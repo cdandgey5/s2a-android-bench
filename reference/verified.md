@@ -19,6 +19,30 @@ Each entry: date, command run, exact output excerpt, verdict.
 | Claude Code (the pin) | `claude.exe update`: "Successfully updated from 2.1.197 to version 2.1.302"; `claude.exe --version` → `2.1.302 (Claude Code)`; written to `benchmark/config/toolchain.yaml` | 2026-10-17 |
 | Pinned-model cutoffs | platform.claude.com/docs/en/about-claude/models/overview, comparison table: `claude-opus-5-5` and `claude-sonnet-5-5` both "Reliable knowledge cutoff: Jun 2026", "Training data cutoff: Jun 2026"; month only, no day → D-001 uses 2026-07-01 as the first post-cutoff day | 2026-10-17 |
 
+### Phase 0 step 1 — bootstrap check, run 4 (2026-10-17, autopilot session) — PASS
+
+Run from the desktop app's Code tab in `C:\Users\natas\abb-src` (PowerShell 7 tool).
+
+| Check | Command | Result | Verdict |
+|---|---|---|---|
+| PowerShell 7 | `$PSVersionTable.PSVersion` | 7.6.7 | ok |
+| Git | `git --version` | 2.44.0.windows.1 | ok |
+| `gh` + auth | `gh auth status` | 2.102.0; logged in as `cdandgey5` (keyring), scopes `gist, read:org, repo, workflow` | ok |
+| `uv` | `uv --version` | 0.13.1 (62faed335 2026-10-13) | ok |
+| Claude Code | `& "$env:USERPROFILE\.local\bin\claude.exe" --version` | `2.1.302 (Claude Code)` = `toolchain.yaml` pin, ≥ 2.1.280 | ok |
+| `ABB_HOME` / `ABB_RESULTS_DIR` | process + user env | `C:\abb` / `C:\abb\results` (both scopes) | ok |
+| Disk | `Get-PSDrive C` | 88.5 GB free (≥ 60 GB) | ok |
+| `ABB_OAUTH_TOKEN` | process env, length only | set, 108 chars (value never printed) | ok |
+| `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_AUTH_TOKEN` | process + user env | all unset | ok |
+| Remote | `git remote -v` | `origin https://github.com/cdandgey5/s2a-android-bench.git` | ok |
+
+Side findings: `python` on PATH is the Microsoft Store alias (and a Store CPython 3.12 exists);
+`pwsh` is a per-user Store/MSIX package (`%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`, no
+`C:\Program Files\PowerShell\7`). Both are avoided: the dev venv uses uv-managed CPython 3.12.15
+(`[tool.uv] python-preference = "only-managed"`), and the agent's PowerShell is a pinned zip under
+`ABB_HOME\tools\pwsh` (D-031). Global git config was empty before `abb tools install` applied
+`core.autocrlf=false`, `core.eol=lf`, `core.longpaths=true`, `core.filemode=false`.
+
 ### Phase 0 step 1 — bootstrap check, run 3 (2026-10-17, subscription-auth plan, D-025)
 
 Verdict: **FAIL — Day 0 (Windows) still not done.** Nothing changed since run 2: `pwsh`, `gh`, `uv`
@@ -108,54 +132,84 @@ Verdict then: **FAIL — Day 0 not done.**
 | Legal page wording (OAuth for ordinary individual use) | mostly confirmed | docs/en/legal-and-compliance: "assume ordinary, individual usage of Claude Code and the Agent SDK"; "should use API key authentication"; enforcement sentence reads "may do so without prior notice"; use-case questions go to sales |
 | Latest Claude Code release | 2.1.302 (2026-10-16) | docs/en/changelog |
 
+### Phase 0 step 5 — tool verification (2026-10-17, pinned 2.1.302, through `abb ws smoke` / `abb auth check`)
+
+All runs: harness user, the launcher (`ABB_HOME\tools\abb_launch.py` under the tools CPython
+3.12.15), a Job Object, an environment block built from scratch (`agent_env.py`), a fresh
+per-run `CLAUDE_CONFIG_DIR` seeded from `sandbox/claude-config.template` (`switchModelsOnFlag:
+false`), **no proxy** (Phase 1), `--permission-mode bypassPermissions --disallowedTools
+WebFetch,WebSearch`, prompt on stdin. Token usage of every run: `docs/RUNS.md`.
+
 | Item | Value | Date |
 |---|---|---|
-| `claude.exe --version` (pinned copy under `ABB_HOME\tools\claude`) | | |
-| `abb auth check`: `claude.exe auth status` through the launcher with the mapped token and an empty `CLAUDE_CONFIG_DIR` → `authMethod` (expected `oauth_token`) | | |
-| Token honoured as the sandbox user `abb-agent` (Phase 1 smoke test through `CreateProcessWithLogonW`) | | |
-| `total_cost_usd` / `usage` present in `-p` results under subscription auth | | |
-| `--model claude-opus-5-5` accepted on this plan (else Sonnet for everything, D-001) | | |
-| Usage-limit output in `-p` (verbatim tail, error text, exit code) — Phase 4 canary | | |
-| `-p` / `--output-format stream-json` / `--verbose` | | |
-| `--max-turns` → `error_max_turns` | | |
-| `--max-budget-usd` → `error_max_budget_usd` | | |
-| `--resume` with `-p` | | |
-| `--permission-mode bypassPermissions` (as the sandbox user through the launcher) | | |
-| `--disallowedTools WebFetch,WebSearch` | | |
-| `--model claude-sonnet-5-5` / `claude-opus-5-5` accepted | | |
-| `--append-system-prompt` | | |
-| Slash command expansion in `-p` (`/speckit-specify …`) | | |
-| AskUserQuestion behaviour in `-p` (Phase 4 step 3) | | |
-| Ctrl+C / Ctrl+Break in `-p` on Windows: `result` line written? exit code? (Phase 0 step 5) | | |
-| Bash tool runs Git Bash (`echo $BASH_VERSION`) | | |
-| Smoke test result JSON excerpt | | |
+| `claude.exe --version` (pinned copy under `ABB_HOME\tools\claude`) | `C:\abb\tools\claude\2.1.302\claude.exe` → `2.1.302 (Claude Code)`; sha256 `3ab075f7…a0ae` in `config/toolchain.lock.yaml` | 2026-10-17 |
+| `abb auth check`: `claude.exe auth status` through the launcher with the mapped token and an empty `CLAUDE_CONFIG_DIR` → `authMethod` (expected `oauth_token`) | exit 0, `loggedIn: true`, **`authMethod: oauth_token`**, `apiProvider: firstParty` — the token is honoured with an empty config dir. Fields: `analyticsDisabled, apiProvider, authMethod, configDirectory, loggedIn, projectsDirectory`: a token session reports **no `subscriptionType`**; the harness user's own CLI login reports `authMethod: none` (the desktop app holds the owner's login), so the plan is not measurable here — the Day 0 reading `pro` stands (`ABB_HOME\state\auth.json: plan_source`) | 2026-10-17 |
+| Token honoured as the sandbox user `abb-agent` (Phase 1 smoke test through `CreateProcessWithLogonW`) | Phase 1 | |
+| `total_cost_usd` / `usage` present in `-p` results under subscription auth | yes: `total_cost_usd`, `usage.{input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens, cache_creation.ephemeral_1h_input_tokens, service_tier, speed, …}`, `modelUsage` | 2026-10-17 |
+| `--model claude-opus-5-5` accepted on this plan (else Sonnet for everything, D-001) | **accepted** (Pro): `smoke-success-opus` → success, `init.model` and the `modelUsage` key are `claude-opus-5-5` | 2026-10-17 |
+| Resolved model id (`init.model`, `modelUsage` keys) | exactly `claude-sonnet-5-5` / `claude-opus-5-5` — no dated snapshot suffix, no background haiku key in these short runs | 2026-10-17 |
+| Usage-limit output in `-p` (verbatim tail, error text, exit code) — Phase 4 canary | Phase 4 | |
+| `rate_limit_event` in `-p` stream-json | **present** in every run with a model call, before the first assistant message: `{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","resetsAt":<epoch s>,"rateLimitType":"five_hour","overageStatus":"rejected","overageDisabledReason":"org_level_disabled","isUsingOverage":false,"unifiedWindows":{"five_hour":{"utilization":0.74,"resetsAt":…},"seven_day":{"utilization":0.54,"resetsAt":…}}}}`. Per-window utilisation is exposed, so D-028 (c) (stop launching near a window's end) is implementable; the key is camelCase `rateLimitType`, not `rate_limit_type` | 2026-10-17 |
+| `-p` / `--output-format stream-json` / `--verbose` | work; event types seen: `system/init`, `rate_limit_event`, `assistant`, `user`, `system/task_started`, `system/task_notification`, `tool_progress`, `system/permission_denied`, `result/*` (the Bash tool runs as a `local_bash` task) | 2026-10-17 |
+| `--max-turns` → `error_max_turns` | works (`--max-turns 1` + a two-call prompt → `subtype: error_max_turns`, `num_turns: 2`, exit 1) although `--max-turns` is **not listed in `claude --help`** on 2.1.302 | 2026-10-17 |
+| `--max-budget-usd` → `error_max_budget_usd` | flag listed in `--help`; a trip is not exercised yet (Phase 4) | 2026-10-17 |
+| `--resume` with `-p` | flag listed; exercised in Phase 4 (nudges) | 2026-10-17 |
+| `--permission-mode bypassPermissions` | honoured (`init.permissionMode: bypassPermissions`) **only with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` unset or 0**. With `=1`, stderr says `⚠ Permission mode forced to default — CLAUDE_CODE_SUBPROCESS_ENV_SCRUB is set (allowed_non_write_users hardening). Declare allowedTools explicitly, or set CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 to opt out.`; in that mode a PowerShell call without an allow rule is denied (`permission_denied`: "Command contains malformed syntax that cannot be parsed: pwsh exited with code 1: The command line is too long."); with `--allowedTools "Bash,PowerShell,…"` both shells work → D-033. `--help` lists the modes `acceptEdits, auto, bypassPermissions, manual, dontAsk, plan`. As the sandbox user: Phase 1 | 2026-10-17 |
+| `--disallowedTools WebFetch,WebSearch` | accepted; WebFetch/WebSearch absent from `init.tools` | 2026-10-17 |
+| `init.tools` in `-p` (2.1.302) | `Task, Bash, CronCreate, CronDelete, CronList, Edit, EnterWorktree, ExitWorktree, Glob, Grep, ListAgents, NotebookEdit, PowerShell, Read, RemoteTrigger, ReportFindings, ScheduleWakeup, SendMessage, Skill, TaskStop, ToolSearch, Workflow, Write` — **no `AskUserQuestion` and no `TodoWrite`** (input for Phase 4 step 3 and D-005) | 2026-10-17 |
+| `--model claude-sonnet-5-5` / `claude-opus-5-5` accepted | both | 2026-10-17 |
+| `--append-system-prompt` | listed in `--help`; exercised in Phase 4 | 2026-10-17 |
+| Slash command expansion in `-p` (`/speckit-specify …`) | Phase 5 | |
+| AskUserQuestion behaviour in `-p` (Phase 4 step 3) | not in the `-p` tool list (above); Phase 4 decides what the question signal is | 2026-10-17 |
+| Ctrl+C / Ctrl+Break in `-p` on Windows: `result` line written? exit code? (Phase 0 step 5) | `abb ws smoke --deadline 20 "Count slowly to 100 …"`, grace 30 s. **Ctrl+Break** (`GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, <child group>)`): claude.exe exits **0** after ~1.6 s, the running Bash task is killed (`tool_result` "Exit code 137"), **no `result` line** (`smoke-interrupt.jsonl`). **Ctrl+C** (`CTRL_C_EVENT` to the launcher's private console, child created with Ctrl+C enabled): claude.exe writes a **`result` line, `subtype: error_during_execution`**, with `total_cost_usd` and `usage`, then exits **0** after ~1.6 s (`smoke-interrupt-ctrlc.jsonl`). The first Ctrl+C attempts showed no effect at all: the "ignore Ctrl+C" flag was inherited from this session's shell down to the launcher; the launcher now clears it before starting the child. **Decision: both drivers use `ctrl_c`** (D-032) | 2026-10-17 |
+| Scrub check (D-026) | the prompt runs `[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] && echo SET || echo UNSET` (Bash) and `if ($env:CLAUDE_CODE_OAUTH_TOKEN) {'SET'} else {'UNSET'}` (PowerShell): **UNSET / UNSET** with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` **and** with `=0`. Positive control (`--env ABB_PROBE=1`): `ABB_PROBE` is SET in both shells, so the check does see inherited variables; `CLAUDE_CONFIG_DIR` is SET with 0 and UNSET with 1 (the documented extra effect of the scrub). Token-value grep over every file of every smoke trial directory: 0 hits. → claude.exe 2.1.302 strips its own OAuth token from tool subprocesses regardless of the scrub; this check is re-run on every pin change (D-033) | 2026-10-17 |
+| Bash tool runs Git Bash (`echo $BASH_VERSION`) | yes: `BASH_VERSION=5.2.26(1)-release`, `uname -s` → `MINGW64_NT-10.0-26200` (Git for Windows 2.44, found through `git.exe` on the block's PATH) | 2026-10-17 |
+| PowerShell tool | `init.powershell_path` = `C:\abb\tools\pwsh\pwsh.exe` (the pinned 7.6.7 zip, D-031); with the owner's Store pwsh it was `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe` | 2026-10-17 |
+| `switchModelsOnFlag` on the pinned version | still documented (docs/en/model-config, read 2026-10-17: `false` = "Ask each time"; non-interactive: "a flagged request ends the turn with a refusal instead") → kept in `benchmark/sandbox/claude-config.template/settings.json` | 2026-10-17 |
+| Revoking a `setup-token` token | **not documented** (docs/en/authentication, read 2026-10-17: the command "does not save the token anywhere"; nothing on revocation; `/logout` revokes only credentials that `/login` or a keyless Console sign-in wrote) → Phase 10's retired token is left to expire | 2026-10-17 |
+| Hidden launcher console | `CREATE_NEW_CONSOLE` + `STARTF_USESHOWWINDOW`/`SW_HIDE`: `GetConsoleWindow()` non-null and `IsWindowVisible` false in every run; no new `WindowsTerminal.exe` process during a launch (default terminal "let Windows decide") → the `CREATE_NO_WINDOW` fallback is not needed | 2026-10-17 |
+| Peak job memory | smoke runs 410–480 MB (claude.exe + Git Bash); module test runs with two test workers: AntennaPod `:app` 3162 MB, Wikipedia `:app` clean+test 6529 MB → `process.memory_mb: 10240` (D-034) | 2026-10-17 |
+| Smoke test result JSON excerpt | `smoke-success`: `{"subtype":"success","is_error":false,"num_turns":2,"total_cost_usd":0.0258,"usage":{"input_tokens":4,"output_tokens":89,"cache_read_input_tokens":36672,"cache_creation_input_tokens":5297,…},"modelUsage":{"claude-sonnet-5-5":{…}},"permission_denials":[]}`; `init.apiKeySource: "none"` | 2026-10-17 |
+| `claude --help` flags used by the driver | listed: `-p/--print`, `--output-format`, `--verbose`, `--max-budget-usd`, `--resume`, `--permission-mode`, `--dangerously-skip-permissions`, `--disallowedTools`, `--allowedTools`, `--model`, `--append-system-prompt`, `--tools`, `--json-schema`, `--input-format`, `--permission-prompts` (`host` or `none`), `--include-partial-messages`, `--settings`; present but must stay unused: `--bare`, `--fallback-model`, `--no-session-persistence`, `--restricted`. Not listed but working: `--max-turns`. Full text: `C:\abb\logs\claude-help-2.1.302.txt` | 2026-10-17 |
 
 ## Spec Kit
 
 | Item | Value | Date |
 |---|---|---|
-| `specify --version` | | |
-| `specify init --help` (flags used) | | |
-| Files created by `specify init --integration claude` | | |
-| Command names found in `.claude/` | | |
-| `specify extension add bug` → command names | | |
+| `specify --version` | `specify 1.2.1` (provisional pin `v1.2.1`, latest release 2026-10-16T20:41Z; `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.2.1` into `ABB_HOME\tools\uvtools`, exe `ABB_HOME\tools\bin\specify.exe`) | 2026-10-17 |
+| `specify init --help` (flags used) | `[project_name]`, `--here`, `--force`, `--integration <str>` (e.g. `claude`), `--integration-options`, `--script sh/ps/py`, `--non-interactive` ("Required for agent harnesses"), `--ignore-agent-tools`, `--preset`, `--extension`, `--allow-symlinks`; the help's example says "Claude installs skills by default" (Phase 5: skills vs slash commands) | 2026-10-17 |
+| Files created by `specify init --integration claude` | Phase 5 | |
+| Command names found in `.claude/` | Phase 5 | |
+| `specify extension add bug` → command names | Phase 5 | |
 
 ## Android SDK
 
 | Item | Value | Date |
 |---|---|---|
-| cmdline-tools zip + sha256 | | |
-| `sdkmanager --list_installed` after a full build | | |
+| cmdline-tools zip + sha256 | `commandlinetools-win-15859902_latest.zip`, sha256 `90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a` — still the Windows entry on developer.android.com/studio (2026-10-17); the download was verified against it | 2026-10-17 |
+| `sdkmanager --list_installed` after a full build | `build-tools;35.0.0 35.0.0`, `build-tools;36.0.0 36.0.0`, `platform-tools 37.0.1`, `platforms;android-35 2`, `platforms;android-36 2`, `platforms;android-37.0 2` (the 36/37 entries were first auto-installed by AGP; now pinned in `toolchain.yaml`) | 2026-10-17 |
+| JDKs | `java -version`: `openjdk version "17.0.20.1" 2026-08-18` (Temurin `jdk-17.0.20.1+1`), `openjdk version "21.0.12.1" 2026-08-18 LTS` (`jdk-21.0.12.1+1`); sha256 in the lock | 2026-10-17 |
 
-## Repositories (one block per repo; from the Phase 0 experiment)
+## Repositories (one block per repo; from the Phase 0 experiment — details in `reference/build-experiments.md`)
 
 ### antennapod
 | Item | Value |
 |---|---|
-| Commit built | |
-| JDK | |
-| Unit-test tasks (per module) | |
-| Robolectric SDK levels | |
-| Cold / warm test time | |
-| Peak memory | |
-| Secrets/stubs needed | |
+| Commit built | `3d105d598dfa582c6cb22ba40b56d11780366890` (`develop`, the default branch) |
+| JDK | 21 |
+| Unit-test tasks (per module) | `testFreeDebugUnitTest` on the 22 flavored modules (incl. `:app`), `testDebugUnitTest` elsewhere (e.g. `:parser:feed`, `:model`) |
+| Robolectric SDK levels | no `@Config(sdk=…)`, no `robolectric.properties`: defaults to the module's target |
+| Cold / warm test time | `:app` 209 s / 41 s (94 s with recompile); `:parser:feed` 36 s / 22 s (37 s) |
+| Peak memory | 2467 MB (`:app` cold), 3162 MB with 2 test workers |
+| Secrets/stubs needed | none |
+
+### wikipedia
+| Item | Value |
+|---|---|
+| Commit built | `0c7ee9b4682512217e01d829fb0b6d068d268724` (`main`, the default branch) |
+| JDK | 17 |
+| Unit-test tasks (per module) | `testAlphaDebugUnitTest` (CI's variant) on `:app` and `:analytics:testkitchen` |
+| Robolectric SDK levels | `robolectric.properties`: `sdk=24` |
+| Cold / warm test time | `:app` 490 s / 26 s (279 s with recompile); `:analytics:testkitchen` 111 s / 20 s (53 s) |
+| Peak memory | 5494 MB (`:app` cold), 6529 MB with 2 test workers and a recompile |
+| Secrets/stubs needed | none (`google-services.json`, `repo.keystore` tracked upstream) |

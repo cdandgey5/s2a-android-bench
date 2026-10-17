@@ -32,13 +32,17 @@ Rules the driver enforces:
   with the mapped block and requires exit 0 and `authMethod: oauth_token` (the CLI reference
   documents the values `none`, `claude.ai`, `oauth_token`, `api_key`, `api_key_helper`,
   `third_party`; exit 0 if logged in, 1 if not). It also records `subscriptionType` (e.g. `pro`,
-  `max`) into the manifest's `plan` field, so the plan is measured, not typed. Whether the token is honoured with an **empty** per-trial `CLAUDE_CONFIG_DIR`
+  `max`) into the manifest's `plan` field, so the plan is measured, not typed. **Phase 0 finding
+  (D-035):** a token session's `auth status` has no `subscriptionType` field, so `abb auth check`
+  also reads the harness user's own CLI login; when that is not logged in either (the owner works
+  in the desktop app), `plan` is `null` with `plan_source` saying why, and the Day 0 reading stands. Whether the token is honoured with an **empty** per-trial `CLAUDE_CONFIG_DIR`
   is not documented — Phase 0 step 5 proves it and records the answer in `reference/verified.md`.
   Whether it is honoured when the process runs **as the sandbox user** (`abb-agent`, no profile)
   is proven by Phase 1's smoke test through the sandbox path, before any trial runs there.
 - **The token never reaches a transcript** (D-026). The agent has a shell, and transcripts are
   verbatim and published in Phase 10, so "never logged" must be enforced, not assumed: the agent
-  env sets `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` (Claude Code strips credentials from its Bash,
+  env originally set `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` — now `0`, D-033: `1` forces permission
+  mode `default`, and the token is stripped from tool subprocesses either way (Claude Code strips credentials from its Bash,
   PowerShell, hook and MCP subprocesses; Phase 0 step 5 proves it covers the OAuth token), and
   `abb audit` fails on any file under the run that contains the token value or an `sk-ant-…`
   key pattern (`specs/headless-agent-driving.md`, "Source of truth"). Residual channel, stated in

@@ -15,10 +15,13 @@ android:
   cmdline_tools_zip: commandlinetools-win-15859902_latest.zip
   cmdline_tools_sha256: 90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a   # 2026-10-16; re-verify on developer.android.com/studio
   base_url: https://dl.google.com/android/repository/
-  packages:
+  packages:                    # union of what the chosen repos resolve (Phase 0 experiment, 2026-10-17)
     - "platform-tools"
     - "platforms;android-35"
     - "build-tools;35.0.0"
+    - "platforms;android-36"     # AntennaPod compileSdk 36
+    - "build-tools;36.0.0"       # AGP default build tools (both repos)
+    - "platforms;android-37.0"   # Wikipedia compileSdk 37
 
 python:
   version: "3.12"
@@ -31,8 +34,14 @@ claude_code:
   version: "2.1.302"           # `claude.exe --version` on Day 0 (2026-10-17, after `claude update` from 2.1.197); must be >= 2.1.280 (Opus 5.5 floor, D-026)
   exe_copy: "$ABB_HOME/tools/claude/<version>/claude.exe"   # copied from the harness user's install; the launcher runs ONLY this path
 
+powershell:                    # pwsh for the agent's PowerShell tool, pinned like the JDKs (D-031): the owner's pwsh 7.6.7 is a
+                               # per-user Store/MSIX package (WindowsApps alias) that the sandbox user cannot run
+  version: "7.6.7"
+  zip_url: https://github.com/PowerShell/PowerShell/releases/download/v7.6.7/PowerShell-7.6.7-win-x64.zip
+  sha256: d2f952ebdbf24386cb8923553aa58e41a846db35a6155ea04c58142a4b16dbb7   # GitHub asset digest, 2026-10-17
+
 speckit:
-  ref: "TODO_PIN"              # git tag, e.g. v0.12.11; set in Phase 5 step 1
+  ref: "v1.2.1"                # provisional (latest release 2026-10-16, Phase 0); re-pinned in Phase 5 step 1
   script_flavor: ps            # `specify init --script ps` on Windows
 
 git:

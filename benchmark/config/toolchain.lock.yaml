@@ -1,0 +1,52 @@
+# Written by `abb tools install`; verified by `abb tools check`. Paths are relative to ABB_HOME.
+android:
+  cmdline_tools_sha256: 90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a
+  cmdline_tools_zip: commandlinetools-win-15859902_latest.zip
+  installed:
+    build-tools;35.0.0: 35.0.0
+    build-tools;36.0.0: 36.0.0
+    platform-tools: 37.0.1
+    platforms;android-35: '2'
+    platforms;android-36: '2'
+    platforms;android-37.0: '2'
+  sdk_root: tools/android-sdk
+claude_code:
+  path: tools/claude/2.1.302/claude.exe
+  sha256: 3ab075f78998efef8b87f491c2e4a39c309dddf44e51d0103eba4f3713d2a0ae
+  version: 2.1.302
+git:
+  global_config:
+    core.autocrlf: 'false'
+    core.eol: lf
+    core.filemode: 'false'
+    core.longpaths: 'true'
+  version: git version 2.44.0.windows.1
+installed_at: '2026-10-17T20:49:33Z'
+jdk17:
+  path: tools/jdk17
+  release_name: jdk-17.0.20.1+1
+  sha256: e53a79c3c3d86865bd7e787903884331068e71321714ffd44f145785affc7cb0
+  url: https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_x64_windows_hotspot_17.0.20.1_1.zip
+  zip: OpenJDK17U-jdk_x64_windows_hotspot_17.0.20.1_1.zip
+jdk21:
+  path: tools/jdk21
+  release_name: jdk-21.0.12.1+1
+  sha256: f9d6e191ab098c0d416e7d588a24420a8621cd2f4720dab2459b8b7b2d2d8b4e
+  url: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.zip
+  zip: OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.zip
+launcher:
+  path: tools/abb_launch.py
+  sha256: 5c3d5eec5e2419455b3ee500ca0e3bcef6e6a0971d62cc5f99fe9ac57768a29e
+platform: windows-x64
+powershell:
+  path: tools/pwsh/pwsh.exe
+  sha256: d2f952ebdbf24386cb8923553aa58e41a846db35a6155ea04c58142a4b16dbb7
+  version: 7.6.7
+  zip: PowerShell-7.6.7-win-x64.zip
+python:
+  path: tools/python/cpython-3.12.15-windows-x86_64-none/python.exe
+  version: 3.12.15
+speckit:
+  path: tools/bin/specify.exe
+  ref: v1.2.1
+  version_output: specify 1.2.1

@@ -208,7 +208,7 @@ stands), plus one harness-health field: `tool_errors` (count of `tool_result` bl
 stage in `status`. It runs `claude` as a **local subprocess** of whatever user runs `s2a` (inside
 the benchmark that is the sandbox user; no sandboxing of its own) with the same argv, and enforces its own per-call deadline through its platform
 layer exactly as the benchmark does: the interrupt named in `sandbox.yaml: process.interrupt`
-(Ctrl+Break to the child's own process group by default; SIGINT elsewhere), wait 30 s for the
+(`sandbox.yaml: process.interrupt` — Ctrl+C to its own launcher console since D-032; SIGINT elsewhere), wait 30 s for the
 `result` line, then kill the process tree; a harness-initiated stop is `timeout`. When the outer
 harness interrupts the orchestrator itself (SIGBREAK/`KeyboardInterrupt`), it forwards the same
 interrupt to its running child, waits `grace_s`, writes `state.json` with `exit_reason: timeout`

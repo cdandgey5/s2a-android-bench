@@ -55,7 +55,7 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   "env_fingerprints": {"antennapod": "sha256:...", "wikipedia": "sha256:..."},
   "toolchain_lock_sha256": "...",
   "s2a_install": {"sha": "def456", "path": "ABB_HOME\\tools\\bin\\s2a.exe"},
-  "interrupt": "ctrl_break",                 # the signal both drivers used for harness-initiated stops (Phase 0 decision)
+  "interrupt": "ctrl_c",                     # the signal both drivers used for harness-initiated stops (Phase 0 decision, D-032)
   "sandbox_mode": "user",                     # user | none (none is refused for split: test)
   "auth_mode": "subscription",                # subscription | api_key
   "plan": "pro",                              # `subscriptionType` from `claude auth status`, recorded by `abb auth check` (not typed by hand)

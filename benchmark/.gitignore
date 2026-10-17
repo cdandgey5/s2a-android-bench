@@ -8,3 +8,4 @@ tasks/**/.validation/
 *.tmp
 .pytest_cache/
 .ruff_cache/
+dist/

@@ -1,0 +1,15 @@
+diff --git a/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/util/DurationParserTest.java b/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/util/DurationParserTest.java
+index 91d9ea5ed..4e53b4776 100644
+--- a/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/util/DurationParserTest.java
++++ b/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/util/DurationParserTest.java
+@@ -41,4 +41,10 @@ public class DurationParserTest {
+         long duration = DurationParser.inMillis("00:00:00.123");
+         assertEquals(123, duration);
+     }
++
++    @Test
++    public void testSecondsWithDecimalCommaInMillis() {
++        assertEquals(minutes + 5 * seconds + 500, DurationParser.inMillis("00:01:05,5"));
++        assertEquals(1 * hours + 2 * minutes + 3 * seconds + 250, DurationParser.inMillis("3723,25"));
++    }
+ }

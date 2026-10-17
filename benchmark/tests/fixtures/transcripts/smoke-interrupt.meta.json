@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-10-17T20:27:09Z",
+  "argv": [
+    "C:\\abb\\tools\\claude\\2.1.302\\claude.exe",
+    "-p",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--model",
+    "claude-sonnet-5-5",
+    "--max-turns",
+    "10",
+    "--max-budget-usd",
+    "1.0",
+    "--permission-mode",
+    "bypassPermissions",
+    "--disallowedTools",
+    "WebFetch,WebSearch"
+  ],
+  "prompt": "Count slowly to 100 using the shell: one number per second, in a single Bash command.",
+  "env_overrides": {},
+  "exit_code": 0,
+  "stopped_by_harness": true,
+  "duration_s": 21.672,
+  "launcher": {
+    "interrupt_mode": "ctrl_break",
+    "interrupt_sent": "ctrl_break",
+    "interrupt_ok": true,
+    "child_exit_code": 0
+  },
+  "result_subtype": null
+}

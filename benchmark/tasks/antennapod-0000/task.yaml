@@ -1,0 +1,37 @@
+# Seed task (Phase 0 step 8): authored, trivial, pure-Java utility + plain JUnit hidden test.
+# Fixture for every later harness piece (validation, grading, arms). Pinned to dev (dev5).
+id: antennapod-0000
+repo: antennapod
+base_commit: "3d105d598dfa582c6cb22ba40b56d11780366890"   # develop, 2026-10-11 (= repos/antennapod.yaml cache_commit)
+source: authored
+category: bugfix
+tags:
+  files_touched: 1
+  files_bucket: "1"
+  modules: 1
+  lang: java
+  ui: none
+  test_kind: junit
+  needs_test_hook: false
+  new_surface: false
+  ticket_mentions_code: false
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+  - module: ":parser:feed"
+    test: "de.danoeh.antennapod.parser.feed.element.util.DurationParserTest"
+    method: "testSecondsWithDecimalCommaInMillis"
+pass_to_pass:
+  - module: ":parser:feed"
+    test: "de.danoeh.antennapod.parser.feed.element.util.DurationParserTest"
+  - module: ":parser:feed"
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev                       # dev5 is pinned to dev (D-011); `abb split --pin-dev` re-writes it in Phase 7
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation: null

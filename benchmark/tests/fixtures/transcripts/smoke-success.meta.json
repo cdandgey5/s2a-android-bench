@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-10-17T20:26:30Z",
+  "argv": [
+    "C:\\abb\\tools\\claude\\2.1.302\\claude.exe",
+    "-p",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--model",
+    "claude-sonnet-5-5",
+    "--max-turns",
+    "3",
+    "--max-budget-usd",
+    "1.0",
+    "--permission-mode",
+    "bypassPermissions",
+    "--disallowedTools",
+    "WebFetch,WebSearch"
+  ],
+  "prompt": "Print the current directory and exit.",
+  "env_overrides": {},
+  "exit_code": 0,
+  "stopped_by_harness": false,
+  "duration_s": 19.063,
+  "launcher": {
+    "interrupt_mode": "ctrl_break",
+    "interrupt_sent": null,
+    "interrupt_ok": null,
+    "child_exit_code": 0
+  },
+  "result_subtype": "success"
+}

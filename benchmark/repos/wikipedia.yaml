@@ -1,19 +1,20 @@
-# Wikipedia Android app - repo #2 (Kotlin, single app module, Apache-2.0)
+# Wikipedia Android app - repo #2 (Kotlin, Apache-2.0). Values from the Phase 0 experiment (2026-10-17,
+# reference/build-experiments.md).
 key: wikipedia
 display_name: Wikipedia Android
 url: https://github.com/wikimedia/apps-android-wikipedia
 license: Apache-2.0
 default_branch: main
 language: kotlin
-ui: xml                                      # TODO: check for Compose usage; set mixed if both
-structure: single_module
+ui: mixed                                    # XML layouts + Compose (123 files with @Composable in app/src/main, 2026-10-17)
+structure: single_module                     # one app module (+ the small :analytics:testkitchen library)
 
 toolchain:
-  jdk: 17                                    # TODO verify  # resolved to ABB_HOME\tools\jdk17
+  jdk: 17                                    # JavaVersion.VERSION_17 / JvmTarget.JVM_17; CI java-version 17 (ABB_HOME\tools\jdk17)
   android:
-    packages:
-      - "platforms;android-35"
-      - "build-tools;35.0.0"
+    packages:                                # resolved by AGP in the Phase 0 build (compileSdk 37)
+      - "platforms;android-37.0"
+      - "build-tools;36.0.0"
   gradle_user_home_props: |
     org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
     kotlin.daemon.jvmargs=-Xmx2g
@@ -24,21 +25,21 @@ toolchain:
     org.gradle.warning.mode=none
 
 build:
-  cache_commit: TODO_40_CHAR_SHA
-  setup_commit: TODO_40_CHAR_SHA            # git merge-base --octopus of this repo's task base commits (specs/repo-config.md)
-  warm_commands:                             # TODO: flavors (e.g. prod/dev/alpha/beta/fdroid) -> pick the one CI tests
-    - cmd: "{gradlew} --console=plain --no-daemon :app:assembleProdDebug"
-    - cmd: "{gradlew} --console=plain --no-daemon :app:testProdDebugUnitTest"
+  cache_commit: 0c7ee9b4682512217e01d829fb0b6d068d268724   # main on 2026-10-17: the Phase 0 experiment
+  setup_commit: 0c7ee9b4682512217e01d829fb0b6d068d268724   # no tasks yet: = cache_commit until `abb tasks coverage` sets the octopus merge-base
+  warm_commands:                             # flavors alpha/beta/custom/dev/fdroid/prod; CI tests `testAlphaDebugUnitTest`
+    - cmd: "{gradlew} --console=plain --no-daemon :app:assembleAlphaDebug"
+    - cmd: "{gradlew} --console=plain --no-daemon testAlphaDebugUnitTest"
       allow_failure: true
-  stubs: []                                  # TODO: check whether repo.keystore/repo.properties are needed for debug builds
+  stubs: []                                  # app/google-services.json, repo.keystore, repo.properties are tracked upstream: nothing to stub
   env:
     JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
 
 tests:
   test_task_for_module:
-    default: "testProdDebugUnitTest"         # TODO confirm
+    default: "testAlphaDebugUnitTest"        # the variant CI tests (.github/workflows/android_pr.yml); both modules have the flavors
   junit_dir: "build/test-results"
-  verify_modules: [":TODO_LIB_MODULE", ":app"]   # used by `abb env verify`; one library module + the app module
+  verify_modules: [":analytics:testkitchen", ":app"]   # used by `abb env verify`: the one library module + the app module
   test_dirs:
     - "**/src/test/**"
     - "**/src/androidTest/**"
@@ -64,7 +65,7 @@ workspace:
     - ".git"
     - ".github"
     - ".idea"
-  strip_agent_instructions: false
+  strip_agent_instructions: false            # repo ships CLAUDE.md + AGENTS.md; keep (D-004)
   diff_exclude:
     - ".claude/**"
     - ".specify/**"

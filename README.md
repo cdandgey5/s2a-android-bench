@@ -56,8 +56,8 @@ already works end to end.
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Foundations (Windows-native): CLI skeleton, platform layer, pinned toolchain, repo selection experiment | blocked at step 1: Day-0 (Windows) bootstrap incomplete (2026-10-17, run 2 in `reference/verified.md`) |
-| 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | not started |
+| 0 | Foundations (Windows-native): CLI skeleton, platform layer, pinned toolchain, repo selection experiment | **passed 2026-10-17** — toolchain locked, `abb auth check` → `oauth_token`, 5 smoke fixtures, AntennaPod + Wikipedia chosen (`reference/build-experiments.md`), seed task `antennapod-0000`; findings D-030…D-035 |
+| 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | in progress (autopilot) |
 | 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | not started |
 | 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | not started |
 | 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | not started |

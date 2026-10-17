@@ -25,9 +25,12 @@ modes:
       resolve_dns: true
 
 process:
-  memory_mb: 8192             # Job Object JOB memory limit per trial (whole tree); confirm in Phase 0 with two Robolectric test workers
-  grace_s: 30                 # STOP file -> launcher sends Ctrl+Break to the child's process group -> wait -> terminate the job
-  interrupt: ctrl_break       # ctrl_break | ctrl_c — decided once in Phase 0 from smoke-interrupt; both drivers use the same value
+  memory_mb: 10240            # D-034: Job Object JOB memory limit per trial (whole tree). Phase 0 peaks with two test workers:
+                              # Wikipedia :app clean+test 6529 MB, AntennaPod :app 3162 MB, + claude.exe ~420 MB -> 8192 left < 1.3 GB headroom
+  grace_s: 30                 # STOP file -> launcher sends the interrupt below -> wait -> terminate the job
+  interrupt: ctrl_c          # D-032 (Phase 0 smoke-interrupt*): Ctrl+C -> claude.exe writes a `result` line (error_during_execution, cost +
+                              # usage) and exits in ~2 s; Ctrl+Break -> exit 0 after ~2 s with NO result line. Both drivers use this value;
+                              # Ctrl+C reaches every process on the launcher's own hidden console (the launcher ignores it)
   launcher: tools/abb_launch.py   # started under ABB_HOME/tools/python; the only command line that crosses CreateProcessWithLogonW
   per_trial_dirs: [work, home, gradle-home, claude-config, agent-out]   # created fresh; nothing writable is shared between trials
   seed_gradle_home: [wrapper/dists]       # copied from caches/gradle-pristine/$REPO into $TRIAL/gradle-home before launch
@@ -45,7 +48,8 @@ process:
     DISABLE_UPDATES: "1"
     CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "60000"
     CLAUDE_CODE_USE_POWERSHELL_TOOL: "1"     # explicit, so every arm has the same shell set (Bash via Git Bash + PowerShell)
-    CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"    # strip credentials from the agent's Bash/PowerShell/hook envs so `env` cannot print the token into a transcript (D-026; Phase 0 step 5 proves it covers CLAUDE_CODE_OAUTH_TOKEN)
+    CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "0"    # D-033: "1" FORCES permission mode `default` in 2.1.302 (bypassPermissions dropped); the token is
+                                             # stripped from Bash/PowerShell subprocesses with 0 as well (measured with a positive control, Phase 0)
     USERPROFILE: "$TRIAL/home"               # also HOME, TEMP, TMP, APPDATA, LOCALAPPDATA -> $TRIAL/home
     JAVA_TOOL_OPTIONS: "-Duser.home=$TRIAL/home -Dfile.encoding=UTF-8"   # Java ignores USERPROFILE; this reaches every JVM incl. test workers
     ANDROID_USER_HOME: "$TRIAL/home/.android"

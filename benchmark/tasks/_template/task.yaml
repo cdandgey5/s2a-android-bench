@@ -9,6 +9,7 @@ upstream:                        # delete the block for authored tasks
   pr_url: null
   fix_commit: null
   fix_date: null
+  issue_created: null           # post-cutoff = issue_created AND fix_date on/after 2026-07-01 (D-001)
 tags:                            # filled by `abb tasks tag`
   files_touched: 0
   files_bucket: "1"
@@ -17,6 +18,7 @@ tags:                            # filled by `abb tasks tag`
   ui: none
   test_kind: junit
   needs_test_hook: false
+  new_surface: false             # set by `abb tasks lint`
   ticket_mentions_code: false
 problem_statement: problem.md
 test_patch: test.patch
@@ -33,4 +35,7 @@ limits:
 needs_emulator: false
 split: null                      # set by `abb split`
 status: draft                    # draft | validated | flaky | dropped
+created_with_s2a_sha: null       # `s2a/` commit current when the task was created (D-019)
+drafted_by: null                 # agent | human (RUN-ALL.md defaults)
+drafted_with_model: null         # required when drafted_by: agent
 validation: null                 # written by `abb tasks validate`

@@ -1,5 +1,5 @@
 # AntennaPod - repo #1 (Java/XML, multi-module, GPL-3.0)
-# Values marked TODO are discovered in Phase 0 step 7 and filled in Phase 0 step 8.
+# Values discovered in the Phase 0 experiment (2026-10-17, reference/build-experiments.md).
 key: antennapod
 display_name: AntennaPod
 url: https://github.com/AntennaPod/AntennaPod
@@ -10,11 +10,11 @@ ui: xml
 structure: multi_module
 
 toolchain:
-  jdk: 17                                   # TODO verify (gradle/libs.versions.toml or CI workflow)  # resolved to ABB_HOME\tools\jdk17
+  jdk: 21                                   # common.gradle sourceCompatibility VERSION_21; CI java-version 21 (ABB_HOME\tools\jdk21)
   android:
-    packages:                               # TODO replace with `sdkmanager --list_installed` after a full build
-      - "platforms;android-35"
-      - "build-tools;35.0.0"
+    packages:                               # resolved by AGP in the Phase 0 build (compileSdk 36)
+      - "platforms;android-36"
+      - "build-tools;36.0.0"
   gradle_user_home_props: |
     org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
     kotlin.daemon.jvmargs=-Xmx2g
@@ -25,22 +25,44 @@ toolchain:
     org.gradle.warning.mode=none
 
 build:
-  cache_commit: TODO_40_CHAR_SHA            # the develop commit used in the Phase 0 experiment
-  setup_commit: TODO_40_CHAR_SHA            # git merge-base --octopus of this repo's task base commits (specs/repo-config.md)
-  warm_commands:                            # TODO confirm task names (app module has flavors: free/play)
+  cache_commit: 3d105d598dfa582c6cb22ba40b56d11780366890   # develop on 2026-10-17 (commit date 2026-10-11): the Phase 0 experiment
+  setup_commit: 3d105d598dfa582c6cb22ba40b56d11780366890   # merge-base of the dev-task base commits (the seed only, so far); `abb tasks coverage` re-sets it
+  warm_commands:                            # free flavor (F-Droid build, no Play services); root selectors cover every module
     - cmd: "{gradlew} --console=plain --no-daemon assembleFreeDebug"
     - cmd: "{gradlew} --console=plain --no-daemon testFreeDebugUnitTest testDebugUnitTest"
       allow_failure: true
-  stubs: []
+  stubs: []                                 # nothing to stub: builds and tests ran without secrets (Phase 0)
   env:
     JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
 
 tests:
   test_task_for_module:
-    default: "testDebugUnitTest"            # library modules
-    ":app": "testFreeDebugUnitTest"         # TODO confirm
+    default: "testDebugUnitTest"            # library modules without product flavors
+    # modules with free/play flavors (`gradlew tasks --all`, 2026-10-17)
+    ":app": "testFreeDebugUnitTest"
+    ":app-wearos": "testFreeDebugUnitTest"
+    ":net:common": "testFreeDebugUnitTest"
+    ":net:discovery": "testFreeDebugUnitTest"
+    ":net:download:service": "testFreeDebugUnitTest"
+    ":net:download:service-interface": "testFreeDebugUnitTest"
+    ":net:ssl": "testFreeDebugUnitTest"
+    ":net:sync:service": "testFreeDebugUnitTest"
+    ":playback:base": "testFreeDebugUnitTest"
+    ":playback:cast": "testFreeDebugUnitTest"
+    ":playback:service": "testFreeDebugUnitTest"
+    ":storage:database": "testFreeDebugUnitTest"
+    ":storage:database-maintenance-service": "testFreeDebugUnitTest"
+    ":storage:importexport": "testFreeDebugUnitTest"
+    ":ui:chapters": "testFreeDebugUnitTest"
+    ":ui:discovery": "testFreeDebugUnitTest"
+    ":ui:echo": "testFreeDebugUnitTest"
+    ":ui:glide": "testFreeDebugUnitTest"
+    ":ui:preferences": "testFreeDebugUnitTest"
+    ":ui:statistics": "testFreeDebugUnitTest"
+    ":ui:transcript": "testFreeDebugUnitTest"
+    ":ui:widget": "testFreeDebugUnitTest"
   junit_dir: "build/test-results"
-  verify_modules: [":TODO_LIB_MODULE", ":app"]   # used by `abb env verify`; one library module + the app module
+  verify_modules: [":parser:feed", ":app"]  # used by `abb env verify`: one library module (the seed task's) + the app module
   test_dirs:
     - "**/src/test/**"
     - "**/src/testDebug/**"

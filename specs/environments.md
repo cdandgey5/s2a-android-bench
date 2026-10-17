@@ -77,6 +77,7 @@ would silently break that on Windows and are handled explicitly:
 | Android command-line tools | `https://dl.google.com/android/repository/commandlinetools-win-15859902_latest.zip`, sha256 `90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a` (2026-10-16; re-verify) | `config/toolchain.yaml` |
 | SDK packages | `sdkmanager.bat` with the pinned package list; licences accepted by feeding `y` lines on stdin from Python; installed list recorded | `config/toolchain.yaml` + lock |
 | Python for tools + launcher | `uv python install 3.12` with `UV_PYTHON_INSTALL_DIR=ABB_HOME\tools\python` set **in `abb tools install`'s own process environment only** (not as a user variable, so the owner's other uv projects are untouched) | lock |
+| PowerShell 7 (the agent's PowerShell tool) | `PowerShell-<v>-win-x64.zip` from the GitHub release, sha256 = the release asset digest, unpacked to `ABB_HOME\tools\pwsh`, first on the agent PATH; the owner's `pwsh` may be a per-user Store/MSIX package the sandbox user cannot run (D-031) | `config/toolchain.yaml: powershell` + lock |
 | `specify`, `s2a` | `uv tool install` with `UV_TOOL_DIR=ABB_HOME\tools\uvtools`, `UV_TOOL_BIN_DIR=ABB_HOME\tools\bin` (same per-process env); `specify` at `speckit.ref` (a provisional latest tag in Phase 0, re-pinned in Phase 5); `s2a` from `%USERPROFILE%\abb-src\s2a` at `s2a_git_sha` (`abb sandbox install-s2a` re-runs it); the harness calls both by absolute path — adding `tools\bin` to the owner's PATH is optional convenience | `config/toolchain.yaml`, `env.lock.json: s2a_git_sha` |
 | Claude Code | pinned native install for the harness user, **≥ 2.1.280** (Opus 5.5 floor, D-026); the versioned binary is copied to `ABB_HOME\tools\claude\<version>\claude.exe`, the only path the launcher ever runs | `config/toolchain.yaml: claude_code.version` |
 | Git for Windows | on the host (2.44); provides Git Bash for Claude Code's Bash tool | `git --version` recorded |
@@ -166,18 +167,19 @@ characters and it opens a new console by default). It starts the tiny **launcher
 CREATE_UNICODE_ENVIRONMENT`, a hidden window (`STARTF_USESHOWWINDOW`/`SW_HIDE`; Phase 0 checks
 that Windows Terminal does not flash a window and falls back to `CREATE_NO_WINDOW`), assigns it
 to a **Job Object** (`JOB_OBJECT_LIMIT_JOB_MEMORY` = `sandbox.yaml: memory_mb`, `KILL_ON_JOB_CLOSE`,
-breakaway disabled), then resumes it. The launcher reads `launch.json` (argv, cwd, the full
-environment block, output paths, the prompt), starts `claude.exe` with a normal `CreateProcess`
-(32 K argv limit) **in its own process group** (`CREATE_NEW_PROCESS_GROUP`), feeds the prompt on
-stdin (≥ 2.1.211), redirects stdout/stderr to `agent-out/`, and polls for `<trial>\STOP`. On
-`STOP` it sends `GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, <child pid>)` — the one interrupt
-that can be targeted at a single process group without touching anything else in the console —
-and **the same mechanism is used by s2a's own driver for its child**, so every arm's timed-out
-calls are stopped identically. After `grace_s` the harness terminates the job. Whether a
-`result` line follows Ctrl+Break (or Ctrl+C) on Windows is **not documented**; Phase 0 measures
-both (`smoke-interrupt.jsonl`), and if only Ctrl+C ends the turn, both drivers switch to it
-together (D-024). The driver marks a stop it initiated as `timeout` regardless; if no result line
-follows, cost is `null` + imputed — identically for every arm. A job-memory hit kills a JVM
+breakaway disabled), then resumes it. The launcher reads `launch.json` (argv, cwd, output paths,
+the prompt, the STOP path, the interrupt — **no environment**: the block is the launcher's own
+process environment, handed unchanged to the child, so the token never touches disk, D-030),
+starts `claude.exe` with a normal `CreateProcess` (32 K argv limit), feeds the prompt on stdin
+(≥ 2.1.211), redirects stdout/stderr to `agent-out/`, and polls for `<trial>\STOP`. On `STOP` it
+sends `sandbox.yaml: process.interrupt` — **`ctrl_c`** since Phase 0 (D-032):
+`GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0)` to its own private hidden console, with the child
+created Ctrl+C-enabled and the launcher ignoring it; claude.exe then writes a `result` line
+(`error_during_execution`, cost + usage) and exits (Ctrl+Break, the alternative, ends it without a
+`result` line). **The same mechanism is used by s2a's own driver for its child**, so every arm's
+timed-out calls are stopped identically. After `grace_s` the harness terminates the job. The
+driver marks a stop it initiated as `timeout` regardless; if no result line follows, cost is
+`null` + imputed — identically for every arm. A job-memory hit kills a JVM
 inside the trial, not the job: the driver classifies that as `agent_error` (or `timeout` if the
 deadline also passed), never `harness_error`. Manual diagnostic for window-station or logon
 failures: `runas /user:abb-agent cmd`. Fallback launcher start if `CreateProcessWithLogonW`
@@ -204,9 +206,9 @@ workspace **with a freshly seeded `gradle-home`** in < 10 min (no `Could not res
 
 ## 6. Resource limits and parallelism
 
-Job-wide memory limit per trial (`memory_mb`, default 8 GB — **confirmed in Phase 0** by
-measuring peak job memory for a module with two Robolectric test workers; raise it if a JVM
-dies), Gradle `org.gradle.jvmargs=-Xmx3g`, Kotlin in-process; `--no-daemon` everywhere the
+Job-wide memory limit per trial (`memory_mb`, **10 GB** — Phase 0 measured 6.5 GB for
+Wikipedia's `:app` recompile + tests with two test workers, plus ~0.4 GB for `claude.exe`, so the
+planned 8 GB left too little headroom, D-034; raise it if a JVM dies), Gradle `org.gradle.jvmargs=-Xmx3g`, Kotlin in-process; `--no-daemon` everywhere the
 harness runs Gradle. 32 GB laptop → 2 trials in parallel (`abb run --parallel 2`). The final run
 can stay on the laptop (~504 trials × ~15 min ÷ 2 ≈ 60 h of compute — but under a
 subscription the real bound is usage windows, so it is spread over days or weeks of batches,

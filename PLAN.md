@@ -36,7 +36,7 @@ Windows 11 host (PowerShell 7, Python 3.12 via uv)          runs as the SANDBOX 
 +-----------------------------------------------+          +------------------------------------------+
 | %USERPROFILE%\abb-src  (code; agent: DENIED)   |          | ABB_HOME\work\<run>\<arm>\<task>\t<k>\work |
 |  benchmark/abb/{arms,harness/platform,...}     | platform |   history-free snapshot (git init, 1 commit)|
-|  s2a/ (`s2a` CLI)   tasks/ (hidden tests)      | layer    |   claude.exe -p ... (Job Object, 8 GB)       |
+|  s2a/ (`s2a` CLI)   tasks/ (hidden tests)      | layer    |   claude.exe -p ... (Job Object, 10 GB)      |
 | ABB_HOME\tools   (pinned JDKs + SDK + claude)  | -------> | ABB_HOME\caches\gradle-ro\<repo> (read-only) |
 | ABB_HOME\caches\repos\<repo>.git (DENIED)     |          |                                             |
 | ABB_HOME\results (DENIED)                       | <------- |  outbound: firewall BLOCK for abb-agent,     |
@@ -181,7 +181,7 @@ constraint is the plan's **usage windows** (session and weekly limits; Opus has 
   decision recorded in `docs/PREREG.md: auth_mode`** (subscription in batches, or ask Anthropic
   first; the docs reserve OAuth for "ordinary, individual usage" — `specs/auth-and-usage.md` §5).
 
-**Compute.** The laptop (32 GB, 32 logical CPUs) runs 2 trials in parallel at 8 GB each; wall
+**Compute.** The laptop (32 GB, 32 logical CPUs) runs 2 trials in parallel at 10 GB each (D-034); wall
 clock is bounded by usage windows long before CPU. Disk: ~40–60 GB for two repos under `ABB_HOME`.
 
 ## 7. Risks and mitigations
@@ -189,7 +189,7 @@ clock is bounded by usage windows long before CPU. Disk: ~40–60 GB for two rep
 | Risk | Mitigation |
 |---|---|
 | Repo does not build offline / needs secrets | Phase 0 experiment picks repos by actually building them; stub secrets; drop repos needing an emulator for unit tests. |
-| Gradle memory blow-ups in parallel | Job Object limit 8 GB per trial, `org.gradle.jvmargs=-Xmx3g`, `kotlin.daemon.jvmargs=-Xmx2g`, max 2 parallel on the laptop. |
+| Gradle memory blow-ups in parallel | Job Object limit 10 GB per trial (measured, D-034), `org.gradle.jvmargs=-Xmx3g`, `kotlin.daemon.jvmargs=-Xmx2g`, max 2 parallel on the laptop. |
 | Robolectric downloads at test time | Warm by running tests during `abb env warm` (serially); gate = tests pass as the sandbox user with the proxy stopped. |
 | Claude Code silently updates or switches model | The agent env disables autoupdate/telemetry (version pinned ≥ 2.1.280, the Opus 5.5 floor); the driver calls the pinned `claude.exe` by absolute path and asserts version and `modelUsage`; no `fallbackModel`/`ANTHROPIC_MODEL` set; `switchModelsOnFlag` only if documented. |
 | Agent stalls behind the proxy / firewall | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, `CLAUDE_CODE_PROXY_RESOLVES_HOSTS=1`; Phase 1 gate runs the smoke test as the sandbox user through the proxy. |
