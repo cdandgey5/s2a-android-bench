@@ -51,7 +51,7 @@ already works end to end.
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Foundations (Windows-native): CLI skeleton, platform layer, pinned toolchain, repo selection experiment | not started |
+| 0 | Foundations (Windows-native): CLI skeleton, platform layer, pinned toolchain, repo selection experiment | blocked at step 1: Day-0 (Windows) bootstrap incomplete (2026-10-17, run 2 in `reference/verified.md`) |
 | 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | not started |
 | 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | not started |
 | 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | not started |

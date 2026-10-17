@@ -7,9 +7,14 @@ warm dependency cache, a throw-away workspace, a network boundary, resource limi
 *no state shared between trials* — is provided by the pieces below. Each states the check that
 proves it.
 
-## 1. Layout (`ABB_HOME`, default `%USERPROFILE%\abb`; keep it short, e.g. `G:\abb`)
+## 1. Layout (`ABB_HOME`, default `%USERPROFILE%\abb`; keep it short, e.g. `C:\abb`)
 
-`abb sandbox setup` first **resets inheritance at the root** (`icacls G:\abb /inheritance:r
+`ABB_HOME` must be on a **local NTFS or ReFS (Dev Drive) volume** that no sync client watches. On
+the reference laptop `G:` is Google Drive for desktop (a FAT32 virtual drive that uploads
+everything): no ACLs, 4 GB file limit, cloud sync of every cache — never use it. `abb tools
+install` refuses an `ABB_HOME` on a file system without ACLs (FAT32/exFAT).
+
+`abb sandbox setup` first **resets inheritance at the root** (`icacls C:\abb /inheritance:r
 /grant:r "<harness user>:(OI)(CI)F" "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F"`, and the same
 for `%USERPROFILE%\abb-src`) — otherwise a data-drive root gives *Authenticated Users* Modify and
 the sandbox user could write anywhere not explicitly denied. Then it applies the grants below

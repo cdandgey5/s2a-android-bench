@@ -15,7 +15,7 @@ reported change. Design: `PLAN.md`; contracts: `specs/`; steps: `phases/`.
 
 Windows 11, **no WSL, no Docker**: PowerShell 7 · Git for Windows · `gh` · `uv` · Claude Code
 ≥ 2.1.211 pinned · Console API key with credit + spend alert · `ABB_HOME` on the drive with
-≥ 60 GB free (short path, e.g. `G:\abb`) · the plan copied out of OneDrive to
+≥ 60 GB free on local NTFS (short path, e.g. `C:\abb`; not the Google Drive `G:`) · the plan copied out of OneDrive to
 `%USERPROFILE%\abb-src` with a private GitHub remote · decisions written down: pinned model + its
 training-cutoff date (D-001), Claude Code version, first two repos (default AntennaPod +
 Wikipedia Android), dev budget per trial (default $5). One elevated step comes later (Phase 1:

@@ -29,20 +29,22 @@ checksummed zips into `ABB_HOME\tools`.
 
 ## 2. Disk and location
 
-- Free space: C: has ~85 GB, G: ~80 GB. Without container images the plan needs ~40–60 GB for two
-  repos (toolchain ~2 GB, warm Gradle caches 5–10 GB per repo, mirrors, workspaces, results).
-  Put the data root on the drive with the most space and keep the path short:
+- Free space: C: (NTFS) has ~90 GB free. Without container images the plan needs ~40–60 GB for
+  two repos (toolchain ~2 GB, warm Gradle caches 5–10 GB per repo, mirrors, workspaces, results).
+- **Not G:.** `G:` on this laptop is Google Drive for desktop — a FAT32 virtual drive that mirrors
+  C:'s free space and uploads everything written to it. No ACLs (the Phase 1 sandbox depends on
+  them), a 4 GB file limit, and every Gradle cache would sync to the cloud. Use C: with a short path:
 
 ```powershell
-[Environment]::SetEnvironmentVariable("ABB_HOME", "G:\abb", "User")
-[Environment]::SetEnvironmentVariable("ABB_RESULTS_DIR", "G:\abb\results", "User")
+[Environment]::SetEnvironmentVariable("ABB_HOME", "C:\abb", "User")
+[Environment]::SetEnvironmentVariable("ABB_RESULTS_DIR", "C:\abb\results", "User")
 # optional convenience: the shared tool launchers (specify.exe, s2a.exe) on your PATH; the harness uses absolute paths anyway
-[Environment]::SetEnvironmentVariable("Path", "$([Environment]::GetEnvironmentVariable('Path','User'));G:\abb\tools\bin", "User")
-New-Item -ItemType Directory -Force G:\abb | Out-Null
+[Environment]::SetEnvironmentVariable("Path", "$([Environment]::GetEnvironmentVariable('Path','User'));C:\abb\tools\bin", "User")
+New-Item -ItemType Directory -Force C:\abb | Out-Null
 ```
 
 - Optional but recommended for Gradle speed: a **Dev Drive** (ReFS) for `ABB_HOME`, and a Windows
-  Defender **exclusion** for `G:\abb` (Settings → Virus & threat protection → Exclusions). Both are
+  Defender **exclusion** for `C:\abb` (Settings → Virus & threat protection → Exclusions). Both are
   your call; the plan works without them, slower.
 
 ## 3. Key and budget

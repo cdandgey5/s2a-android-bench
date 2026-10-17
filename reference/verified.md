@@ -7,10 +7,30 @@ Each entry: date, command run, exact output excerpt, verdict.
 
 | Item | Value | Date |
 |---|---|---|
-| PowerShell 7 version | | |
-| `ABB_HOME` drive and free space | | |
-| Git for Windows version; `core.autocrlf`/`core.eol` | | |
-| Defender exclusion / Dev Drive (yes/no) | | |
+| PowerShell 7 version | not installed (only Windows PowerShell 5.1.26100.9711) | 2026-10-17 |
+| `ABB_HOME` drive and free space | `ABB_HOME` unset. C: NTFS, 928.7 GiB, 90.2 GiB free. G: is Google Drive for desktop (`Win32_LogicalDisk`: FAT32, label "Google Drive", `GoogleDriveFS` running), mirrors C:'s size; unusable for `ABB_HOME` | 2026-10-17 |
+| Git for Windows version; `core.autocrlf`/`core.eol` | 2.44.0.windows.1; `core.autocrlf=true` (system), `core.eol`/`core.longpaths`/`core.filemode` unset (global); `LongPathsEnabled=1` (HKLM) | 2026-10-17 |
+| Defender exclusion / Dev Drive (yes/no) | exclusions not readable without admin; Dev Drive: no (C: is NTFS) | 2026-10-17 |
+
+### Phase 0 step 1 — bootstrap check, run 2 (2026-10-17, Windows-native plan)
+
+Verdict: **FAIL — Day 0 (Windows) not done.** Phase 0 stops here.
+
+| Check | Command | Result | Verdict |
+|---|---|---|---|
+| PowerShell 7 | `Get-Command pwsh` | missing; this shell is 5.1.26100.9711 | **missing** |
+| Git for Windows | `git --version` | 2.44.0.windows.1 | ok |
+| `gh` + auth | `Get-Command gh` | not installed | **missing** |
+| `uv` | `Get-Command uv` | not installed | **missing** |
+| Claude Code | `& "$env:USERPROFILE\.local\bin\claude.exe" --version` | 2.1.197; plan needs ≥ 2.1.211; `toolchain.yaml` `claude_code.version: TODO_PIN` | **too old, not pinned** |
+| `ABB_HOME` | process + user env | unset (`ABB_RESULTS_DIR` unset too) | **missing** |
+| Disk for `ABB_HOME` | `Win32_LogicalDisk` | C: NTFS 90.2 GiB free ≥ 60 GB; G: is Google Drive (FAT32), not usable | ok on C: |
+| `ANTHROPIC_API_KEY` | process + user env | unset | **missing** |
+| Pinned model ids (`/v1/models`) | — | not run: no API key | **not checked** |
+| Working clone `%USERPROFILE%\abb-src` | `Test-Path` | absent; the only repo is the OneDrive folder (commits `2f09972`, `3bd3122`) | **missing** |
+| `git remote -v` | — | no remote | **missing** |
+| D-001 training-cutoff date | `docs/DECISIONS.md` | still TODO | **missing** |
+| `winget` | `Get-Command winget` | present (for the Day 0 installs) | ok |
 
 ### Phase 0 step 1 — bootstrap check, run 1 (2026-10-17, from the Windows host; WSL absent) — SUPERSEDED
 
