@@ -91,7 +91,9 @@ approval pauses), `--max-turns 200`, `--max-usd 15`, `--timeout-min 45`,
 
 Exit codes: 0 = report written with verdict ACCEPT; 2 = finished with verdict REJECT after the
 fix loop (report explains); 3 = stopped at a gate that could not be passed; 4 = budget/timeout
-exhausted; 5 = paused for human input (interactive mode); 1 = orchestrator error.
+exhausted; 5 = paused for human input (interactive mode); 6 = the model service refused the
+request (usage limit or authentication) — state is saved and `s2a resume` continues once it is
+available; 1 = orchestrator error.
 
 ## 3. Modes
 
@@ -178,12 +180,12 @@ if some tests fail; those failures become the baseline.
   },
   "assumptions": ["Persist speed per app, not per podcast (ticket does not say)"],
   "exit_code": null,
-  "exit_reason": null              # completed | max_turns | timeout | budget | agent_error | harness_error | gate_failed | paused
+  "exit_reason": null              # completed | max_turns | timeout | budget | agent_error | harness_error | gate_failed | paused | usage_limited | auth_failed
 }
 ```
 
-`exit_reason` uses the benchmark's `ExitReason` enum plus `gate_failed` and `paused`, so Arm C
-maps it directly (exit code 4 alone does not say whether turns, time or money ran out). Per-stage
+`exit_reason` uses the benchmark's `ExitReason` enum plus `gate_failed`, `paused` and
+`auth_failed`, so Arm C maps it directly (exit code 4 alone does not say whether turns, time or money ran out). Per-stage
 `turns_used` is recorded so the benchmark can report where the budget went. With
 `--skip verify` there is no verdict: the run exits 0 when `implement` finished with every gate
 green (`verdict: null` in state and report), 3 otherwise.
@@ -196,8 +198,13 @@ session (this is how context survives fresh sessions).
 ## 7. Driver contract
 
 `s2a/driver.py` implements `run_headless` exactly as `specs/headless-agent-driving.md`
-(flags, verbatim transcript, nudge protocol, PhaseCall records, model assertion), plus one
-harness-health field: `tool_errors` (count of `tool_result` blocks with `is_error`), reported per
+(flags, verbatim transcript, nudge protocol, PhaseCall records, model assertion, **and the probe
+rule**: a stage call that ends without a `success` result and without an explaining subtype
+triggers one probe call, `claude -p "ping" --tools "" --max-turns 1` on the same model, kept
+as `.s2a/runs/<id>/transcripts/probe-<stage>-<n>.jsonl`; limit text or 429 → the orchestrator
+writes `state.json` with `exit_reason: usage_limited` and exits 6 without consuming a fix
+attempt; 401/403 → `exit_reason: auth_failed`, exit 6; probe ok → the stage's own outcome
+stands), plus one harness-health field: `tool_errors` (count of `tool_result` blocks with `is_error`), reported per
 stage in `status`. It runs `claude` as a **local subprocess** of whatever user runs `s2a` (inside
 the benchmark that is the sandbox user; no sandboxing of its own) with the same argv, and enforces its own per-call deadline through its platform
 layer exactly as the benchmark does: the interrupt named in `sandbox.yaml: process.interrupt`
@@ -255,8 +262,11 @@ stack later = one profile file + optional prompt overrides; the orchestrator doe
   `.s2a/runs/<id>/calls.jsonl` → `PhaseCall`s; copies `.s2a/runs/<id>/transcripts/*.jsonl` into
   the trial's `transcript/` and `.s2a/runs/<id>/prompts/*.md` into `prompts/`, rewriting each
   `PhaseCall.transcript_path` to the copied location; maps `state.json.exit_reason` →
-  `exit_reason` (`gate_failed`/`paused` → `agent_error` with a note; **exit code 1 or a missing
-  `state.json` → `agent_error` too — the product crashed; it is never re-run, D-017**); copies `.s2a/runs/<id>/*.md` + `state.json` + `plan.json`
+  `exit_reason` (**`usage_limited` → the trial is `usage_limited`: wiped, re-queued, never
+  counted, scheduler pauses — the same rule as every other arm, `specs/auth-and-usage.md` §3;
+  `auth_failed` → the run aborts with `aborted_reason: auth`**; `gate_failed`/`paused` →
+  `agent_error` with a note; **exit code 1 or a missing `state.json` → `agent_error` too — the
+  product crashed; it is never re-run, D-017**); copies `.s2a/runs/<id>/*.md` + `state.json` + `plan.json`
   to `artifacts/`; and produces the scoped diff against the `base` tag (commits on the `s2a/*`
   branch are part of the diff; `.s2a/` is excluded).
 - Ablations pass `--max-turns 200 − <skipped stage cap>` (`noverify`: 170, `norepro`: 185;

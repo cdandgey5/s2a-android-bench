@@ -16,17 +16,17 @@ Two implementations exist and must stay identical in behaviour:
 | Non-interactive single prompt | `claude -p "<prompt>"` (or prompt on stdin, ≤ 10 MB) |
 | Full transcript + cost | `--output-format stream-json --verbose` |
 | Cap agentic turns | `--max-turns N` → on hit: non-zero exit, result `subtype: "error_max_turns"` |
-| Cap spend | `--max-budget-usd X` → `subtype: "error_max_budget_usd"` (client-side estimate, may overshoot one response) |
+| Cap spend | `--max-budget-usd X` → `subtype: "error_max_budget_usd"` (caps Claude Code's client-side estimate at list price — the only cost figure that exists under a subscription; may overshoot one response) |
 | Continue a session | `claude -p --resume <session_id> "<prompt>"` (sessions made by `-p` are resumable; never pass `--no-session-persistence`) |
 | Skip permission prompts | `--permission-mode bypassPermissions` (= `--dangerously-skip-permissions`). Refused as root/sudo on Linux and macOS only; on Windows just never run the harness as Administrator. Always pass it explicitly (the `-p` default mode varies by version and feature flags). |
 | Deny tools | `--disallowedTools "WebFetch,WebSearch"` (deny rules apply in every mode); arms may deny more in their own calls |
-| Pin model | `--model claude-opus-5-5` — the id as listed by `GET /v1/models` (checked on Day 0); never an alias like `opus`. If the CLI reports a dated snapshot (`claude-opus-5-5-2026…`) in `init.model`/`modelUsage`, the driver matches by prefix and records the resolved id in `run.json` |
+| Pin model | `--model claude-opus-5-5` — the full model id (Phase 0 proves the owner's plan accepts it, else D-001 falls back to `claude-sonnet-5-5`); never an alias like `opus`. If the CLI reports a dated snapshot (`claude-opus-5-5-2026…`) in `init.model`/`modelUsage`, the driver matches by prefix and records the resolved id in `run.json` |
 | System prompt | `--append-system-prompt "<text>"` (keeps Claude Code's defaults; recorded on the first request and reused on `--resume`) |
 | Slash commands | Put `/name args` in the prompt string; Claude Code expands the first one. The `init` event lists `slash_commands`; Phase 5's gate checks it contains `speckit-specify`. |
-| Auth | `ANTHROPIC_API_KEY` env (always used with `-p` when set) |
+| Auth | `CLAUDE_CODE_OAUTH_TOKEN` in the environment block, mapped by the harness from the user variable `ABB_OAUTH_TOKEN` (one-year token from `claude setup-token`); **no** `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN`/cloud flags (an API key would take precedence and "is always used when present" with `-p`); the harness refuses to start if its own environment has `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`; `abb auth check` (`claude.exe auth status` through the launcher → `authMethod: oauth_token`) once per run (`specs/auth-and-usage.md`) |
 | No self-update, no telemetry | Agent env (`config/sandbox.yaml`): `DISABLE_AUTOUPDATER=1 DISABLE_UPDATES=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (a native install otherwise updates itself in the background and would move off the pinned version; feature-flag/telemetry hosts would also be blocked by the firewall and retried). Version floors: `DISABLE_UPDATES` ≥ 2.1.118, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` ≥ 2.1.182, stdin fix on Windows ≥ 2.1.211 → **pin ≥ 2.1.211** |
 | Proxy DNS | `CLAUDE_CODE_PROXY_RESOLVES_HOSTS=1` so the CLI lets the proxy resolve `api.anthropic.com` (a per-user firewall rule does not block DNS — Windows resolves through the `Dnscache` service — but with the proxy doing the lookup nothing else needs name resolution) |
-| Windows specifics | Call the pinned binary by absolute path (`ABB_HOME\tools\claude\<version>\claude.exe`; Claude Desktop can shadow `claude` on PATH). The Bash tool runs Git Bash; `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` is set explicitly so every arm has the same shell set; never deny `Bash` (that would also remove PowerShell). Settings and sessions live in a per-trial `CLAUDE_CONFIG_DIR` (`<trial>\claude-config`, seeded from `ABB_HOME\sandbox\claude-config.template`, `settings.json` deny-write). Credentials are file-based on Windows; the key is passed only via the environment block. |
+| Windows specifics | Call the pinned binary by absolute path (`ABB_HOME\tools\claude\<version>\claude.exe`; Claude Desktop can shadow `claude` on PATH). The Bash tool runs Git Bash; `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` is set explicitly so every arm has the same shell set; never deny `Bash` (that would also remove PowerShell). Settings and sessions live in a per-trial `CLAUDE_CONFIG_DIR` (`<trial>\claude-config`, seeded from `ABB_HOME\sandbox\claude-config.template`, `settings.json` deny-write). Credentials are file-based on Windows; the token is passed only via the environment block. |
 | Background work after final turn | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=60000` so a trial cannot hang 10 min after finishing |
 | Model-switch guard | The certain guard is the `modelUsage` assertion below. No `fallbackModel` setting and no `ANTHROPIC_MODEL` env are set. `~/.claude/settings.json: {"switchModelsOnFlag": false}` is baked in **only if the pinned version documents the key** (two of three checks today found it, one did not — Phase 0 step 5 decides and records) |
 | Do NOT use | `--bare` (skips CLAUDE.md, commands, skills — breaks Spec Kit and repo instructions; docs say it may become the `-p` default, which is why `CLAUDE_CODE_VERSION` is pinned) and `--restricted` (refuses bypassPermissions) |
@@ -98,8 +98,28 @@ Behaviour:
      `claude-haiku-*` key is background usage — record it as `background_models` — any other
      model means a fallback happened: flag `model_drift=True` and treat the call as
      `harness_error` (the pinned-model rule was violated).
-   - A call that ends with **no** `result` line (killed, auth failure, retries exhausted) is
-     `agent_error` with `cost_usd = None`. The driver also computes `cost_usd_imputed` from the
+   - **Usage limit** (subscription): the call is `usage_limited` — not an agent failure; the
+     trial is wiped, re-queued and never counted; the scheduler pauses and probes
+     (`specs/auth-and-usage.md` §3) — when the result/error text matches `hit your (session|
+     weekly|Opus|Sonnet) limit` (a `rate_limit_event`/`error: rate_limit` line naming the plan
+     quota counts too), **or** when the call ends without a `success` result, without an
+     explaining subtype, and the **probe** says the service is unavailable. The probe is skipped
+     for `success`, `error_max_turns` and `error_max_budget_usd` (already explained) and runs
+     right after any other ending (no `result` line, `is_error`, other error subtypes):
+     `claude.exe -p "ping" --tools "" --max-turns 1 --model <the call's model>` through the
+     same launch path, transcript kept **outside the trial** at
+     `<run>/probes/<ts>-<arm>-<task>-t<k>-<n>.jsonl` (never wiped; `abb audit` recounts pauses
+     from these). Outcomes: limit text or 429 → `usage_limited` and the scheduler pause loop;
+     401/403 → the **run** aborts at once with `aborted_reason: auth` (trial directory kept;
+     message points at `abb auth check`); model id rejected or `init.model` mismatch → the run
+     aborts with `aborted_reason: model`; any other probe failure (proxy, launcher) →
+     `harness_error` (re-queued once); probe succeeds → the call's own classification stands.
+     The exact `-p` output on a limit is undocumented — Phase 4 records the first real
+     occurrence verbatim in `reference/verified.md` before any matrix run.
+   - A call with **no `assistant` message at all** is never `agent_error`: `usage_limited` when
+     the probe fails, `harness_error` (re-queued once) when it succeeds.
+   - A call that ends with **no** `result` line after at least one `assistant` message (killed,
+     hung, retries exhausted) and a succeeding probe is `agent_error` with `cost_usd = None`. The driver also computes `cost_usd_imputed` from the
      per-message `usage` blocks seen so far and the model's list price, so means are not biased
      downward for the arm that is killed more often; reports show both.
 3. **Nudge protocol** (the measurable stand-in for "human interventions"):
@@ -176,23 +196,28 @@ The plain arm gets the whole total in one call (`--max-turns 200`). Multi-call a
 ## Smoke test (Phase 0 gate)
 
 Through the harness launch path (`abb ws smoke`, which builds the agent environment block exactly
-as a trial would and runs the pinned `claude.exe`), with `ANTHROPIC_API_KEY` set; the equivalent
-PowerShell by hand:
+as a trial would and runs the pinned `claude.exe`), with the block carrying
+`CLAUDE_CODE_OAUTH_TOKEN` (mapped from `ABB_OAUTH_TOKEN`) and **no** `ANTHROPIC_API_KEY`; the
+equivalent PowerShell by hand (set the variable for that shell only):
 
 ```powershell
+$env:CLAUDE_CODE_OAUTH_TOKEN = $env:ABB_OAUTH_TOKEN      # this shell only; never set it at user level
 & "$env:USERPROFILE\.local\bin\claude.exe" -p --output-format stream-json --verbose --model claude-sonnet-5-5 `
   --max-turns 3 --permission-mode bypassPermissions "Print the current directory and exit." `
   | Tee-Object benchmark\tests\fixtures\transcripts\smoke-success.jsonl | Select-Object -Last 1 `
   | ConvertFrom-Json | Select-Object subtype, total_cost_usd, num_turns, session_id, usage, modelUsage
+```
 
 Must print a `result` with `subtype: "success"` whose `modelUsage` keys start with the
-configured id. Repeat with `--max-turns 1` and a prompt that needs two tool calls → save as
+configured id, and whose `total_cost_usd`/`usage` fields are present under subscription auth
+(record this; if absent, the driver estimates from per-message usage and `config/prices.yaml`).
+Run it once with `--model claude-opus-5-5` and once with `claude-sonnet-5-5`: whichever the plan
+accepts decides D-001. Also run `claude.exe auth status` through the same launch path and
+record `authMethod`. Repeat with `--max-turns 1` and a prompt that needs two tool calls → save as
 `smoke-maxturns1.jsonl` (`subtype: "error_max_turns"`). Third: `abb ws smoke --deadline 20
 "Count slowly to 100 using the shell"` → at 20 s the launcher sends Ctrl+Break (and, in a second run,
 Ctrl+C) → save as `smoke-interrupt.jsonl` and record in `reference/verified.md` whether a
 `result` line was written and what the exit code was for each signal (this decides whether timed-out trials carry a measured or an imputed
 cost; either way it is applied identically to every arm). These three files are the parser
-fixtures Phases 4 and 6 use. If the model id is rejected (404), list the current ids
-(`(irm "https://api.anthropic.com/v1/models?limit=1000" -Headers @{"x-api-key"=$env:ANTHROPIC_API_KEY;
-"anthropic-version"="2023-06-01"}).data.id` — the endpoint pages at 20 by default), update D-001
-and `config/limits.yaml`, and continue. Record `claude --version` in `reference/verified.md`.
+fixtures Phases 4 and 6 use. If a model id is rejected, try the current ids from the model docs with `claude.exe --model <id> -p "ping"`
+(there is no API key to query `/v1/models`), update D-001 and `config/limits.yaml`, and continue. Record `claude --version` in `reference/verified.md`.

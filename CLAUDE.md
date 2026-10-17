@@ -26,9 +26,14 @@ file fully before doing anything.
    per `docs/DAY-0.md`), never under OneDrive; data lives under `ABB_HOME` (toolchain, caches,
    workspaces) and `ABB_RESULTS_DIR`. Agent runs execute as the low-privilege sandbox user
    (`specs/environments.md`).
-6. **Secrets never enter the repo or any config file.** The API key reaches agent processes only
-   through the environment block the platform layer builds, read from the user environment or a git-ignored `.env` (a five-line parser in
-   `abb/config.py`; no dotenv dependency). Log every API-spending activity in `docs/RUNS.md`.
+6. **Secrets never enter the repo or any config file.** There is no API key anywhere in this
+   project. The subscription token from `claude setup-token` lives in the user environment
+   variable `ABB_OAUTH_TOKEN` (or the git-ignored `benchmark/.env`, read by a five-line parser in
+   `abb/config.py`; no dotenv dependency) and reaches agent processes only through the
+   environment block the platform layer builds, where it is named `CLAUDE_CODE_OAUTH_TOKEN`.
+   Never set `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` globally, never print the token,
+   never put it in argv. Log every run (tokens, est. USD, usage-limit pauses) in `docs/RUNS.md`.
+   See `specs/auth-and-usage.md`.
 7. **No employer code.** The S2A arm (Phase 6) is written from scratch in this repo. Do not
    import prompts, skills or scripts from anywhere else.
 8. **Keep the fairness protocol** (`specs/fairness-protocol.md`). In particular: once Phase 7
@@ -40,7 +45,14 @@ file fully before doing anything.
     table current.
 11. **Transcripts are the truth.** `run.json` and `calls.jsonl` are derived; `abb audit` recomputes
     them from the verbatim transcripts for every arm and a report is not valid until it passes.
-12. **Two packages, one contract.** `s2a/` (the framework) and `benchmark/` (the harness) are
+12. **Phases run one per chat, files are the memory.** At every phase gate, and whenever the user
+    says stop or asks for a handoff, rewrite the handoff file (template kept; exact step, what
+    exists, what is verified, blockers, next action), commit and stop. On `main` that file is
+    `docs/HANDOFF.md`; on a parallel-phase branch `phase-<N>` it is `docs/HANDOFF-phase-<N>.md`
+    and `docs/HANDOFF.md` is never touched there (the merge deletes the branch file). A new chat
+    starts from `AGENTS.md` + the handoff file + `git log`; never assume anything from a previous
+    chat that is not in those files.
+13. **Two packages, one contract.** `s2a/` (the framework) and `benchmark/` (the harness) are
     separate Python packages. Neither imports the other: the benchmark shells out to the `s2a`
     CLI, and the only shared things are the headless-driver contract
     (`specs/headless-agent-driving.md`) and the transcript test fixtures. Nothing in `s2a/`

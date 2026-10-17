@@ -30,8 +30,8 @@ Secondary flags (multi-select): `asked_question`, `ignored_repo_conventions`, `w
    summary — no arm name, no artifacts, no transcript (those identify the arm). Record `source:
    manual`. A second, non-blind pass (`--with-transcript`) sets the secondary flags only.
 2. **Refine the taxonomy** if labels don't fit; update this file.
-3. **LLM labeller** (`abb/harness/labeller.py`, Anthropic Python SDK, model `claude-opus-5-5`,
-   structured output with the label enum). Input = the same blind bundle as step 1, output =
+3. **LLM labeller** (`abb/harness/labeller.py`: headless `claude.exe -p --output-format json
+   --json-schema … --tools "" --max-turns 1`, pinned model, subscription auth, no SDK). Input = the same blind bundle as step 1, output =
    `{primary, secondary[], confidence, rationale}`. Run on the manual set first: require
    ≥ 80 % agreement on primary label, else fix the prompt and retry. Then label the rest with
    `source: llm`. Report agreement per arm and note that 80 % on 20–30 items has a ±15 pp CI.

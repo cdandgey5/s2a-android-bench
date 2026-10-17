@@ -56,7 +56,7 @@ CLI: abb env warm <repo> [--warm-commits ...]   abb env verify <repo> [--sandbox
    ```
    The agent's environment block is built from scratch (`config/sandbox.yaml: process.env` with
    the per-trial `home/`, `gradle-home/`, `claude-config/` paths filled in, `GRADLE_RO_DEP_CACHE`,
-   `ANTHROPIC_API_KEY`, `JAVA_HOME`, `ANDROID_HOME`, `PATH` with the toolchain, Git and `tools\bin`
+   `CLAUDE_CODE_OAUTH_TOKEN` (mapped from `ABB_OAUTH_TOKEN`; never an API key), `JAVA_HOME`, `ANDROID_HOME`, `PATH` with the toolchain, Git and `tools\bin`
    only); the harness environment is never inherited. `snapshot()` also creates the per-trial
    dirs, renders `gradle-home\gradle.properties` + `init.d\abb.gradle` (Robolectric offline
    properties), seeds `gradle-home\wrapper\dists` (and `caches\<ver>\transforms` when
@@ -93,8 +93,10 @@ CLI: abb env warm <repo> [--warm-commits ...]   abb env verify <repo> [--sandbox
    checks **as the sandbox user through the launcher**: real `open()` attempts on every denied path
    (mirror, pristine cache, results, repo clone — expect `PermissionError`), read-only on
    `gradle-ro`, `curl.exe https://github.com` (must fail) while the same command succeeds as the
-   harness user, `curl.exe -x http://127.0.0.1:8888 https://api.anthropic.com/v1/models` (HTTP
-   status), and the Claude smoke test through the proxy (must succeed, no retries); it also confirms that
+   harness user, `curl.exe -x http://127.0.0.1:8888 https://api.anthropic.com/v1/models` (any HTTP
+   status — a 401 is fine, there is no key; it proves the proxy forwards), and the Claude smoke test through the proxy **as the sandbox user** (must succeed, no retries —
+   this is also the proof that the subscription token is honoured under `abb-agent` with no
+   profile; record it in `reference/verified.md`); it also confirms that
    `claude.exe`, `git`, `pwsh` and `gradlew.bat` work without a loaded profile.
    `abb sandbox install-s2a` (Phase 6) runs `uv tool install` of `s2a` as the harness user into
    `tools\bin`; `--refresh` re-applies ACLs and re-copies `claude.exe` after a version change.

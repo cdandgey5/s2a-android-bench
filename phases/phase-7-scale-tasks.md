@@ -7,9 +7,10 @@ caches warmed for every base commit; dev/test split frozen with a seed.
 tooling (lint, validate) lands while this phase is under way. Starts mid-Phase 2 in its own
 session and branch; runs alongside Phases 3–6. Repo #3 (and #4) environments are built **in this phase**
 (Phase 0 step 6 + Phase 1 for each; ~1 week hidden here). **Author isolation (D-019):** this
-session's checkout must not contain `s2a/`: `git clone --no-checkout <remote> ~/abb-tasks && cd
-~/abb-tasks && git sparse-checkout init --no-cone && git sparse-checkout set '/*' '!/s2a/' && git
-checkout -b phase-7 main` (non-cone mode is required to exclude a directory). `tasks/TRIAGE.md`
+session's checkout must not contain `s2a/`: the PowerShell block in `START-HERE.md` §3 clones
+`<remote>` with `--no-checkout` into `%USERPROFILE%\abb-tasks`, runs `git sparse-checkout init
+--no-cone` and `git sparse-checkout set "/*" "!/s2a/"` (non-cone mode is required to exclude a
+directory), and creates branch `phase-7` from `main`. Every chat of this phase is opened there. `tasks/TRIAGE.md`
 entries are timestamped. Shared-machine rules: this is the only session that re-warms
 `caches\gradle\<repo>`; it never runs `abb env prune` while another session has a run active.
 

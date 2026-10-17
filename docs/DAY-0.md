@@ -1,4 +1,4 @@
-# Day 0 — human bootstrap on Windows (about one hour, once)
+# Day 0 — human bootstrap on Windows (about two hours, once)
 
 Everything below is done by you, not by the agent, because it needs installers, an account, or an
 elevated PowerShell. No WSL, no Docker. When it is done, open Claude Code in `%USERPROFILE%\abb-src`
@@ -46,25 +46,42 @@ New-Item -ItemType Directory -Force C:\abb | Out-Null
 - Optional but recommended for Gradle speed: a **Dev Drive** (ReFS) for `ABB_HOME`, and a Windows
   Defender **exclusion** for `C:\abb` (Settings → Virus & threat protection → Exclusions). Both are
   your call; the plan works without them, slower.
-
-## 3. Key and budget
-
-- A **Console API key** with credit. Store it for your user (never in the repo):
-
-```powershell
-[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", "sk-ant-...", "User")
-```
-
-- Set a **spend alert** in the Console; decide the dev cap per trial (`benchmark/config/limits.yaml:
-  profiles.dev.max_usd`, default 5.0).
-- Confirm both pinned model ids exist (new terminal so the variable is loaded):
+- **Power.** Runs last hours and usage-limit pauses can last longer. While a run is active keep
+  the laptop on AC with sleep off — sleep suspends every trial and their wall-clock deadlines
+  fire on wake:
 
 ```powershell
-(irm "https://api.anthropic.com/v1/models?limit=1000" -Headers @{ "x-api-key" = $env:ANTHROPIC_API_KEY; "anthropic-version" = "2023-06-01" }).data.id | Select-String -Pattern '^claude-(opus|sonnet)-5-5$'
+powercfg /change standby-timeout-ac 0
+powercfg /change hibernate-timeout-ac 0
 ```
 
-Both must print; otherwise write the current ids into `docs/DECISIONS.md` D-001 and
-`benchmark/config/limits.yaml`.
+  Restore your usual values afterwards (`powercfg /q` shows them).
+
+## 3. Subscription token (no API key)
+
+The benchmark's headless runs use your subscription through a one-year token — no API key, no
+Console account. In PowerShell 7, logged in to Claude Code as usual:
+
+```powershell
+& "$env:USERPROFILE\.local\bin\claude.exe" setup-token      # prints a token; it is not saved anywhere
+$t = Read-Host -MaskInput "ABB_OAUTH_TOKEN"                 # paste it here, masked: never as a literal on a command line (shell history)
+[Environment]::SetEnvironmentVariable("ABB_OAUTH_TOKEN", $t, "User"); Remove-Variable t
+[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", $null, "User")        # no API key anywhere: it would win over the token
+[Environment]::SetEnvironmentVariable("CLAUDE_CODE_OAUTH_TOKEN", $null, "User")  # must NOT be set globally (next paragraph)
+```
+
+The token expires after a year: repeat these lines then (`abb auth check` tells you when it
+has stopped working).
+
+The variable is deliberately **not** named `CLAUDE_CODE_OAUTH_TOKEN`: that name is read by every
+Claude Code session on this machine, outranks your login, and a token session cannot use Remote
+Control or claude.ai connectors — set globally it would silently turn every building chat into a
+CI session. Only the harness maps `ABB_OAUTH_TOKEN` to `CLAUDE_CODE_OAUTH_TOKEN`, inside each
+trial's environment block (`specs/auth-and-usage.md` §1). Phase 0 verifies it (`abb auth check`).
+Know your plan's usage limits (session and weekly; Opus has its own): the runner pauses and
+probes automatically when a limit is hit, and `PLAN.md` §6 plans the runs around the windows.
+Read `specs/auth-and-usage.md` §5 once — it explains why the final matrix is a decision you make
+before the freeze.
 
 ## 4. The working clone (out of OneDrive)
 
@@ -99,17 +116,19 @@ sets the NTFS denies. Nothing is installed as that user (it has no network); it 
 | Pinned model and its **training-cutoff date** (from the model docs) | `docs/DECISIONS.md` D-001 |
 | Claude Code version pinned (from step 1) | `benchmark/config/toolchain.yaml` |
 | First two repos (default: AntennaPod, Wikipedia Android) | `docs/DECISIONS.md` D-003 (the agent fills in evidence) |
-| Dev budget per trial and total for the first six weeks | `benchmark/config/limits.yaml`, `PLAN.md` §6 |
+| Your plan (Pro / Max 5x / Max 20x) and whether `--model claude-opus-5-5` is allowed on it (Phase 0 smoke test decides the pin) | `docs/DECISIONS.md` D-001 |
 | `ABB_HOME` drive, Dev Drive yes/no, Defender exclusion yes/no | this file; `reference/verified.md` |
 
 ## 7. Start
 
-Open a **new** PowerShell 7 window (so the user-level variables are loaded), then:
+Open Claude Code on `%USERPROFILE%\abb-src` — either the desktop app's Code tab pointed at that
+folder, or a **new** PowerShell 7 window (so the user-level variables are loaded):
 
 ```powershell
 Set-Location "$env:USERPROFILE\abb-src"
 & "$env:USERPROFILE\.local\bin\claude.exe"
 ```
 
-Paste the Phase 0 kickoff prompt from `START-HERE.md`. The agent's first step is to verify
+Either way it runs on your normal login (the token is under a name Claude Code never reads).
+Paste the Phase 0 kickoff prompt from `START-HERE.md` §2. The agent's first step is to verify
 everything above and stop if something is missing.

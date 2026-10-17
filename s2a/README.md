@@ -16,6 +16,9 @@ Build plan: `../phases/phase-6-s2a-orchestrator.md`. Seeds in `s2a/s2a/`: `pipel
 `profiles/android.yaml`, `prompts/*.md` (they ship inside the package). The Python modules are
 built in Phase 6.
 
-Requires Claude Code on the PATH and `ANTHROPIC_API_KEY`. Exit codes: 0 verified change; 2
+Requires Claude Code (pinned); it uses whatever auth that `claude.exe` has — your normal login
+when you run it yourself, or a `CLAUDE_CODE_OAUTH_TOKEN` placed in its environment by whoever
+starts it headlessly. No API key needed. Exit codes: 0 verified change; 2
 finished but the independent verifier still rejects (see the report); 3 a gate could not be
-passed; 4 budget/time exhausted; 5 paused for your input (`--interactive`).
+passed; 4 budget/time exhausted; 5 paused for your input (`--interactive`); 6 the model service
+refused the request (usage limit or authentication) — state is saved, `s2a resume` continues.

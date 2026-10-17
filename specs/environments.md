@@ -187,15 +187,17 @@ misbehaves: `pwsh Start-Process -Credential … -WindowStyle Hidden` (same short
 inherited): `sandbox.yaml: process.env` with the per-trial paths filled in (`USERPROFILE`,
 `HOME`, `TEMP`, `TMP`, `APPDATA`, `LOCALAPPDATA` → `<trial>\home`; `JAVA_TOOL_OPTIONS`;
 `ANDROID_USER_HOME`; `GRADLE_USER_HOME`; `GRADLE_RO_DEP_CACHE`; `CLAUDE_CONFIG_DIR`) +
-`ANTHROPIC_API_KEY` + `JAVA_HOME=tools\jdk<N>` + `ANDROID_HOME` + `PATH` (toolchain, Git,
-`tools\bin` only). Two parallel trials therefore share nothing writable even though both run as
+`CLAUDE_CODE_OAUTH_TOKEN` (the subscription token, mapped from the harness user's
+`ABB_OAUTH_TOKEN`; never an API key — `specs/auth-and-usage.md`) +
+`JAVA_HOME=tools\jdk<N>` + `ANDROID_HOME` + `PATH` (toolchain, Git, `tools\bin` only). Two parallel trials therefore share nothing writable even though both run as
 `abb-agent`.
 
 **Verification** (`abb env verify <repo> --sandbox user` and `abb sandbox check`, run as the
 sandbox user through the launcher with real file reads and real network attempts): denied paths
 raise access-denied on read and on create; `git -C <mirror> log` fails; `curl.exe
 https://github.com` fails (and succeeds for the harness user); `curl.exe -x
-http://127.0.0.1:8888 https://api.anthropic.com/v1/models` returns an HTTP status; the Claude
+http://127.0.0.1:8888 https://api.anthropic.com/v1/models` returns an HTTP status (401 is
+fine — no key, it proves the proxy forwards); the Claude
 smoke test through the launcher succeeds; the repo's unit tests run offline from a fresh
 workspace **with a freshly seeded `gradle-home`** in < 10 min (no `Could not resolve`, no
 `android-all` download, no wrapper download).
@@ -206,8 +208,10 @@ Job-wide memory limit per trial (`memory_mb`, default 8 GB — **confirmed in Ph
 measuring peak job memory for a module with two Robolectric test workers; raise it if a JVM
 dies), Gradle `org.gradle.jvmargs=-Xmx3g`, Kotlin in-process; `--no-daemon` everywhere the
 harness runs Gradle. 32 GB laptop → 2 trials in parallel (`abb run --parallel 2`). The final run
-can stay on the laptop (~504 trials × ~15 min ÷ 2 ≈ 60 h, three nights) or move to a rented
-**Windows** VM set up by `scripts/vm-setup.ps1` (same `abb tools install`, same fingerprints).
+can stay on the laptop (~504 trials × ~15 min ÷ 2 ≈ 60 h of compute — but under a
+subscription the real bound is usage windows, so it is spread over days or weeks of batches,
+`specs/auth-and-usage.md` §3) or move to a **Windows** VM set up by `scripts/vm-setup.ps1`
+(same `abb tools install`, same fingerprints; it uses the same token, one account).
 
 ## 7. Windows-specific pitfalls the harness handles
 

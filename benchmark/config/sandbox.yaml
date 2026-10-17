@@ -32,6 +32,9 @@ process:
   per_trial_dirs: [work, home, gradle-home, claude-config, agent-out]   # created fresh; nothing writable is shared between trials
   seed_gradle_home: [wrapper/dists]       # copied from caches/gradle-pristine/$REPO into $TRIAL/gradle-home before launch
   seed_transforms: false                  # also copy caches/<version>/transforms (Phase 1 measures cold-trial time and decides)
+  auth: oauth_token           # the harness user's ABB_OAUTH_TOKEN (user env or git-ignored .env) is placed in the block as CLAUDE_CODE_OAUTH_TOKEN;
+                              # the block NEVER contains ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN or CLAUDE_CODE_USE_BEDROCK/VERTEX/FOUNDRY;
+                              # the harness refuses to start if ITS OWN environment has CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY (specs/auth-and-usage.md)
   env:                        # added to every agent environment block (never inherit the harness env); $-paths are filled in by the runner
     HTTPS_PROXY: http://127.0.0.1:8888
     HTTP_PROXY: http://127.0.0.1:8888

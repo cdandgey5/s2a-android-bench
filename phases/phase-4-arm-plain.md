@@ -4,7 +4,7 @@
 sequential runner, and a report that prints **real numbers** for dev5. This is the milestone
 that proves the whole pipeline.
 
-**Prerequisites.** Phase 3 gate. `ANTHROPIC_API_KEY` available. Dev model `claude-sonnet-5-5`.
+**Prerequisites.** Phase 3 gate. `ABB_OAUTH_TOKEN` set and `abb auth check` green (subscription; no API key). Dev model `claude-sonnet-5-5`.
 
 **Effort.** ~1 week part-time.
 
@@ -23,6 +23,7 @@ benchmark/abb/arms/plain/prompts/system.md   # plain-specific lines appended aft
 benchmark/abb/arms/plain/prompts/task.md     # prompt template with {{ticket}}
 benchmark/abb/harness/setup.py            # one_time_setup support + results/_setup_cache (no-op for plain; used by Phases 5, 6, 8)
 benchmark/abb/harness/audit.py            # `abb audit <run_id>`: recompute totals from transcripts, fail on mismatch
+benchmark/config/prices.yaml              # list prices per model id, dated; used only for cost_usd_imputed and the fallback estimate
 benchmark/abb/harness/run.py              # minimal: one arm, sequential, writes results layout
 benchmark/abb/harness/report.py           # minimal table + setup section (grows in Phase 9)
 benchmark/abb/arms/plain/prompts/guided.md   # plain-guided control: the S2A workflow described in prose
@@ -47,7 +48,15 @@ CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label �
    nudge protocol with both caps (2 per call, 4 per trial), prompt saving/hashing, verbatim
    transcript streaming, timeout via the workspace exec timeout (124/137 → timeout; 143 →
    agent_error), model/version assertions (`init`, `modelUsage`), and budget bookkeeping
-   (`limits_left` mutated). Redact the API key from any logged argv/env.
+   (`limits_left` mutated). Redact the OAuth token from any logged argv/env. Implement the
+   `usage_limited` outcome and the **probe** (`specs/headless-agent-driving.md` §2,
+   `specs/auth-and-usage.md` §3): limit text → `usage_limited`; any call without a `success`
+   result and without an explaining subtype → run the probe through the launch path, keep its
+   transcript under `<run>/probes/` (outside the trial), and classify from it (limit/429 →
+   `usage_limited`; 401/403 → abort `auth`; model rejected → abort `model`; other → `harness_error`;
+   ok → the call's own outcome; no `assistant` message + probe ok → `harness_error`); parse
+   `resets <time>` when present; surface `paused_until` (hint) to the runner. Fixtures: add
+   `probe-ok.jsonl` and a hand-written `probe-limited.jsonl` until the canary replaces it.
 3. **Confirm question handling in `-p` mode.** The docs (2026-10) say an `AskUserQuestion`
    call is denied with no permission host, the model is told nobody can approve, the run
    continues, and the denial appears in `result.permission_denials`. Confirm once on the pinned
@@ -104,7 +113,15 @@ CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label �
    (≥ 2.1.211), reinstall for both users (`abb tools install`, `abb sandbox setup --refresh`), and
    record it in `env.lock.json`.
 8. **Run dev5 × 1 trial on Sonnet 5.5.** Then run it again (trial 2) to see variance. Keep both
-   run ids in `docs/RUNS.md` with a one-line note each (this file is the lab notebook from now on).
+   run ids in `docs/RUNS.md` with tokens, est. USD and a one-line note each (this file is the lab
+   notebook from now on). Record **trials completed per session window** — the number `PLAN.md`
+   §6 uses for dev scheduling. **Usage-limit canary:** the first time any trial ends on a usage
+   limit, copy the exact transcript tail, stderr, error text and exit code into
+   `reference/verified.md` and adjust the detector. If dev5 × 2 never hits a limit, run
+   `abb ws smoke --until-limit --max-calls 200` once when the window is nearly spent (loops the
+   probe prompt through the launcher until the limit answers or the cap is reached; costs the
+   rest of that window and locks your chats out until it resets) — Phase 8
+   refuses `--tasks test` or > 30-trial runs without the canary unless `--allow-no-canary`.
 9. Commit `phase 4: plain arm + first results`.
 
 ## Acceptance gate
@@ -131,4 +148,5 @@ drives the budget in PLAN.md §6).
   the plain arm but not for others — the version pin protects you; re-check on every upgrade.
 - The nudge heuristic will have false positives (a summary ending in "?"). Cap is 2; the cost
   is one extra short turn. Accept it; it is identical across arms.
-- Keep `--max-budget-usd` ≥ 3× the observed mean so it only catches runaways.
+- Keep `--max-budget-usd` ≥ 3× the observed mean so it only catches runaways (it caps the
+  client-side estimate; there is no bill).

@@ -9,7 +9,8 @@ Unit of analysis: one `metrics.json` row per (arm, task, trial).
 | **pass@1** | For each (arm, task): `resolved_trials / trials`. Arm value = mean over tasks. |
 | **pass^k** (k = trials = 3) | For each (arm, task): 1 if all trials resolved else 0. Arm value = mean over tasks. |
 | **pass@any** | 1 if any trial resolved. Reported but not headline (optimistic). |
-| **Cost per task** | Mean over (task, trial) of `cost_usd` (trials with a null cost use `cost_usd_imputed` and are counted in a "null-cost share" column). Also median and p90. Setup cost shown in its own column. |
+| **Tokens per task** | Mean/median over (task, trial) of input, output and cache tokens — the primary cost unit under a subscription. |
+| **Est. cost per task** | Mean over (task, trial) of `cost_usd` — Claude Code's client-side estimate at API list price ("est. API-equivalent USD"; there is no bill) (trials with a null cost use `cost_usd_imputed` and are counted in a "null-cost share" column). Also median and p90. Setup cost shown in its own column. |
 | **Cost per resolved task** | Σ cost / Σ resolved. |
 | **Interventions per trial** | Mean `interventions` (capped at 4 per trial for every arm); share of trials with ≥ 1; also per call. |
 | **Wall-clock per trial** | Mean/median `duration_ms`. |

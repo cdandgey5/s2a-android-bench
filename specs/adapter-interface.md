@@ -16,7 +16,8 @@ ExitReason = Literal[
     "max_turns",          # hit the per-call or total turn budget
     "timeout",            # harness-initiated stop at the deadline (stopped_by_harness)
     "budget",             # --max-budget-usd tripped
-    "agent_error",        # non-zero exit, error_during_execution, no result line, orchestrator crash
+    "agent_error",        # non-zero exit, error_during_execution, no result line (probe ok), orchestrator crash
+    "usage_limited",      # model service refused (subscription window; probe failed): trial wiped, re-queued, never counted
     "harness_error",      # OUR bug (platform failure, transcript unparsable, model drift); trial is re-runnable
 ]
 

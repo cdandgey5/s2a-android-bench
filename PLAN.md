@@ -108,7 +108,7 @@ accidental reads, not a boundary; clone recipe in START-HERE.md §3).
 
 | Area | Decision | Why |
 |---|---|---|
-| Model | One pinned model for every arm in the final run: **`claude-opus-5-5`** (confirmed against `/v1/models` on Day 0; if Claude Code reports a dated snapshot id, the driver matches by prefix and records the resolved id). Development runs use **`claude-sonnet-5-5`** with a $5/trial cap. The driver asserts the model from the `init` event and `modelUsage`; the agent environment disables Claude Code autoupdate and telemetry (D-001, D-021). | Changing model and workflow at once makes the comparison uninterpretable. |
+| Model | One pinned model for every arm in the final run: **`claude-opus-5-5`** if the Phase 0 smoke test accepts it on the owner's plan, else `claude-sonnet-5-5` for everything (if Claude Code reports a dated snapshot id, the driver matches by prefix and records the resolved id). Development runs use **`claude-sonnet-5-5`** with a $5/trial estimate cap. The driver asserts the model from the `init` event and `modelUsage`; the agent environment disables Claude Code autoupdate and telemetry (D-001, D-021). | Changing model and workflow at once makes the comparison uninterpretable. |
 | Agent runtime | Claude Code in headless mode (`claude.exe -p …`), launched natively on Windows as the sandbox user through the platform layer, for all arms; the s2a CLI uses the same driver contract. | Same tools, same permissions, same sandbox for every arm. |
 | Tests | JVM unit tests only (JUnit, Robolectric, Compose-under-Robolectric, Roborazzi/Paparazzi). No emulator in v1. | Fast, deterministic, cheap. |
 | Grading | SWE-bench style: revert agent edits under test dirs **and protected build paths** (wrapper, buildSrc, build files unless gold touches them), apply hidden test patch, `cleanTest`, F2P must pass, P2P must still pass with a one-shot flakiness re-run; `test_compile_failed` reported separately (D-020, D-022, D-023). | Prevents gaming; catches regressions; separates task-quality problems from agent failures. |
@@ -121,6 +121,7 @@ accidental reads, not a boundary; clone recipe in START-HERE.md §3).
 | Trials | 3 per (arm, task). pass@1 and pass^3. Paired bootstrap over tasks. Honesty about power: ~±18–20 pp detectable at the headline n ≈ 28; ~±15 pp only on the exploratory all-task breakdowns. | Agents are stochastic; paired design is the most powerful we can afford. |
 | Repos | **AntennaPod** (Java/XML/multi-module, GPL-3.0) and **Wikipedia Android** (Kotlin/single-module, Apache-2.0) first; **Thunderbird for Android** (Kotlin/Compose/multi-module, Apache-2.0, JDK 21) if its warm unit-test run is < 10 min; **NewPipe** as 4th. Tusky is archived → deprioritised. Avoid *Now in Android*. | See `reference/repo-candidates.md`. |
 | S2A design | Standalone orchestrator (`s2a/`): deterministic Python, fixed stages with machine-checked gates, fresh sessions per stage and per implement task, reproduce/characterize before any change, independent verifier with the verdict derived in code, bounded fix loop under the same gates, resumable state, autonomous default, Android profile first; ablations as `--skip` with the skipped stage's turns removed (D-015, D-016). | Gated workflows beat free-running agents on predictability; the brownfield literature agrees. |
+| Auth & usage | Subscription only, no API key: building in Claude Code on the owner's login, headless trials via a `claude setup-token` OAuth token stored as `ABB_OAUTH_TOKEN` and mapped to `CLAUDE_CODE_OAUTH_TOKEN` only inside the trial block (never under the repo or `ABB_HOME`), `ANTHROPIC_API_KEY` scrubbed; tokens are the primary cost unit, `cost_usd` is est. API-equivalent; usage limits pause the runner, never count against a trial; the held-out matrix's auth is a PREREG decision (D-025). | The owner has no API key and does not plan to use one. |
 | Platform | **Windows-first, no WSL, no Docker.** PowerShell 7 for humans; Python 3.12 (`uv`) for everything else; Typer, pydantic, PyYAML, pandas, matplotlib, keyring, pywin32/ctypes — the OS-specific parts only inside `abb/harness/platform/` and `s2a/s2a/platform/` (`specs/platform-layer.md`); macOS later via `posix.py`; no `.sh` scripts anywhere. MIT (D-024). | The owner develops and runs on Windows; the framework must be independent of any one OS. |
 
 ## 5. Timeline
@@ -144,28 +145,32 @@ reference fixes for authored tasks, reviewing maps, hand-labelling failures).
 | 10 | `docs/PREREG.md` committed; dev-set confirmation on the pinned model; freeze tag; held-out run (three laptop nights or a Windows VM). |
 | 11 | Phase 9 applied to the held-out run; write-up; README; publish. |
 
-## 6. Budget
+## 6. Usage (there is no API bill)
 
-**Compute.** The laptop (32 GB, 32 logical CPUs) runs 2 trials in parallel at 8 GB each. The
-final run (~504 trials × ~15 min ÷ 2 ≈ 60 h) fits in three nights on the laptop; a rented
-Windows VM (`scripts/vm-setup.ps1`) is optional. Disk: ~40–60 GB for two repos under `ABB_HOME`.
+Everything runs on the owner's Claude subscription: the building chats in Claude Code and the
+headless trials through a one-year `claude setup-token` token (`specs/auth-and-usage.md`). There
+is no per-token charge, so **tokens are the primary cost metric** and `cost_usd` is reported as
+"est. API-equivalent USD" (Claude Code's own client-side estimate at list price). The binding
+constraint is the plan's **usage windows** (session and weekly limits; Opus has its own):
 
-**API spend — measure before estimating.** Phase 4's gate records cost per run for 5 tasks per
-arm in `docs/RUNS.md`. Until then, size the risk with:
+- The runner pauses on a usage limit and probes its way back (reset time is only a hint);
+  paused trials are re-run from scratch and not counted (`usage_limited`), identically for
+  every arm. Any call that got no model response at all is never counted as an agent failure.
+- Phase 4's gate measures **trials per session window** for the plain arm on Sonnet — the
+  number for scheduling dev work. The held-out run is planned from the **Opus dev-set
+  confirmation run** (Phase 10 prerequisite), per arm: Opus has its own limit and multi-stage
+  arms use 2–5× the tokens, so the Sonnet figure is the wrong input for it.
+- Dev work uses `claude-sonnet-5-5` (its own, larger limit) and keeps the Opus window for the
+  pinned runs. `profiles.dev.max_usd: 5` and `--max-usd` cap the *estimate* and remain the
+  runaway guards.
+- Sizing (upper bound, before measurement): test tasks ≈ 28; `runs_final = 28 × 6 arms × 3 = 504`;
+  `runs_optional = 28 × 3 × 1 = 84`; `runs_dev ≈ 430`. Under a subscription this is weeks of
+  windows, not days — the MVP cut (§9) is the realistic default, and the **held-out run is a
+  decision recorded in `docs/PREREG.md: auth_mode`** (subscription in batches, or ask Anthropic
+  first; the docs reserve OAuth for "ordinary, individual usage" — `specs/auth-and-usage.md` §5).
 
-```
-test tasks    ~ 28 (40 x 0.7)
-runs_final    = 28 x 6 arms (plain, plain-guided, speckit, s2a, s2a-nomap, s2a-noverify) x 3 = 504
-runs_optional = 28 x 3 arms (plain-gate, s2a-norepro, speckit-sdd) x 1                     =  84
-runs_dev      ~ 12 dev tasks x ~6 arms x ~6 iterations                                     ~ 430
-cost ~ sum over runs of cost_per_run(arm)
-```
-
-Multi-phase arms (B, C) typically spend 2–5× the tokens of the plain arm; S2A's gates add
-Gradle time but no tokens. Dev runs use `claude-sonnet-5-5` with `profiles.dev.max_usd: 5`;
-only the final run and the last dev-set confirmation use the pinned `claude-opus-5-5`. Hard
-guard: `abb run --max-usd N`. Weeks 1–2 spend only smoke tests and validation (no agent runs):
-budget tens of dollars; set a Console spend alert before Phase 4.
+**Compute.** The laptop (32 GB, 32 logical CPUs) runs 2 trials in parallel at 8 GB each; wall
+clock is bounded by usage windows long before CPU. Disk: ~40–60 GB for two repos under `ABB_HOME`.
 
 ## 7. Risks and mitigations
 
@@ -186,7 +191,8 @@ budget tens of dollars; set a Console spend alert before Phase 4.
 | Hidden tests encode the gold interface | Interface rule + lint in Phase 2; `test_compile_failed` reported per arm; V0/V1 validation handles new-surface tasks. |
 | Author bias (we wrote tasks and S2A) | PREREG: primary = all test tasks, with a pre-registered robustness check on historical post-cutoff tasks (the mitigation for the ~35 % authored tasks inside the headline denominator) and authored tasks shown separately; task-set hash before tuning; worktree hygiene for authoring/tuning sessions (not a boundary — the author knows both sides, and the README says so). |
 | Disk exhaustion | ≥ 60 GB on the `ABB_HOME` drive; `abb env prune`; cache sizes printed by `abb env fingerprint`. |
-| Cost overrun | `--max-usd`, dev cap $5/trial, measure 5 tasks per arm first, Console alert. |
+| Usage-limit stalls | Runner pauses and probes its way back (the parsed reset time is only the first wake-up); `usage_limited` trials re-queued for every arm equally, including inside the S2A orchestrator; throughput measured in Phase 4 before any matrix is scheduled. |
+| Subscription policy for bulk headless runs | Dev-scale runs are ordinary personal use; the held-out matrix is an explicit PREREG decision (batches under the subscription, or ask Anthropic); no API key is assumed anywhere (`specs/auth-and-usage.md` §5). |
 | Too few tasks for significance | Say so; report CIs; one primary comparison; 28 test tasks detect ~±18–20 pp differences only (40 tasks ~±15 pp on exploratory breakdowns); PREREG prints the detectable delta. |
 | Timeline slip | §9 MVP cut, decided when the first results table exists (target end of week 5). |
 | Licensing | Tasks derived from GPL repos carry a GPL notice; repos referenced by URL + commit. |

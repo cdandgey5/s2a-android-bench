@@ -6,7 +6,9 @@ the first two repositories, and one seed task so every later harness piece has a
 
 **Prerequisites (done by the human — `docs/DAY-0.md`).** Windows 11, PowerShell 7, Git for
 Windows, `gh` (authenticated), `uv`, Claude Code ≥ 2.1.211 pinned and its version written into
-`benchmark/config/toolchain.yaml`; `ANTHROPIC_API_KEY` as a user environment variable; `ABB_HOME`
+`benchmark/config/toolchain.yaml`; the subscription token from `claude setup-token` as the user
+environment variable `ABB_OAUTH_TOKEN`, with **no** `ANTHROPIC_API_KEY` and **no** global
+`CLAUDE_CODE_OAUTH_TOKEN`; `ABB_HOME`
 on the drive with the most space (≥ 60 GB free); the plan cloned to `%USERPROFILE%\abb-src` with a
 private GitHub remote; the pinned model's training-cutoff date in D-001. No admin rights are
 needed in this phase.
@@ -18,10 +20,10 @@ needed in this phase.
 ```
 .gitignore                     # root: .venv/, __pycache__/, *.tmp, .env
 benchmark/
-  pyproject.toml                 # package `abb`; deps: typer, rich, pydantic, pyyaml, pandas, numpy, matplotlib, anthropic, keyring; windows: pywin32
+  pyproject.toml                 # package `abb`; deps: typer, rich, pydantic, pyyaml, pandas, numpy, matplotlib, keyring; windows: pywin32 (no `anthropic` SDK: every model call goes through `claude.exe`)
   README.md  LICENSE (MIT)  .env.example
   abb/__init__.py
-  abb/cli.py                     # Typer app: tools, env, sandbox, tasks, repos, run, grade, grade-patch, report, split, labels, audit, repro, ws
+  abb/cli.py                     # Typer app: tools, env, sandbox, auth, tasks, repos, run, grade, grade-patch, report, split, labels, audit, repro, ws
   abb/config.py                  # pydantic models: RepoConfig, TaskConfig, SandboxConfig, ToolchainConfig, LimitsConfig (re-exports arms.base.Limits); 5-line .env loader
   abb/paths.py                   # ABB_HOME, TOOLS, CACHES, WORK, RESULTS (= ABB_RESULTS_DIR), REPO_CLONE; all pathlib
   abb/log.py
@@ -36,7 +38,7 @@ benchmark/
   tests/test_config.py           # schemas load the seed yaml files
   tests/platform/test_windows.py # start/stop a process, memory limit, tree kill, robust delete with a locked file
   tests/fixtures/transcripts/{smoke-success,smoke-maxturns1,smoke-interrupt}.jsonl   # from step 5
-docs/RUNS.md                     # lab notebook from day one: date, run id or activity, model, cost
+docs/RUNS.md                     # lab notebook from day one: date, run id or activity, model, tokens, est. USD, usage pauses
 docs/DECISIONS.md                # confirm D-001…D-005, D-024 (Windows-native); fill D-003 with evidence
 reference/verified.md            # dated verification of external facts (Windows section)
 reference/build-experiments.md   # results of the repo-selection experiment
@@ -47,9 +49,10 @@ reference/build-experiments.md   # results of the repo-selection experiment
 1. **Verify the bootstrap.** In `%USERPROFILE%\abb-src` (PowerShell 7): `$PSVersionTable.PSVersion`
    (7.x), `git --version`, `gh auth status`, `uv --version`, `& "$env:USERPROFILE\.local\bin\claude.exe"
    --version` (≥ 2.1.211 and equal to `toolchain.yaml`), `$env:ABB_HOME` set and on a drive with
-   ≥ 60 GB free (`Get-PSDrive`), `$env:ANTHROPIC_API_KEY` set, `git remote -v` shows the private
-   remote, `(irm "https://api.anthropic.com/v1/models?limit=1000" …).data.id` lists both pinned ids
-   (the endpoint pages at 20 by default). Record everything in `reference/verified.md`. If anything
+   ≥ 60 GB free (`Get-PSDrive`), `$env:ABB_OAUTH_TOKEN` set, `$env:ANTHROPIC_API_KEY` and
+   `$env:CLAUDE_CODE_OAUTH_TOKEN` unset (never print the token), `git remote -v` shows the private
+   remote. Record everything
+   in `reference/verified.md`. If anything
    is missing, stop and tell the human exactly what to do.
 2. **Project skeleton.** `uv init --package` style layout with the files above. `uv run abb --help`
    must list every command group (stubs print "not implemented in this phase"). No `.sh` files
@@ -71,8 +74,10 @@ reference/build-experiments.md   # results of the repo-selection experiment
    config from `toolchain.yaml`; write `config/toolchain.lock.yaml`. `abb tools check` re-verifies.
 5. **Tool verification.** Paste outputs into `reference/verified.md`: `java -version` from both
    JDKs, `sdkmanager.bat --list_installed`, `claude.exe --version`, `specify --version`, `specify
-   init --help`. Then the Claude smoke tests from `specs/headless-agent-driving.md` **through the
-   harness driver's launch path** (`abb ws smoke`), saving fixtures: `smoke-success`,
+   init --help`. Then `abb auth check` (runs `claude.exe auth status` through the launcher with the mapped
+   token and an empty `CLAUDE_CONFIG_DIR`; record `authMethod` — expected `oauth_token`). Then
+   the Claude smoke tests from `specs/headless-agent-driving.md` **through the harness driver's
+   launch path** (`abb ws smoke`), saving fixtures: `smoke-success`,
    `smoke-maxturns1`, and `smoke-interrupt` (deadline hit → the launcher sends Ctrl+Break to the child's process
    group, then in a second run Ctrl+C → does a `result` line appear? exit code? record both and
    set `sandbox.yaml: process.interrupt` to the one that ends the turn cleanly). Check every flag the driver spec uses against `claude --help`. Check the
@@ -107,8 +112,9 @@ reference/build-experiments.md   # results of the repo-selection experiment
    as bytes), `LICENSE-NOTE.md`, `source: authored`, `status: draft`.
 9. **Decisions log.** Confirm D-001…D-005 and D-024; write the training-cutoff date, the current
    model ids and the resolved id into D-001; fill D-003.
-10. **Lab notebook.** Start `docs/RUNS.md` (date, run id or activity, model, cost USD from the
-    Console, note). Every API-spending activity from now on gets a row.
+10. **Lab notebook.** Start `docs/RUNS.md` (date, run id or activity, model, tokens in/out,
+    est. API-equivalent USD from the result line, usage-limit pauses, note). Every run from now
+    on gets a row.
 11. Commit `phase 0: foundations` and push.
 
 ## Acceptance gate

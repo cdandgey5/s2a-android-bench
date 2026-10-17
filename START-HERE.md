@@ -13,25 +13,97 @@ reported change. Design: `PLAN.md`; contracts: `specs/`; steps: `phases/`.
 
 ## 1. Before the first agent session (you, ~2 hours) — `docs/DAY-0.md`
 
-Windows 11, **no WSL, no Docker**: PowerShell 7 · Git for Windows · `gh` · `uv` · Claude Code
-≥ 2.1.211 pinned · Console API key with credit + spend alert · `ABB_HOME` on the drive with
+Windows 11, **no WSL, no Docker, no API key**: PowerShell 7 · Git for Windows · `gh` · `uv` · Claude
+Code ≥ 2.1.211 pinned · a one-year subscription token from `claude setup-token` stored as the
+user variable `ABB_OAUTH_TOKEN` (only the harness maps it to `CLAUDE_CODE_OAUTH_TOKEN`, inside
+each trial; `specs/auth-and-usage.md`) · `ABB_HOME` on the drive with
 ≥ 60 GB free on local NTFS (short path, e.g. `C:\abb`; not the Google Drive `G:`) · the plan copied out of OneDrive to
 `%USERPROFILE%\abb-src` with a private GitHub remote · decisions written down: pinned model + its
 training-cutoff date (D-001), Claude Code version, first two repos (default AntennaPod +
-Wikipedia Android), dev budget per trial (default $5). One elevated step comes later (Phase 1:
+Wikipedia Android), dev estimate cap per trial (default $5 est. API-equivalent). One elevated step comes later (Phase 1:
 `abb sandbox setup`).
 
-## 2. Kickoff prompt (paste into Claude Code running in `%USERPROFILE%\abb-src`)
+## 2. Running the phases chat by chat (no API, your subscription)
+
+Every phase is built **in Claude Code** — the desktop app's Code tab or `claude.exe` in a
+PowerShell 7 window, opened on `%USERPROFILE%\abb-src` (Phase 7: `%USERPROFILE%\abb-tasks`, §3)
+— one phase per chat, on your normal login (the headless token is stored under a name Claude Code itself never reads, so no chat
+picks it up). Nothing needs an API key: the benchmark's headless runs use the subscription token
+(`specs/auth-and-usage.md`). The files are the memory, not the chat: at every gate the agent
+rewrites `docs/HANDOFF.md`, commits and stops, so any fresh chat can pick up where the last one
+ended.
+
+Phase files: `phase-0-foundations.md`, `phase-1-environments.md`, `phase-2-tasks-and-validation.md`,
+`phase-3-grading.md`, `phase-4-arm-plain.md`, `phase-5-arm-speckit.md`, `phase-6-s2a-orchestrator.md`,
+`phase-7-scale-tasks.md`, `phase-8-runner.md`, `phase-9-analysis.md`, `phase-10-release.md`.
+
+**Kickoff (first chat, Phase 0):**
 
 ```
 Read AGENTS.md, then PLAN.md, then phases/phase-0-foundations.md. Execute Phase 0 step by step.
 Step 1 verifies my bootstrap (docs/DAY-0.md); if anything is missing, stop and tell me exactly
 what to do. Use the seed files under benchmark/ as given. Keep docs/RUNS.md current for every
-API-spending action. When the Phase 0 acceptance gate passes, paste the gate output, update the
-status table in README.md, commit and push, and stop. Do not start Phase 1.
+run. When the Phase 0 acceptance gate passes, paste the gate output, rewrite docs/HANDOFF.md,
+update the status table in README.md, commit and push, and stop. Do not start Phase 1.
 ```
 
-For each later phase: `Execute Phase N from phases/phase-N-*.md. Stop at its gate and report.`
+**Next phase (a new chat each time):**
+
+```
+Read AGENTS.md, docs/HANDOFF.md and `git log --oneline -20`, then phases/phase-N-<name>.md.
+Confirm the previous phase's gate still passes (re-run its gate commands; fix only what the
+rerun proves broken). Then execute Phase N step by step. At its gate: paste the output, rewrite
+docs/HANDOFF.md, update README.md's status table, commit and push, and stop.
+```
+
+**When a chat gets long mid-phase:** tell it `Write the handoff file for this branch
+(docs/HANDOFF.md on main, docs/HANDOFF-phase-N.md on branch phase-N) with the exact step you are
+on, what is done and what is next, commit, and stop.` Then open a new chat with:
+
+```
+Read AGENTS.md, the handoff file for this branch (docs/HANDOFF.md on main; docs/HANDOFF-phase-N.md
+on branch phase-N), `git status` and `git log --oneline -20`. If the tree holds uncommitted work
+the handoff does not mention, inspect it before continuing. Continue Phase N from the step named
+there; do not redo finished steps. At the gate: paste the output, rewrite the handoff file, commit,
+push, stop.
+```
+
+**Parallel phase, first chat (Phases 5, 6, 7 — own branch, own handoff file):**
+
+```
+Read AGENTS.md, docs/HANDOFF.md and `git log --oneline -20`, then phases/phase-N-<name>.md.
+Create branch phase-N from main (`git checkout -b phase-N main`) and create docs/HANDOFF-phase-N.md
+from the template in docs/HANDOFF.md; on this branch never edit docs/HANDOFF.md. Confirm the gate
+this phase starts from (its Prerequisites line) still passes. Execute Phase N step by step. At its
+gate: paste the output, rewrite docs/HANDOFF-phase-N.md, update README.md's status table, commit,
+push the branch, and stop. Do not merge.
+```
+
+Phase 7's chats are opened in `%USERPROFILE%\abb-tasks` — the sparse worktree without `s2a/`
+created with the PowerShell block in §3 (which already creates branch `phase-7`) — and its
+starting gate is Phase 2 step 3 (`abb tasks mine` yields candidates). Later chats of a parallel
+phase use the next-phase and resume prompts above with `docs/HANDOFF-phase-N.md` and `git
+checkout phase-N` first.
+
+**Merge (one chat on `main`, before Phase 8):**
+
+```
+Read AGENTS.md and docs/HANDOFF.md. On main, `git merge --no-ff` phase-7, then phase-5, then
+phase-6, in that order. Shared files (abb/arms/registry.py, docs/DECISIONS.md, env.lock.json,
+repos/*.yaml, README.md's status table) are append-only: keep both sides. In each merge commit
+delete that branch's docs/HANDOFF-phase-N.md after folding its open items into docs/HANDOFF.md.
+Then run `uv run pytest -q`, `uv run abb tasks lint --all` and `uv run abb sandbox install-s2a`,
+and re-run the Phase 4, 5, 6 and 7 gate commands. Rewrite docs/HANDOFF.md, commit, push, stop.
+```
+
+Habits that keep this cheap: `/compact` when the context gets heavy instead of starting over;
+ask for the handoff before the chat is unusable, not after; one phase per chat. **Your chats and
+the headless trials draw on the same account's usage windows**: a dev run or the canary
+(`abb ws smoke --until-limit`) also locks out the chat you are building in, so run them at the
+end of a work session, and build on Sonnet (`/model claude-sonnet-5-5`) on days an Opus run is
+scheduled (Pro/Max chats default to Opus 5.5). Claude Code's auto memory is machine-local
+and not relied on — `HANDOFF.md`, `RUNS.md`, `verified.md`, `DECISIONS.md` and git are the state.
+A "session" in §3 is one chat, or a chain of chats joined by `HANDOFF.md`, on one branch.
 
 ## 3. Phase sequence, sessions and gates
 
@@ -47,7 +119,7 @@ For each later phase: `Execute Phase N from phases/phase-N-*.md. Stop at its gat
 | 6′ | **6 S2A orchestrator** | new session, branch `phase-6` | Phase 4 gate | **review the first codebase map by hand; read one full run's artifacts** | `s2a run` end to end on one task; resume works; S2A + ablations on dev5 | 2 weeks, parallel |
 | 7 | **8 Runner** | main (after merging 7 → 5 → 6) | Phases 4–7 merged | nothing | resume, budget stop, 2 parallel on the laptop, audit in the loop | 1 week |
 | 8 | **6 tuning + 9 Analysis** | main | Phase 8 gate; `TASKSET.sha256` committed | **blind-label 20–30 failures**; approve prompt changes on dev results only | deterministic report; labeller ≥ 80 % agreement | 1–2 weeks |
-| 9 | **10 Release** | main | Phases 7, 8, 9 gates | **complete `docs/PREREG.md`**, approve the freeze, rent the box | held-out run once; README complete; `abb repro` identical | 1 week + 1–2 days compute |
+| 9 | **10 Release** | main | Phases 7, 8, 9 gates | **complete `docs/PREREG.md` incl. `auth_mode`**, approve the freeze, plan the usage windows (optionally a Windows VM) | held-out run once; README complete; `abb repro` identical | 1 week + 1–2 days compute |
 
 Rules for parallel sessions: one branch per phase, merge order 7 → 5 → 6, shared files
 (`abb/arms/registry.py`, `docs/DECISIONS.md`, `env.lock.json`, `repos/*.yaml`, README status)
@@ -88,6 +160,7 @@ first table moves to week 6 and the MVP cut is taken as soon as it exists.
 
 | When | Decision |
 |---|---|
+| Before the held-out run | `docs/PREREG.md: auth_mode` — run the matrix under your subscription in batches across usage windows, or ask Anthropic first (`specs/auth-and-usage.md` §5). |
 | When the first results table exists (target end of week 5) | Keep the full plan (~11 weeks) or take the MVP cut (2 repos, ~28 tasks, controls at 1 trial, Spec Kit optional) — `PLAN.md` §9. |
 | Before Phase 6 tuning | `tasks/TASKSET.sha256` is committed; from here the tuning session never sees test tasks. |
 | Before Phase 10 | `docs/PREREG.md` completed: one primary comparison, arms, exclusions, rerun rule. After the freeze nothing changes. |
@@ -99,7 +172,7 @@ first table moves to week 6 and the MVP cut is taken as soon as it exists.
 |---|---|---|
 | `git apply` fails on every patch | CRLF conversion | `git config --global core.autocrlf false`, re-clone |
 | Neither Ctrl+Break nor Ctrl+C leaves a `result` line | undocumented Windows behaviour | expected; the driver imputes cost; rely on `--max-turns`/`--max-budget-usd` as the primary bounds |
-| smoke test 404 on the model id | ids changed | update D-001; the agent continues |
+| smoke test rejects the model id | ids changed, or the plan does not allow Opus | update D-001 (Sonnet fallback); the agent continues |
 | `android-all` or `Could not resolve` in `abb env verify` | warm step incomplete | add the test run / SDK level to `warm_commands` |
 | workspace delete fails ("being used by another process") | Gradle daemon or Explorer lock | `gradlew.bat --stop`; the robust delete retries and reports leftovers |
 | `CreateProcessWithLogonW` logon failure | sandbox user lacks logon rights | `sandbox-setup.ps1` grants them; fallback `Start-Process -Credential` |
@@ -107,7 +180,10 @@ first table moves to week 6 and the MVP cut is taken as soon as it exists.
 | the `ABB_HOME` drive under 20 GB free | workspaces piling up | `abb env prune` when no run is active |
 | `init.model` reports a dated snapshot id | the CLI resolved the pinned id | fine: the driver matches by prefix and records it; update D-001 with the mapping |
 | < 2 of 10 mined candidates validate | tickets leak the fix or tests need hooks | author 3 of the 5 dev tasks yourself (Phase 2 pitfalls) |
-| Console spend climbing with no RUNS.md row | untracked runs | every run gets a row; dev cap $5/trial |
+| a trial ends with "hit your session limit" | subscription usage window exhausted | expected; the runner marks it `usage_limited`, pauses, probes every 15 min and re-queues (Phase 4 canary records the exact output) |
+| `abb auth check` fails or reports `api_key` | a stray `ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN` in the user environment, or `ABB_OAUTH_TOKEN` missing or expired | unset the strays; `claude setup-token` → `ABB_OAUTH_TOKEN` (`docs/DAY-0.md` §3) |
+| a long or paused run died overnight | the laptop slept: trials were suspended and their deadlines fired on wake | `powercfg /change standby-timeout-ac 0` while runs are active (`docs/DAY-0.md` §2); `--resume` |
+| dev runs never hit a usage limit, Phase 8 refuses the matrix | no canary recorded | `abb ws smoke --until-limit` at the end of a session window (costs the rest of it), or `--allow-no-canary` (recorded) |
 | grader reports every test `missing` | wrong flavor task name or JUnit path | `./gradlew :m:tasks --all`; fix `test_task_for_module` |
 
 ## 7. Done looks like

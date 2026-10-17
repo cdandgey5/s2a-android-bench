@@ -7,25 +7,31 @@ reproducibility package.
 closed with a "frozen" entry; `docs/RUNS.md` lists the last dev-set confirmation run on the
 pinned model (`claude-opus-5-5`) with cost per arm.
 
-**Effort.** ~3 laptop nights of compute (or 1–2 days on a Windows VM); ~1 week of writing.
+**Effort.** ~60 h of compute spread over the subscription's usage windows (days to weeks of
+batches; the MVP cut shortens it); ~1 week of writing.
 
 ## Steps
 
 1. **Pre-register, then freeze.** Complete `docs/PREREG.md` (primary comparison, arms in the
-   matrix, exclusion rules, harness-bug criteria, rerun rule) and commit it; its sha256 goes
+   matrix, exclusion rules, harness-bug criteria, rerun rule, **`auth_mode` and the usage-window
+   schedule** — `specs/auth-and-usage.md` §5) and commit it; its sha256 goes
    into the manifest. Tag the harness `v1.0-frozen`. Complete D-010 in `docs/DECISIONS.md`
    ("test set run once on <date>; no task or prompt changes after the tag"). Re-run `abb tasks
    lint --all` and `abb env verify` for every repo; confirm `tasks/TASKSET.sha256` matches.
-2. **Budget check.** `abb run --dry-run --arm plain --arm speckit --arm s2a --arm s2a-nomap
-   --arm s2a-noverify --tasks test --trials 3 --model claude-opus-5-5` → estimated cost from the
-   last dev-set numbers. Set `--max-usd` to 1.3× the estimate.
-3. **Run machine.** The laptop (three nights at `--parallel 2`) or a Windows VM prepared by
+2. **Usage check.** `abb run --dry-run --arm plain --arm speckit --arm s2a --arm s2a-nomap
+   --arm s2a-noverify --tasks test --trials 3 --model claude-opus-5-5` → estimated tokens, est.
+   USD and **usage windows**, computed per arm from the **Opus dev-set confirmation run** in
+   the prerequisites (its trials-per-window per arm in `docs/RUNS.md`; Phase 4's Sonnet figure
+   is for dev scheduling only). Set
+   `--max-usd` to 1.3× the estimate and write the window schedule and `auth_mode` into PREREG
+   (`specs/auth-and-usage.md` §5 — decide this before the freeze, not after).
+3. **Run machine.** The laptop (batches at `--parallel 2` across usage windows) or a Windows VM prepared by
    `scripts/vm-setup.ps1` (`abb tools install`, `abb env warm` for every repo, `abb sandbox
    setup`; fingerprints must equal `env.lock.json`). Smoke trial (one dev task, plain arm) to
-   confirm API key, versions and fingerprints match the manifest you expect.
+   confirm `abb auth check`, versions and fingerprints match the manifest you expect.
 4. **Run.** `abb run … --parallel 6 --label heldout-final --grade` → run id
-   `<YYYYMMDD>-<HHMM>-heldout-final`. Monitor with `abb run status`. If the run aborts
-   (budget/rate limits/host), `--resume` it; the manifest records every resume. If a **harness
+   `<YYYYMMDD>-<HHMM>-heldout-final`. Monitor with `abb run status` (usage-limit pauses show
+   as `paused until …` and resume by themselves). If the run aborts (budget/host), `--resume` it; the manifest records every resume. If a **harness
    bug** meeting the PREREG criteria is found, stop, fix, tag `v1.0.1`, re-run the whole test
    set, and publish both run ids; the first run stays primary unless PREREG's asymmetry rule
    applies.

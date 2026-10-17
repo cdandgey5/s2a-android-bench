@@ -47,14 +47,30 @@ CLI: abb run --arm A [--arm B …] --tasks dev|test|all|<ids> --trials k --paral
    `run.json` and no grade (a "trial lost" line in the report, excluded from denominators).
    `agent_error` — including an orchestrator crash — is never retried. Retry counts per arm go
    into `events.jsonl` and the report.
-6. **Cost meter.** Sum `cost_usd` as trials finish; when `--max-usd` is crossed, stop
-   *launching* new jobs, let running ones finish, mark `manifest.aborted_reason = "budget"`.
+6. **Cost meter and usage pauses.** Sum est. `cost_usd` and tokens as trials finish; when
+   `--max-usd` is crossed, stop *launching* new jobs, let running ones finish, mark
+   `manifest.aborted_reason = "budget"`. `--pause-on-usage-limit` (default on): a `usage_limited`
+   trial wipes its directory, re-queues, and pauses all workers; first wake-up = parsed reset
+   time + 2 min if one parsed, else 30 min; then probe every 15 min (`specs/auth-and-usage.md`
+   §3; the run's `limits.model`, through the launcher as the sandbox user in a scratch
+   `ABB_HOME\work\probe\<ts>`, transcript kept at `<run>/probes/<ts>-scheduler-<n>.jsonl`)
+   until a probe succeeds; a 401/403 aborts the run (`auth`) at once; `--max-pause-h` (default
+   48) → `aborted_reason = "usage_limit"`, resumable. `abb run status` shows `paused until …` /
+   `probing`; probe events go to `events.jsonl` and `abb audit` recounts `usage_limited_pauses`
+   from `<run>/probes/`;
+   the pause count per arm goes into the manifest. A **matrix** run (`--tasks test`, or > 30
+   trials) refuses to start if `reference/verified.md` has no usage-limit canary (Phase 4 step 8)
+   unless `--allow-no-canary`, which is recorded in the manifest. At start, warn if
+   `powercfg /q` shows a non-zero AC standby timeout (`docs/DAY-0.md` §2).
    Also stop on SIGINT gracefully (`abb run abort` writes a stop-file the scheduler polls).
-7. **Rate limits.** Claude Code retries 429s internally and reports them as `system` events
-   (`subtype: api_retry`); the driver counts them into `PhaseCall.rate_limit_retries`. Only when
-   a call ends **without a `result` line** because retries or auth were exhausted does the
-   scheduler back off that worker 60 s and re-queue the trial once (logged as `rate_limited`,
-   not as an agent failure). Report the total retry count per run.
+7. **Rate limits.** Claude Code retries transient 429s internally and reports them as `system` events
+   (`subtype: api_retry`); the driver counts them into `PhaseCall.rate_limit_retries`. When a
+   call ends **without a `result` line** or with an unexplained error result, the driver's
+   probe decides (`specs/headless-agent-driving.md` §2): limit/429 → `usage_limited` → the
+   pause/probe loop of step 6; 401/403 → abort `auth`; model rejected → abort `model`; probe
+   succeeds → the call's own classification stands (`harness_error` re-queued
+   once per step 5; `agent_error` never retried). No trial is ever counted as a failure because
+   the window closed on it. Report retry, probe and pause counts per arm.
 8. **Optional Windows VM.** `scripts/vm-setup.ps1` (PowerShell 7) installs Git, `gh`, `uv`,
    Claude Code (pinned), clones the repo, runs `abb tools install`, `abb env warm` for every repo
    and `abb sandbox setup`, then a smoke trial; fingerprints must equal `env.lock.json`.

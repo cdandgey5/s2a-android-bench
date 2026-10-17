@@ -12,7 +12,7 @@
 ```
 benchmark/abb/harness/report.py           # full version
 benchmark/abb/harness/stats.py            # pass@1, pass^k, paired bootstrap, detectable delta
-benchmark/abb/harness/labeller.py         # Anthropic SDK; structured output; calibration mode
+benchmark/abb/harness/labeller.py         # headless Claude Code (`-p --output-format json --json-schema --tools "" --max-turns 1`); calibration mode
 benchmark/abb/harness/charts.py           # matplotlib; consistent palette; CI whiskers
 benchmark/tests/test_stats.py             # known-answer tests (toy data) for every statistic
 benchmark/tests/test_report.py            # builds a report from fixture results
@@ -47,9 +47,10 @@ CLI: abb report <run_id> [--arms …] [--breakdowns …]      abb labels init|sh
    for the secondary-flag pass only), `set <label>` (writes `labels.json` with `source:
    manual`), `llm` (labeller on unlabelled or on `--calibrate` set), `agreement` (manual vs llm
    confusion matrix + agreement %, per arm).
-7. **Labeller** (`labeller.py`): Anthropic Python SDK, model `claude-opus-5-5`, structured
-   output via `output_config.format` with the enum from the taxonomy, `thinking` adaptive,
-   streaming. Prompt includes the taxonomy table verbatim and the bundle. Cost of labelling is
+7. **Labeller** (`labeller.py`): through the headless driver, `claude.exe -p --output-format json
+   --json-schema <taxonomy enum schema> --tools "" --max-turns 1 --model <pinned>` with the blind
+   bundle on stdin; read `structured_output` (subtype `error_max_structured_output_retries` →
+   retry once, then `unlabelled`). No SDK, no API key. Prompt includes the taxonomy table verbatim and the bundle. Cost of labelling is
    reported in `docs/RUNS.md` (it is analysis cost, not arm cost).
 8. **Hand-label 20–30 failures** from the latest dev-set run, stratified across arms. Refine
    the taxonomy if needed (edit `specs/failure-taxonomy.md`, bump `taxonomy_version` in

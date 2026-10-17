@@ -23,7 +23,8 @@ Nothing in this file may change after the freeze tag; if it must, the run is a n
 - [ ] Final arms: `plain`, `plain-guided`, `speckit`, `s2a`, `s2a-nomap`, `s2a-noverify` at 3
   trials; optional at 1 trial if budget allows: `plain-gate`, `s2a-norepro`, `speckit-sdd`.
 - [ ] Model: `claude-opus-5-5`; Claude Code version: `[ ]`; Spec Kit ref: `[ ]`; `s2a_git_sha`: `[ ]`.
-- [ ] Limits: 45 min, $15, 200 turns, nudges 2/call 4/trial. Binding: wall-clock and USD.
+- [ ] Limits: 45 min, $15 est., 200 turns, nudges 2/call 4/trial. Binding: wall-clock and est. USD.
+- [ ] `auth_mode`: `subscription` (batches across usage windows; plan `[ ]`; expected windows `[ ]`) | `api_key` — and whether Anthropic was asked (`specs/auth-and-usage.md` §5): `[ ]`.
 
 ## Task set
 
@@ -42,6 +43,9 @@ Nothing in this file may change after the freeze tag; if it must, the run is a n
 - `test_compile_failed` outcomes are unresolved in the primary metric; those on a non-empty diff
   touching the F2P module are reported in the interface table with their blind `INTERFACE` labels.
 - `flaky_p2p` tests are excluded from regressions (D-023).
+- `usage_limited` trials (subscription window exhausted — limit text, or any call that ended
+  without a success result and whose probe failed) are wiped, re-run and **not counted**; the
+  count per arm is reported. A call with no model response at all is never `agent_error`.
 
 ## Harness-bug criteria and rerun rule
 
@@ -58,8 +62,9 @@ if the bug affected arms asymmetrically (shown per arm in the report). Both runs
 - Report the detectable effect size for the primary denominator (`stats.detectable_delta`).
 - Failure labelling: blind manual labels on ≥ 20 stratified failures, LLM labels for the rest,
   agreement reported per arm.
-- Cost: `cost_usd` with null-cost share and `cost_usd_imputed`; setup cost per setup kind and
-  amortised; gate runs and per-stage turns per arm.
+- Cost: tokens first; `cost_usd` as est. API-equivalent USD with null-cost share and
+  `cost_usd_imputed`; setup cost per setup kind and amortised; gate runs, per-stage turns and
+  `usage_limited` pauses per arm.
 
 ## Sign-off
 

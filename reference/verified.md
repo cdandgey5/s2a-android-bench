@@ -25,8 +25,9 @@ Verdict: **FAIL — Day 0 (Windows) not done.** Phase 0 stops here.
 | Claude Code | `& "$env:USERPROFILE\.local\bin\claude.exe" --version` | 2.1.197; plan needs ≥ 2.1.211; `toolchain.yaml` `claude_code.version: TODO_PIN` | **too old, not pinned** |
 | `ABB_HOME` | process + user env | unset (`ABB_RESULTS_DIR` unset too) | **missing** |
 | Disk for `ABB_HOME` | `Win32_LogicalDisk` | C: NTFS 90.2 GiB free ≥ 60 GB; G: is Google Drive (FAT32), not usable | ok on C: |
-| `ANTHROPIC_API_KEY` | process + user env | unset | **missing** |
-| Pinned model ids (`/v1/models`) | — | not run: no API key | **not checked** |
+| `ABB_OAUTH_TOKEN` (subscription auth, D-025; no API key wanted) | user env | not checked yet — `claude setup-token` per `docs/DAY-0.md` §3 | **to do** |
+| `ANTHROPIC_API_KEY` and global `CLAUDE_CODE_OAUTH_TOKEN` must be unset | process + user env | not checked (plan changed 2026-10-17) | **to do** |
+| Pinned model accepted on the plan | `claude.exe --model claude-opus-5-5 -p ping` | not run (Phase 0 step 5) | **not checked** |
 | Working clone `%USERPROFILE%\abb-src` | `Test-Path` | absent; the only repo is the OneDrive folder (commits `2f09972`, `3bd3122`) | **missing** |
 | `git remote -v` | — | no remote | **missing** |
 | D-001 training-cutoff date | `docs/DECISIONS.md` | still TODO | **missing** |
@@ -63,6 +64,11 @@ Verdict then: **FAIL — Day 0 not done.**
 | Item | Value | Date |
 |---|---|---|
 | `claude.exe --version` (pinned copy under `ABB_HOME\tools\claude`) | | |
+| `abb auth check`: `claude.exe auth status` through the launcher with the mapped token and an empty `CLAUDE_CONFIG_DIR` → `authMethod` (expected `oauth_token`) | | |
+| Token honoured as the sandbox user `abb-agent` (Phase 1 smoke test through `CreateProcessWithLogonW`) | | |
+| `total_cost_usd` / `usage` present in `-p` results under subscription auth | | |
+| `--model claude-opus-5-5` accepted on this plan (else Sonnet for everything, D-001) | | |
+| Usage-limit output in `-p` (verbatim tail, error text, exit code) — Phase 4 canary | | |
 | `-p` / `--output-format stream-json` / `--verbose` | | |
 | `--max-turns` → `error_max_turns` | | |
 | `--max-budget-usd` → `error_max_budget_usd` | | |

@@ -11,6 +11,8 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   proxy.log                           # every CONNECT the egress proxy allowed or denied
   events.jsonl                        # scheduler log: start/end/skip/retry/resume per trial
   audit.json                          # Phase 4+: `abb audit` recomputation from transcripts (pass/fail per trial)
+  probes/<ts>-<arm>-<task>-t<k>-<n>.jsonl   # probe calls that justified a usage_limited / harness_error / abort decision (never wiped)
+  probes/<ts>-scheduler-<n>.jsonl     # pause-loop probes; `abb audit` recounts manifest.usage_limited_pauses from this directory
   setup/<setup_kind>/<repo>/          # one-time per-repo setup, reported separately
     run.json  transcript/  prompts/  artifacts/        # setup_kind = speckit-constitution | s2a-map
   <arm>/<task_id>/t<k>/               # k = 1..trials
@@ -54,12 +56,15 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   "s2a_install": {"sha": "def456", "path": "ABB_HOME\\tools\\bin\\s2a.exe"},
   "interrupt": "ctrl_break",                 # the signal both drivers used for harness-initiated stops (Phase 0 decision)
   "sandbox_mode": "user",                     # user | none (none is refused for split: test)
+  "auth_mode": "subscription",                # subscription | api_key; plan name below is free text from the owner
+  "plan": "Max 5x",
+  "usage_limited_pauses": {"plain": 2, "s2a": 3},
   "strip_agent_instructions": false,
   "allow_env_drift": false,
   "harness_git_sha": "abc123",
   "split_file_sha256": "...",                 # proves the frozen split was used
   "resumes": [{"at": "2026-12-04T02:10:00Z", "reason": "host reboot"}],
-  "aborted_reason": null,                     # budget | sigint | null
+  "aborted_reason": null,                     # budget | sigint | usage_limit | auth | model | null
   "host": {"os": "windows", "release": "11 26200", "cpus": 32, "mem_gb": 32}
 }
 ```
@@ -73,7 +78,7 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
 | resolved, build_ok, reason (`null`, `patch_apply_failed`, `test_compile_failed`, `grade_timeout`, …), interface_table (bool), regressions_n, flaky_p2p_n | grade.json | grader |
 | agent_touched_tests, build_config_changed, build_config_reverted, test_config_suspect | grade.json.flags | grader |
 | diff_files, diff_insertions, diff_deletions, scope_creep_files | grade.json | grader |
-| exit_reason, duration_ms, cost_usd (nullable), cost_usd_imputed, num_turns, tool_calls, tool_errors, interventions, asked_question, rate_limit_retries, other_retries, model_drift | run.json | arm |
+| exit_reason, duration_ms, cost_usd (nullable; est. API-equivalent USD), cost_usd_imputed, num_turns, tool_calls, tool_errors, interventions, asked_question, rate_limit_retries, other_retries, model_drift | run.json | arm |
 | gate_gradle_runs, gate_seconds | run.json | arm (S2A gates, plain-gate hook) |
 | input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cache_hit_rate | run.json (summed over calls) | arm |
 | calls_n, calls (json list of {name, cost_usd, num_turns}) | run.json | arm |

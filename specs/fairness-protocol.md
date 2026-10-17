@@ -9,6 +9,7 @@ committed before the freeze.
 | Item | Rule |
 |---|---|
 | Model | One exact model id per run for every arm and every call, including sub-agents. `switchModelsOnFlag: false`, and the driver fails a call as `harness_error` if `modelUsage` shows any non-background foreign model. |
+| Auth | Same subscription token for every arm, in the environment block only; no API key anywhere (`specs/auth-and-usage.md`). |
 | Agent runtime | Same pinned `claude.exe` (version asserted from the `init` event), same permission mode, same shell set (`CLAUDE_CODE_USE_POWERSHELL_TOOL=1`, Bash via Git Bash), same **baseline** tool deny list (`WebFetch,WebSearch`); an arm may deny *more* tools in some of its own calls (S2A's read-only stages do), never fewer. Autoupdate and telemetry disabled in the agent env. |
 | Environment | Same environment fingerprint (toolchain + warm cache + platform) for every arm; the `s2a-*` arms additionally have the `s2a` package installed for the sandbox user at `s2a_git_sha`. |
 | Input | Byte-identical `problem.md`. Arms may wrap it in their own prompt template, but may not add task-specific hints. |
@@ -34,7 +35,8 @@ back). The write-up reports S2A against both, not only against `plain`.
 | One-time per-repo setup (Spec Kit constitution; S2A codebase map) | `results/<run>/setup/<setup_kind>/<repo>/run.json`. Report as "setup cost per repo" and *also* as an amortised per-task number (`setup / tasks_in_repo`) in a clearly labelled column. Never fold silently into cost per task. |
 | Historical (mined/reverted) vs authored tasks | Separate rows in every headline table. The primary comparison uses all test tasks; the pre-registered **contamination-robustness** check repeats it on historical post-cutoff tasks, and authored tasks are shown on their own (the framework author wrote them). |
 | Pre- vs post-cutoff tasks | `upstream.fix_date` **and** `upstream.issue_created` vs the pinned model's published training cutoff (D-001); a task is post-cutoff only if both are. |
-| Trials with no cost line | `cost_usd` null; `cost_usd_imputed` reported alongside; share per arm shown. |
+| Trials with no cost line | `cost_usd` null; `cost_usd_imputed` reported alongside; share per arm shown. All `cost_usd` figures are Claude Code's client-side estimate at API list price ("est. API-equivalent USD"); tokens are the primary unit. |
+| Usage-limit pauses | `usage_limited` trials (subscription window exhausted) are wiped, re-queued and not counted; count per arm reported. |
 | `test_compile_failed` outcomes (interface table) | Per arm and category (non-empty diff touching the F2P module whose test source set did not compile); blind `INTERFACE` labels say how many were correct fixes with a different shape. |
 | Retries, rate-limit retries, gate runs, per-stage turns | Per arm. |
 

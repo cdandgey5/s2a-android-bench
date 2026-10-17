@@ -41,9 +41,13 @@ docs/DECISIONS.md                        # D-015 (orchestrator), D-016 (principl
    must load. `state.py`: `RunState` with atomic save, `load`, `next_stage()`, `mark()`,
    `exit_reason`, and `progress.md` rendering.
 2. **Driver.** `s2a/driver.py` implements `run_headless` per `specs/headless-agent-driving.md`
-   (same flags, nudge protocol, verbatim transcript, PhaseCall records, model assertion). Copy
-   the benchmark's transcript fixtures into `s2a/tests/fixtures/transcripts/` and make
-   `test_driver_parser.py` identical in intent to the benchmark's parser test; both must pass.
+   (same flags, nudge protocol, verbatim transcript, PhaseCall records, model assertion, and the
+   probe rule: a stage call without a `success` result and without an explaining subtype runs
+   one probe; limit/429 → `state.json.exit_reason: usage_limited`, exit 6; 401/403 →
+   `auth_failed`, exit 6; `s2a resume` continues from the same stage). Copy the benchmark's
+   transcript fixtures — including `probe-ok.jsonl` and `probe-limited.jsonl` — into
+   `s2a/tests/fixtures/transcripts/` and make `test_driver_parser.py` identical in intent to
+   the benchmark's parser test; both must pass. Test exit 6 + resume with the limited fixture.
 3. **Rendering.** `render.py`: templates with `{{…}}` placeholders; section extraction from
    `map.md` by heading (`map_commands` = "Commands" + "Test infrastructure"; `map_conventions`
    = "Conventions" + "Pitfalls"); size caps (`{{map}}` 40 kB — a 400-line map is ~25–35 kB —,
@@ -143,9 +147,10 @@ docs/DECISIONS.md                        # D-015 (orchestrator), D-016 (principl
     <limits.max_turns_total> --max-usd <limits.max_usd> --timeout-min <limits.timeout_minutes>
     [--skip map|verify|reproduce]`; then read `.s2a/runs/<id>/calls.jsonl` → `PhaseCall`s; copy
     `transcripts/*.jsonl` → trial `transcript/` and `prompts/*.md` → trial `prompts/`, rewriting
-    `transcript_path`; map `state.json.exit_reason` → `exit_reason` (`gate_failed`/`paused` →
-    `agent_error` with a note; exit code 1 or no `state.json` → `agent_error` too — the product
-    crashed, never re-run); ablations pass `--max-turns 200 − <skipped stage cap>`; copy
+    `transcript_path`; map `state.json.exit_reason` → `exit_reason` (`usage_limited` → trial
+    `usage_limited`, wiped and re-queued, scheduler pauses; `auth_failed` → run aborted `auth`;
+    `gate_failed`/`paused` → `agent_error` with a note; exit code 1 or no `state.json` →
+    `agent_error` too — the product crashed, never re-run); ablations pass `--max-turns 200 − <skipped stage cap>`; copy
     `.s2a/runs/<id>/*.md` + `state.json` + `plan.json` to `artifacts/`; produce the scoped diff
     against the `base` tag. Registry: `s2a`, `s2a-nomap`, `s2a-noverify`, `s2a-norepro`.
 16. **Tests.** Gates, state resume (kill after task 1 → resume finishes task 2), plan.json
