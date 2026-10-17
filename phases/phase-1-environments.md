@@ -116,7 +116,7 @@ CLI: abb env warm <repo> [--warm-commits ...]   abb env verify <repo> [--sandbox
 9. **Prune** `abb env prune`: deletes workspaces of finished runs (`cleanup()` on each), old warm
    scratch dirs, and reports `caches\` sizes; never touches a running trial.
 10. Repeat 1 and 4 for repo #2.
-10b. **Throughput probe — PROPOSED (D-027; owner decision — delete this step if rejected).**
+10b. **Throughput probe (D-027).**
    Why: the account is on Claude Pro (`subscriptionType: pro`, the smallest usage windows), the
    building chats share those windows, and Phase 4 is the first place the plan would otherwise
    learn whether the matrix fits — about five weeks in. Here the sandbox exists, so one realistic
@@ -145,11 +145,14 @@ uv run abb env verify wikipedia --sandbox user     # same (seed task step skippe
 uv run abb sandbox check                           # denied paths denied, github.com unreachable, API reachable through the proxy, smoke test OK
 $env:ABB_INTEGRATION=1; uv run pytest -q tests\test_workspace.py tests\test_junit.py tests\test_proxy.py tests\platform
 Get-Content benchmark\env.lock.json
+Get-Content docs\RUNS.md                           # throughput probe row (step 10b): tokens, session %, weekly %, weeks estimate
 ```
 
 Passes when both repos' unit tests run offline from a history-free workspace as the agent user
-in under 10 minutes, the invariants test is green, and the sandbox check proves the boundary
-(filesystem denies + firewall + allow-list proxy).
+in under 10 minutes, the invariants test is green, the sandbox check proves the boundary
+(filesystem denies + firewall + allow-list proxy), and the throughput probe is recorded in
+`docs/RUNS.md` and `reference/verified.md` with the owner's Pro / Max / MVP-cut decision
+(START-HERE §5, D-027).
 
 ## Pitfalls
 

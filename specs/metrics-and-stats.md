@@ -14,7 +14,7 @@ Unit of analysis: one `metrics.json` row per (arm, task, trial).
 | **Cost per resolved task** | Σ cost / Σ resolved. |
 | **Interventions per trial** | Mean `interventions` (capped at 4 per trial for every arm); share of trials with ≥ 1; also per call. |
 | **Wall-clock per trial** | Mean/median `duration_ms`. |
-| **Usage-limit sensitivity** — PROPOSED (D-028) | pass@1 and the primary paired-bootstrap CI recomputed with each slot's first attempt, a cut (`usage_limited`) attempt counted as unresolved (from `<run>/usage_limited/`); plus per arm: cut count, cut rate, mean elapsed and tokens at the cut. Shown next to the headline. |
+| **Usage-limit sensitivity** (D-028) | pass@1 and the primary paired-bootstrap CI recomputed with each slot's first attempt, a cut (`usage_limited`) attempt counted as unresolved (from `<run>/usage_limited/`); plus per arm: cut count, cut rate, mean elapsed and tokens at the cut. Shown next to the headline. |
 
 ## Secondary metrics
 

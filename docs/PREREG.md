@@ -44,10 +44,10 @@ Nothing in this file may change after the freeze tag; if it must, the run is a n
   touching the F2P module are reported in the interface table with their blind `INTERFACE` labels.
 - `flaky_p2p` tests are excluded from regressions (D-023).
 - `usage_limited` trials (subscription window exhausted — limit text, or any call that ended
-  without a success result and whose probe failed) are wiped, re-run and **not counted**; the
-  count per arm is reported. A call with no model response at all is never `agent_error`.
-  **PROPOSED (D-028; delete if rejected):** cut attempts are kept under `<run>/usage_limited/`
-  rather than wiped, and the sensitivity check in the analysis plan uses them.
+  without a success result and whose probe failed) are re-run and **not counted** in the
+  primary metric; the cut attempt is kept under `<run>/usage_limited/` (never graded) and the
+  usage-limit sensitivity check in the analysis plan uses it; the count per arm is reported
+  (D-028). A call with no model response at all is never `agent_error`.
 
 ## Harness-bug criteria and rerun rule
 
@@ -67,7 +67,7 @@ if the bug affected arms asymmetrically (shown per arm in the report). Both runs
 - Cost: tokens first; `cost_usd` as est. API-equivalent USD with null-cost share and
   `cost_usd_imputed`; setup cost per setup kind and amortised; gate runs, per-stage turns and
   `usage_limited` pauses per arm.
-- **PROPOSED (D-028; delete if rejected) — usage-limit sensitivity check:** the primary
+- **Usage-limit sensitivity check (D-028):** the primary
   comparison recomputed with each (arm, task, trial) slot's first attempt, a `usage_limited`
   attempt scored unresolved; reported next to the headline with its own CI, together with the
   cut count, cut rate and mean elapsed time and tokens at the cut, per arm. If the headline and

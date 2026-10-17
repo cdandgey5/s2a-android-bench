@@ -13,7 +13,7 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   audit.json                          # Phase 4+: `abb audit` recomputation from transcripts (pass/fail per trial)
   probes/<ts>-<arm>-<task>-t<k>-<n>.jsonl   # probe calls that justified a usage_limited / harness_error / abort decision (never wiped)
   probes/<ts>-scheduler-<n>.jsonl     # pause-loop probes; `abb audit` recounts manifest.usage_limited_pauses from this directory
-  usage_limited/<arm>/<task_id>/t<k>-a<n>/   # PROPOSED (D-028): cut attempts kept instead of wiped (run.json, transcript/, prompts/); never graded; input to the usage-limit sensitivity check
+  usage_limited/<arm>/<task_id>/t<k>-a<n>/   # D-028: cut attempts, kept (run.json, transcript/, prompts/); never graded; input to the usage-limit sensitivity check; `abb audit` scans them too
   setup/<setup_kind>/<repo>/          # one-time per-repo setup, reported separately
     run.json  transcript/  prompts/  artifacts/        # setup_kind = speckit-constitution | s2a-map
   <arm>/<task_id>/t<k>/               # k = 1..trials

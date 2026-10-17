@@ -148,7 +148,7 @@ docs/DECISIONS.md                        # D-015 (orchestrator), D-016 (principl
     [--skip map|verify|reproduce]`; then read `.s2a/runs/<id>/calls.jsonl` → `PhaseCall`s; copy
     `transcripts/*.jsonl` → trial `transcript/` and `prompts/*.md` → trial `prompts/`, rewriting
     `transcript_path`; map `state.json.exit_reason` → `exit_reason` (`usage_limited` → trial
-    `usage_limited`, wiped and re-queued, scheduler pauses; `auth_failed` → run aborted `auth`;
+    `usage_limited`, attempt kept under `<run>/usage_limited/` and re-queued (D-028), scheduler pauses; `auth_failed` → run aborted `auth`;
     `gate_failed`/`paused` → `agent_error` with a note; exit code 1 or no `state.json` →
     `agent_error` too — the product crashed, never re-run); ablations pass `--max-turns 200 − <skipped stage cap>`; copy
     `.s2a/runs/<id>/*.md` + `state.json` + `plan.json` to `artifacts/`; produce the scoped diff

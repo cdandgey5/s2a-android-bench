@@ -110,7 +110,7 @@ A "session" in §3 is one chat, or a chain of chats joined by `HANDOFF.md`, on o
 | Order | Phase | Session / branch | Starts when | You do during it | Gate (what you check) | Est. |
 |---|---|---|---|---|---|---|
 | 1 | **0 Foundations** | main session, `main` | Day 0 done | answer questions | `abb tools check` (pinned JDKs + SDK); three smoke-test fixtures (incl. the interrupt finding); 2 repos built on Windows with timings; seed task `antennapod-0000`; `abb repos check` | 4–6 days |
-| 2 | **1 Environments + sandbox** | same | Phase 0 gate | **run `abb sandbox setup` once in an elevated PowerShell when asked** | offline tests < 10 min per repo as the sandbox user; invariants green (denied paths denied, no build cache); `abb sandbox check` proves firewall + proxy | 4–6 days |
+| 2 | **1 Environments + sandbox** | same | Phase 0 gate | **run `abb sandbox setup` once in an elevated PowerShell when asked; read the usage meter before and after the throughput probe (step 10b), then decide Pro / Max / MVP cut** | offline tests < 10 min per repo as the sandbox user; invariants green (denied paths denied, no build cache); `abb sandbox check` proves firewall + proxy; throughput probe recorded (D-027) | 4–6 days |
 | 3 | **2 Tasks & validation** | same | Phase 1 gate | **hand-edit every mined ticket; write 1 authored task** | 5 tasks + seed validated 3×; lint (incl. interface rule) clean; `setup_commit` set | 1–2 weeks |
 | 3′ | **7 Scale tasks** (long pole) | **new session, branch `phase-7`, worktree without `s2a/`** | mid-Phase 2, once `abb tasks mine` yields candidates (Phase 2 step 3) | **triage mined candidates, author ~14 tasks with reference fixes; review repos 3/4 build results** | ≥ 35 validated; coverage within tolerance; `TASKSET.sha256`; split frozen with dev5 pinned | 3 weeks, parallel |
 | 4 | **3 Grading** | main | Phase 2 gate | nothing | 7-row sanity matrix green on seed + 1 dev task | 3–5 days |
@@ -160,7 +160,7 @@ first table moves to week 6 and the MVP cut is taken as soon as it exists.
 
 | When | Decision |
 |---|---|
-| **PROPOSED (D-027):** after the Phase 1 throughput probe (step 10b, end of week 2) | With the measured trials per window and per week: stay on Pro, move to Max, or take the MVP cut (`PLAN.md` §9) now rather than at week 5. Delete this row if D-027 is rejected. |
+| After the Phase 1 throughput probe (step 10b, end of week 2; D-027) | With the measured trials per window and per week: stay on Pro, move to Max, or take the MVP cut (`PLAN.md` §9) now rather than at week 5. Record the choice in `docs/DECISIONS.md`. |
 | Before the held-out run | `docs/PREREG.md: auth_mode` — run the matrix under your subscription in batches across usage windows, or ask Anthropic first (`specs/auth-and-usage.md` §5). |
 | When the first results table exists (target end of week 5) | Keep the full plan (~11 weeks) or take the MVP cut (2 repos, ~28 tasks, controls at 1 trial, Spec Kit optional) — `PLAN.md` §9. |
 | Before Phase 6 tuning | `tasks/TASKSET.sha256` is committed; from here the tuning session never sees test tasks. |

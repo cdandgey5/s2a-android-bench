@@ -100,7 +100,8 @@ Behaviour:
      model means a fallback happened: flag `model_drift=True` and treat the call as
      `harness_error` (the pinned-model rule was violated).
    - **Usage limit** (subscription): the call is `usage_limited` — not an agent failure; the
-     trial is wiped, re-queued and never counted; the scheduler pauses and probes
+     attempt is kept under `<run>/usage_limited/`, the trial re-queued, and it is not counted in
+     the primary metric (the sensitivity check uses it, D-028); the scheduler pauses and probes
      (`specs/auth-and-usage.md` §3) — when the result/error text matches `hit your (session|
      weekly|Opus|Sonnet) limit` (a `rate_limit_event`/`error: rate_limit` line naming the plan
      quota counts too), **or** when the call ends without a `success` result, without an

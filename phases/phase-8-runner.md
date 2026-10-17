@@ -50,7 +50,8 @@ CLI: abb run --arm A [--arm B …] --tasks dev|test|all|<ids> --trials k --paral
 6. **Cost meter and usage pauses.** Sum est. `cost_usd` and tokens as trials finish; when
    `--max-usd` is crossed, stop *launching* new jobs, let running ones finish, mark
    `manifest.aborted_reason = "budget"`. `--pause-on-usage-limit` (default on): a `usage_limited`
-   trial wipes its directory, re-queues, and pauses all workers; first wake-up = parsed reset
+   trial's directory is moved to `<run>/usage_limited/<arm>/<task>/t<k>-a<n>/` (kept, never
+   graded; D-028), the trial re-queues in a fresh `t<k>`, and all workers pause; first wake-up = parsed reset
    time + 2 min if one parsed, else 30 min; then probe every 15 min (`specs/auth-and-usage.md`
    §3; the run's `limits.model`, through the launcher as the sandbox user in a scratch
    `ABB_HOME\work\probe\<ts>`, transcript kept at `<run>/probes/<ts>-scheduler-<n>.jsonl`)
@@ -62,11 +63,10 @@ CLI: abb run --arm A [--arm B …] --tasks dev|test|all|<ids> --trials k --paral
    trials) refuses to start if `reference/verified.md` has no usage-limit canary (Phase 4 step 8)
    unless `--allow-no-canary`, which is recorded in the manifest. At start, warn if
    `powercfg /q` shows a non-zero AC standby timeout (`docs/DAY-0.md` §2).
-   **PROPOSED (D-028; delete if rejected):** a cut trial's directory is moved to
-   `<run>/usage_limited/<arm>/<task>/t<k>-a<n>/` instead of wiped (the re-queued attempt starts in
-   a fresh `t<k>`); and, only if Phase 0 found that `-p` emits `rate_limit_event` with a warning
-   status or utilisation, the scheduler stops launching new trials once the latest event says the
-   window is nearly spent, lets running trials finish, then enters the normal pause/probe loop.
+   **Fewer cuts (D-028):** only if Phase 0 found that `-p` emits `rate_limit_event` with a
+   warning status or utilisation, the scheduler stops launching new trials once the latest event
+   says the window is nearly spent, lets running trials finish, then enters the normal
+   pause/probe loop.
    Also stop on SIGINT gracefully (`abb run abort` writes a stop-file the scheduler polls).
 7. **Rate limits.** Claude Code retries transient 429s internally and reports them as `system` events
    (`subtype: api_retry`); the driver counts them into `PhaseCall.rate_limit_retries`. When a

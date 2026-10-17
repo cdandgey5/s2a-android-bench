@@ -155,8 +155,9 @@ constraint is the plan's **usage windows** (session and weekly limits; Opus has 
 
 - The runner pauses on a usage limit and probes its way back (reset time is only a hint);
   paused trials are re-run from scratch and not counted (`usage_limited`), identically for
-  every arm. Any call that got no model response at all is never counted as an agent failure.
-- **PROPOSED (D-027, owner decision):** an earlier, coarser measurement at the end of Phase 1
+  every arm; the cut attempt is kept, and a pre-registered sensitivity check scores it
+  unresolved, because re-running favours short trials (D-028). Any call that got no model response at all is never counted as an agent failure.
+- **Throughput probe (D-027):** an earlier, coarser measurement at the end of Phase 1
   (step 10b): one realistic sandboxed agent session on the seed task, with the usage meter read
   before and after. The owner's plan is Pro, so whether the matrix fits at all is the biggest
   unknown; this answers it in week 2 instead of week 5, and feeds a decision (Pro / Max / MVP

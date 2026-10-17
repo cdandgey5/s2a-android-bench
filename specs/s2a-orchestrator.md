@@ -262,8 +262,9 @@ stack later = one profile file + optional prompt overrides; the orchestrator doe
   `.s2a/runs/<id>/calls.jsonl` → `PhaseCall`s; copies `.s2a/runs/<id>/transcripts/*.jsonl` into
   the trial's `transcript/` and `.s2a/runs/<id>/prompts/*.md` into `prompts/`, rewriting each
   `PhaseCall.transcript_path` to the copied location; maps `state.json.exit_reason` →
-  `exit_reason` (**`usage_limited` → the trial is `usage_limited`: wiped, re-queued, never
-  counted, scheduler pauses — the same rule as every other arm, `specs/auth-and-usage.md` §3;
+  `exit_reason` (**`usage_limited` → the trial is `usage_limited`: attempt kept under
+  `<run>/usage_limited/`, re-queued, not counted in the primary metric (D-028), scheduler
+  pauses — the same rule as every other arm, `specs/auth-and-usage.md` §3;
   `auth_failed` → the run aborts with `aborted_reason: auth`**; `gate_failed`/`paused` →
   `agent_error` with a note; **exit code 1 or a missing `state.json` → `agent_error` too — the
   product crashed; it is never re-run, D-017**); copies `.s2a/runs/<id>/*.md` + `state.json` + `plan.json`

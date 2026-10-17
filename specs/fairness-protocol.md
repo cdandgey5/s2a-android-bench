@@ -36,7 +36,7 @@ back). The write-up reports S2A against both, not only against `plain`.
 | Historical (mined/reverted) vs authored tasks | Separate rows in every headline table. The primary comparison uses all test tasks; the pre-registered **contamination-robustness** check repeats it on historical post-cutoff tasks, and authored tasks are shown on their own (the framework author wrote them). |
 | Pre- vs post-cutoff tasks | `upstream.fix_date` **and** `upstream.issue_created` vs the pinned model's published training cutoff (D-001); a task is post-cutoff only if both are. |
 | Trials with no cost line | `cost_usd` null; `cost_usd_imputed` reported alongside; share per arm shown. All `cost_usd` figures are Claude Code's client-side estimate at API list price ("est. API-equivalent USD"); tokens are the primary unit. |
-| Usage-limit pauses | `usage_limited` trials (subscription window exhausted) are wiped, re-queued and not counted; count per arm reported. |
+| Usage-limit pauses | `usage_limited` trials (subscription window exhausted) are re-queued and not counted in the primary metric; the cut attempt is kept under `<run>/usage_limited/` and enters the pre-registered usage-limit sensitivity check; cut count, cut rate and elapsed time/tokens at the cut reported per arm (D-028). |
 | `test_compile_failed` outcomes (interface table) | Per arm and category (non-empty diff touching the F2P module whose test source set did not compile); blind `INTERFACE` labels say how many were correct fixes with a different shape. |
 | Retries, rate-limit retries, gate runs, per-stage turns | Per arm. |
 
