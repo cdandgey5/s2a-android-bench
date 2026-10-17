@@ -22,7 +22,7 @@ benchmark/abb/arms/plain/config.yaml      # turn_cap: null  (single call gets th
 benchmark/abb/arms/plain/prompts/system.md   # plain-specific lines appended after environment.md
 benchmark/abb/arms/plain/prompts/task.md     # prompt template with {{ticket}}
 benchmark/abb/harness/setup.py            # one_time_setup support + results/_setup_cache (no-op for plain; used by Phases 5, 6, 8)
-benchmark/abb/harness/audit.py            # `abb audit <run_id>`: recompute totals from transcripts, fail on mismatch
+benchmark/abb/harness/audit.py            # `abb audit <run_id>`: recompute totals from transcripts, fail on mismatch; fail if any file under the run contains the token or an sk-ant-… key (D-026)
 benchmark/config/prices.yaml              # list prices per model id, dated; used only for cost_usd_imputed and the fallback estimate
 benchmark/abb/harness/run.py              # minimal: one arm, sequential, writes results layout
 benchmark/abb/harness/report.py           # minimal table + setup section (grows in Phase 9)
@@ -110,7 +110,7 @@ CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label �
    report), then stops. Both register in `registry.py`; `plain-gate` is optional in the final
    matrix.
 7. **Pin versions.** Set `claude_code.version` in `config/toolchain.yaml` to the exact version used
-   (≥ 2.1.211), reinstall for both users (`abb tools install`, `abb sandbox setup --refresh`), and
+   (≥ 2.1.280, D-026), reinstall for both users (`abb tools install`, `abb sandbox setup --refresh`), and
    record it in `env.lock.json`.
 8. **Run dev5 × 1 trial on Sonnet 5.5.** Then run it again (trial 2) to see variance. Keep both
    run ids in `docs/RUNS.md` with tokens, est. USD and a one-line note each (this file is the lab

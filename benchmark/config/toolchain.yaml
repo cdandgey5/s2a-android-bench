@@ -28,7 +28,7 @@ python:
 
 claude_code:
   installer: "irm https://claude.ai/install.ps1"     # run as: & ([scriptblock]::Create((irm https://claude.ai/install.ps1))) <version>
-  version: "TODO_PIN"          # the exact version printed by `claude.exe --version` on Day 0; must be >= 2.1.211
+  version: "TODO_PIN"          # the exact version printed by `claude.exe --version` on Day 0; must be >= 2.1.280 (Opus 5.5 floor, D-026)
   exe_copy: "$ABB_HOME/tools/claude/<version>/claude.exe"   # copied from the harness user's install; the launcher runs ONLY this path
 
 speckit:

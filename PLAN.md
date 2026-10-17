@@ -156,6 +156,11 @@ constraint is the plan's **usage windows** (session and weekly limits; Opus has 
 - The runner pauses on a usage limit and probes its way back (reset time is only a hint);
   paused trials are re-run from scratch and not counted (`usage_limited`), identically for
   every arm. Any call that got no model response at all is never counted as an agent failure.
+- **PROPOSED (D-027, owner decision):** an earlier, coarser measurement at the end of Phase 1
+  (step 10b): one realistic sandboxed agent session on the seed task, with the usage meter read
+  before and after. The owner's plan is Pro, so whether the matrix fits at all is the biggest
+  unknown; this answers it in week 2 instead of week 5, and feeds a decision (Pro / Max / MVP
+  cut now — START-HERE §5).
 - Phase 4's gate measures **trials per session window** for the plain arm on Sonnet — the
   number for scheduling dev work. The held-out run is planned from the **Opus dev-set
   confirmation run** (Phase 10 prerequisite), per arm: Opus has its own limit and multi-stage
@@ -179,7 +184,7 @@ clock is bounded by usage windows long before CPU. Disk: ~40–60 GB for two rep
 | Repo does not build offline / needs secrets | Phase 0 experiment picks repos by actually building them; stub secrets; drop repos needing an emulator for unit tests. |
 | Gradle memory blow-ups in parallel | Job Object limit 8 GB per trial, `org.gradle.jvmargs=-Xmx3g`, `kotlin.daemon.jvmargs=-Xmx2g`, max 2 parallel on the laptop. |
 | Robolectric downloads at test time | Warm by running tests during `abb env warm` (serially); gate = tests pass as the sandbox user with the proxy stopped. |
-| Claude Code silently updates or switches model | The agent env disables autoupdate/telemetry (version pinned ≥ 2.1.211); the driver calls the pinned `claude.exe` by absolute path and asserts version and `modelUsage`; no `fallbackModel`/`ANTHROPIC_MODEL` set; `switchModelsOnFlag` only if documented. |
+| Claude Code silently updates or switches model | The agent env disables autoupdate/telemetry (version pinned ≥ 2.1.280, the Opus 5.5 floor); the driver calls the pinned `claude.exe` by absolute path and asserts version and `modelUsage`; no `fallbackModel`/`ANTHROPIC_MODEL` set; `switchModelsOnFlag` only if documented. |
 | Agent stalls behind the proxy / firewall | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, `CLAUDE_CODE_PROXY_RESOLVES_HOSTS=1`; Phase 1 gate runs the smoke test as the sandbox user through the proxy. |
 | Graceful stop on Windows undocumented | Phase 0 measures whether Ctrl+Break (or Ctrl+C) yields a `result` line and both drivers use the same signal; the driver marks harness-initiated stops as `timeout` and imputes cost identically for every arm; `--max-turns`/`--max-budget-usd` are the primary bounds. |
 | Windows file-system traps | `core.autocrlf=false`, `core.longpaths=true` + `LongPathsEnabled`, short `ABB_HOME`, Defender exclusion (optional), Gradle daemons stopped before deleting workspaces, case-collision check in `abb repos check`. |

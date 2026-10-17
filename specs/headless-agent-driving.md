@@ -24,12 +24,13 @@ Two implementations exist and must stay identical in behaviour:
 | System prompt | `--append-system-prompt "<text>"` (keeps Claude Code's defaults; recorded on the first request and reused on `--resume`) |
 | Slash commands | Put `/name args` in the prompt string; Claude Code expands the first one. The `init` event lists `slash_commands`; Phase 5's gate checks it contains `speckit-specify`. |
 | Auth | `CLAUDE_CODE_OAUTH_TOKEN` in the environment block, mapped by the harness from the user variable `ABB_OAUTH_TOKEN` (one-year token from `claude setup-token`); **no** `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN`/cloud flags (an API key would take precedence and "is always used when present" with `-p`); the harness refuses to start if its own environment has `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`; `abb auth check` (`claude.exe auth status` through the launcher → `authMethod: oauth_token`) once per run (`specs/auth-and-usage.md`) |
-| No self-update, no telemetry | Agent env (`config/sandbox.yaml`): `DISABLE_AUTOUPDATER=1 DISABLE_UPDATES=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (a native install otherwise updates itself in the background and would move off the pinned version; feature-flag/telemetry hosts would also be blocked by the firewall and retried). Version floors: `DISABLE_UPDATES` ≥ 2.1.118, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` ≥ 2.1.182, stdin fix on Windows ≥ 2.1.211 → **pin ≥ 2.1.211** |
+| No self-update, no telemetry | Agent env (`config/sandbox.yaml`): `DISABLE_AUTOUPDATER=1 DISABLE_UPDATES=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (a native install otherwise updates itself in the background and would move off the pinned version; feature-flag/telemetry hosts would also be blocked by the firewall and retried). Version floors: `DISABLE_UPDATES` ≥ 2.1.118, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` ≥ 2.1.182, stdin fix on Windows ≥ 2.1.211, Opus 5.5 ≥ 2.1.280 (docs/en/model-config) → **pin ≥ 2.1.280** (D-026) |
+| Credential scrub | `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` in the agent env: Claude Code strips credentials (matched "by name or value shape") from the environments of its subprocesses — Bash, PowerShell, hooks, MCP — so an agent running `env` cannot print `CLAUDE_CODE_OAUTH_TOKEN` into the verbatim transcript. The docs' example names `ANTHROPIC_API_KEY`, so Phase 0 step 5 proves the OAuth token is covered too. It also removes `CLAUDE_CONFIG_DIR` from subprocesses (nothing in a trial needs it there). Backstop: `abb audit` fails on any file under the run that contains the token (below) (D-026) |
 | Proxy DNS | `CLAUDE_CODE_PROXY_RESOLVES_HOSTS=1` so the CLI lets the proxy resolve `api.anthropic.com` (a per-user firewall rule does not block DNS — Windows resolves through the `Dnscache` service — but with the proxy doing the lookup nothing else needs name resolution) |
 | Windows specifics | Call the pinned binary by absolute path (`ABB_HOME\tools\claude\<version>\claude.exe`; Claude Desktop can shadow `claude` on PATH). The Bash tool runs Git Bash; `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` is set explicitly so every arm has the same shell set; never deny `Bash` (that would also remove PowerShell). Settings and sessions live in a per-trial `CLAUDE_CONFIG_DIR` (`<trial>\claude-config`, seeded from `ABB_HOME\sandbox\claude-config.template`, `settings.json` deny-write). Credentials are file-based on Windows; the token is passed only via the environment block. |
 | Background work after final turn | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=60000` so a trial cannot hang 10 min after finishing |
-| Model-switch guard | The certain guard is the `modelUsage` assertion below. No `fallbackModel` setting and no `ANTHROPIC_MODEL` env are set. `~/.claude/settings.json: {"switchModelsOnFlag": false}` is baked in **only if the pinned version documents the key** (two of three checks today found it, one did not — Phase 0 step 5 decides and records) |
-| Do NOT use | `--bare` (skips CLAUDE.md, commands, skills — breaks Spec Kit and repo instructions; docs say it may become the `-p` default, which is why `CLAUDE_CODE_VERSION` is pinned) and `--restricted` (refuses bypassPermissions) |
+| Model-switch guard | The certain guard is the `modelUsage` assertion below. No `fallbackModel` setting and no `ANTHROPIC_MODEL` env are set. `~/.claude/settings.json: {"switchModelsOnFlag": false}` is baked in **only if the pinned version documents the key**. It is documented as of 2026-10-17 (docs/en/model-config: `false` = "Ask each time"; in `-p` "a flagged request ends the turn with a refusal instead"), so the default is to keep it; Phase 0 step 5 re-checks on the pinned version and records |
+| Do NOT use | `--bare` (skips CLAUDE.md, commands, skills — breaks Spec Kit and repo instructions; docs say it "will become the default for `-p` in a future release", which is why `CLAUDE_CODE_VERSION` is pinned; it also never reads the OAuth token) and `--restricted` (refuses bypassPermissions) |
 
 ## `run_headless(...)`
 
@@ -154,6 +155,9 @@ Behaviour:
 ships `abb audit <run_id>`, which recomputes turns, cost, tool calls, the `init` model and
 version, `modelUsage` keys and Σ turns ≤ `max_turns_total` from the transcripts of **every**
 arm (including the orchestrator's) and fails on any mismatch with `run.json`/`calls.jsonl`.
+It also **fails if any file under the run directory** (transcripts, probes, prompts, artifacts,
+diffs, logs) contains the value of `ABB_OAUTH_TOKEN` or matches `sk-ant-[a-z]+\d{2}-` (OAuth `oat`, API `api`, `admin` keys); the
+failure names the file, never the match (D-026). Nothing leaves the machine before audit passes.
 
 ## Assisted mode (optional, dev tasks only)
 
@@ -198,7 +202,11 @@ The plain arm gets the whole total in one call (`--max-turns 200`). Multi-call a
 Through the harness launch path (`abb ws smoke`, which builds the agent environment block exactly
 as a trial would and runs the pinned `claude.exe`), with the block carrying
 `CLAUDE_CODE_OAUTH_TOKEN` (mapped from `ABB_OAUTH_TOKEN`) and **no** `ANTHROPIC_API_KEY`; the
-equivalent PowerShell by hand (set the variable for that shell only):
+equivalent PowerShell by hand (set the variable for that shell only). Run it only in a **fresh
+PowerShell 7 window**, never from inside a chat: a desktop-app chat's shell carries ~29
+`CLAUDE_CODE_*`/`ANTHROPIC_*` variables (e.g. `CLAUDE_CODE_ENTRYPOINT=claude-desktop`,
+`ANTHROPIC_BASE_URL`, `CLAUDE_CODE_CHILD_SESSION`) that a child `claude.exe` would inherit, so the
+fixture would not match a trial. `abb ws smoke` builds the block from scratch and is unaffected.
 
 ```powershell
 $env:CLAUDE_CODE_OAUTH_TOKEN = $env:ABB_OAUTH_TOKEN      # this shell only; never set it at user level
@@ -219,5 +227,10 @@ record `authMethod`. Repeat with `--max-turns 1` and a prompt that needs two too
 Ctrl+C) → save as `smoke-interrupt.jsonl` and record in `reference/verified.md` whether a
 `result` line was written and what the exit code was for each signal (this decides whether timed-out trials carry a measured or an imputed
 cost; either way it is applied identically to every arm). These three files are the parser
-fixtures Phases 4 and 6 use. If a model id is rejected, try the current ids from the model docs with `claude.exe --model <id> -p "ping"`
+fixtures Phases 4 and 6 use. Fourth, the **scrub check** (not saved as a fixture): an `abb ws smoke` prompt that asks the
+agent to run, in Bash, `[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] && echo SET || echo UNSET` and, in
+PowerShell, `if ($env:CLAUDE_CODE_OAUTH_TOKEN) {'SET'} else {'UNSET'}`, and to print both outputs.
+Both must print `UNSET`. The commands print a word, never the value, so a failed scrub cannot
+leak the token into the transcript; grep that transcript for the token value as well. If either prints `SET`, stop: the trial env needs another way to keep the token out of
+subprocesses before any agent run. If a model id is rejected, try the current ids from the model docs with `claude.exe --model <id> -p "ping"`
 (there is no API key to query `/v1/models`), update D-001 and `config/limits.yaml`, and continue. Record `claude --version` in `reference/verified.md`.

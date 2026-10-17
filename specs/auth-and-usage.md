@@ -24,15 +24,28 @@ Rules the driver enforces:
   `-p` "the key is always used when present". The harness refuses to start if its own
   environment has `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` set (so a stray global
   variable is caught, not inherited).
-- Never `--bare`: bare mode "does not read `CLAUDE_CODE_OAUTH_TOKEN`". (`--bare` may become the
-  `-p` default in a future release — one more reason the Claude Code version is pinned.)
+- Never `--bare`: bare mode "does not read `CLAUDE_CODE_OAUTH_TOKEN`". (The docs say `--bare`
+  "will become the default for `-p` in a future release", with no date — one more reason the
+  Claude Code version is pinned, and why every pin upgrade re-runs `abb auth check` and the
+  smoke tests.)
 - Preflight once per run: `abb auth check` runs `claude.exe auth status` through the launcher
   with the mapped block and requires exit 0 and `authMethod: oauth_token` (the CLI reference
   documents the values `none`, `claude.ai`, `oauth_token`, `api_key`, `api_key_helper`,
-  `third_party`). Whether the token is honoured with an **empty** per-trial `CLAUDE_CONFIG_DIR`
+  `third_party`; exit 0 if logged in, 1 if not). It also records `subscriptionType` (e.g. `pro`,
+  `max`) into the manifest's `plan` field, so the plan is measured, not typed. Whether the token is honoured with an **empty** per-trial `CLAUDE_CONFIG_DIR`
   is not documented — Phase 0 step 5 proves it and records the answer in `reference/verified.md`.
   Whether it is honoured when the process runs **as the sandbox user** (`abb-agent`, no profile)
   is proven by Phase 1's smoke test through the sandbox path, before any trial runs there.
+- **The token never reaches a transcript** (D-026). The agent has a shell, and transcripts are
+  verbatim and published in Phase 10, so "never logged" must be enforced, not assumed: the agent
+  env sets `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` (Claude Code strips credentials from its Bash,
+  PowerShell, hook and MCP subprocesses; Phase 0 step 5 proves it covers the OAuth token), and
+  `abb audit` fails on any file under the run that contains the token value or an `sk-ant-…`
+  key pattern (`specs/headless-agent-driving.md`, "Source of truth"). Residual channel, stated in
+  the README: a process of the sandbox user could still read `claude.exe`'s own environment.
+- **A fresh token for the held-out run.** Phase 10 creates a new `setup-token` token for the
+  held-out matrix and retires it afterwards (revoked if Anthropic documents a way — Phase 0 step
+  5 records whether it does — otherwise left to expire, never reused for publishing or sharing).
 - One token, one account, every arm: identical by construction (fairness-protocol.md).
 - `s2a` run by you in a terminal, outside the benchmark, simply uses whatever auth that
   `claude.exe` has — your login. Inside a trial it inherits the block.
@@ -69,9 +82,9 @@ counting* a trial:
 | Detect | (a) the result/error text matches `hit your (session\|weekly\|Opus\|Sonnet) limit` (and, if present, a `resets <time>` fragment), or (b) a call ends without a `success` result and without an explaining subtype (`error_max_turns`, `error_max_budget_usd` are explained — no probe) and **the probe says the service is unavailable**. The probe: right after such a call the driver runs `claude.exe -p "ping" --tools "" --max-turns 1 --model <the call's model>` through the same launch path and keeps its transcript at `<run>/probes/<ts>-<arm>-<task>-t<k>-<n>.jsonl`, outside the trial directory. Limit text or 429 → `usage_limited`; 401/403 → the run aborts at once (`aborted_reason: auth` → `abb auth check`); model rejected → run aborts (`model`); other probe failure → `harness_error`; probe succeeds → the call's own classification stands. A call with **no `assistant` message at all** is never `agent_error`: `usage_limited`, `harness_error` or an abort, by the probe. The S2A arm applies the same rule inside the orchestrator (`exit_reason: usage_limited`, exit 6; `specs/s2a-orchestrator.md` §7). |
 | Classify | the trial gets outcome `usage_limited`: not resolved, not unresolved, **not counted**; its directory is wiped and the trial re-queued; the probe transcript under `<run>/probes/` stays, so `abb audit` can recount `usage_limited_pauses` per arm from transcripts (rule 11) |
 | Pause | `abb run --pause-on-usage-limit` (default on): all workers stop launching. First wake-up = the parsed reset time + 2 min when a `resets <time>` fragment parsed (bare clock time, local zone, next occurrence), else 30 min; from then on the scheduler **probes every 15 min** until a probe succeeds, then resumes. The parsed time is only a hint; the probe is the mechanism. Scheduler probes use the run's `limits.model`, run through the launcher as the sandbox user in a scratch `ABB_HOME\work\probe\<ts>` with the trial env block minus workspace, and are kept as `<run>/probes/<ts>-scheduler-<n>.jsonl`; a 401/403 during the loop aborts the run (`auth`) instead of waiting. Total pause is capped by `--max-pause-h` (default 48 h, a weekly limit can be days) → `aborted_reason = "usage_limit"`, resumable with `--resume`. `abb run status` shows `paused until …`/`probing`; probes are logged in `events.jsonl` and summarised in `docs/RUNS.md`. |
-| Fairness | every arm is subject to the same pauses; a paused trial is re-run from scratch so no arm's wall-clock budget is consumed by waiting; interleaved scheduling (Phase 8) keeps a window's close from falling on one arm |
+| Fairness | every arm is subject to the same pauses; a paused trial is re-run from scratch so no arm's wall-clock budget is consumed by waiting; interleaved scheduling (Phase 8) keeps a window's close from falling on one arm. **Known bias of re-running from scratch:** a longer trial is more likely to be cut when a window closes, so the trials that get counted over-represent short runs. Failures tend to be the long runs (flailing until max turns or the deadline), and the multi-stage arms run longer and get cut more often. Discarding cut attempts therefore favours success, and favours the arms that are cut most. **PROPOSED (D-028, owner decision):** (a) keep every cut attempt instead of wiping it — move it to `<run>/usage_limited/<arm>/<task>/t<k>-a<n>/` (transcript, `run.json` with tokens, turns and elapsed time at the cut; never graded); (b) a pre-registered sensitivity check: the primary comparison recomputed with each trial slot's **first** attempt, a cut attempt scored unresolved, reported next to the headline; plus cut count, cut rate and mean elapsed/tokens at cut per arm; (c) fewer cuts: if Phase 0 finds `-p` emits `rate_limit_event` with a warning status or utilisation, the scheduler stops *launching* trials once the window is nearly spent, lets running trials finish, then pauses as usual. Alternatives for the owner: keep the current rule and only report cut counts; or count cut attempts as unresolved in the primary metric itself (conservative, but it penalises the environment rather than the agent). |
 | Canary | the exact `-p` output on a limit is undocumented. Phase 4 captures the first real occurrence verbatim (transcript tail, stderr, exit code) into `reference/verified.md` and tunes the detector. If dev runs never hit a limit, run `abb ws smoke --until-limit --max-calls 200` once when the window is nearly spent (end of a work session, or when the app's usage indicator says so): it loops the probe prompt through the launcher until the limit answers or `--max-calls` is reached, records the output, and costs the remainder of that window — and locks your own chats out until it resets. A **matrix run** — `--tasks test`, or more than 30 trials — refuses to start without the canary unless `--allow-no-canary` is passed, which is recorded in the manifest. |
-| Plan | Phase 4's gate records **trials per session window** for the plain arm on Sonnet in `docs/RUNS.md` — the number for scheduling dev work. The held-out run is planned from the **Opus dev-set confirmation run** (Phase 10 prerequisite), per arm, because Opus has its own limit and multi-stage arms use 2–5× the tokens. `PLAN.md` §6 turns those into a calendar. |
+| Plan | **PROPOSED (D-027):** Phase 1 step 10b first runs one realistic sandboxed session on the seed task with the usage meter read before and after, and records session % and weekly % per trial, giving a lower-bound estimate of the weeks the plan needs and an early Pro / Max / MVP-cut decision. Then Phase 4's gate records **trials per session window** for the plain arm on Sonnet in `docs/RUNS.md` — the number for scheduling dev work. The held-out run is planned from the **Opus dev-set confirmation run** (Phase 10 prerequisite), per arm, because Opus has its own limit and multi-stage arms use 2–5× the tokens. `PLAN.md` §6 turns those into a calendar. |
 
 Opus has its own limit on the plans that separate it, and dev work on `claude-sonnet-5-5`
 keeps that window free for the pinned final runs.
@@ -99,8 +112,10 @@ Differences between Pro, Max 5x and Max 20x beyond the limits themselves are not
 Anthropic's legal page says OAuth subscription auth "is intended exclusively for purchasers of
 … subscription plans and is designed to support ordinary use of Claude Code", that advertised
 limits "assume ordinary, individual usage of Claude Code and the Agent SDK", that "developers
-building products or services … should use API key authentication", and that Anthropic "may
-enforce these restrictions … without prior notice". No document permits or forbids a personal
+building products or services … should use API key authentication", and that Anthropic may
+enforce these restrictions and "may do so without prior notice" (docs/en/legal-and-compliance,
+checked 2026-10-17; the same page directs use-case questions to Anthropic's sales team). No
+document permits or forbids a personal
 benchmark batch of hundreds of headless runs; it is not an obviously prohibited case, and it is
 hard to call it ordinary individual usage either.
 
@@ -113,7 +128,8 @@ How the plan handles that, honestly:
   `docs/PREREG.md: auth_mode` before the freeze:
   1. run it under the subscription in small batches across usage windows and days (slow; the
      MVP cut in `PLAN.md` §9 makes it tractable), accepting that this stretches "ordinary";
-  2. ask first — a support request at https://support.claude.com describing the batch; or
+  2. ask first — describe the batch to Anthropic (the legal page sends use-case questions to
+     sales; https://support.claude.com is the other channel) and keep the answer in `docs/`; or
   3. use an API key for that run only — which the owner has ruled out for now.
   The plan does not choose for you; it makes the choice visible and reversible.
 - Nothing in this plan ever shares the token with anyone else or serves other users: the
@@ -126,6 +142,6 @@ How the plan handles that, honestly:
   `claude.exe -p --output-format json --json-schema … --tools "" --max-turns 1` through the
   same driver and read `structured_output`.
 - `docs/RUNS.md` logs tokens and est. USD per run, plus usage-limit pauses and probes.
-- The run manifest records `auth_mode` (`subscription` | `api_key`), the plan name (free text,
-  from you), `allow_no_canary`, and the count of `usage_limited` pauses per arm.
+- The run manifest records `auth_mode` (`subscription` | `api_key`), the plan (`subscriptionType`
+  from `claude auth status`, recorded by `abb auth check`), `allow_no_canary`, and the count of `usage_limited` pauses per arm.
 - `docs/PREREG.md` lists `usage_limited` among the not-counted outcomes.

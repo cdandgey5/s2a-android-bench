@@ -62,6 +62,11 @@ CLI: abb run --arm A [--arm B …] --tasks dev|test|all|<ids> --trials k --paral
    trials) refuses to start if `reference/verified.md` has no usage-limit canary (Phase 4 step 8)
    unless `--allow-no-canary`, which is recorded in the manifest. At start, warn if
    `powercfg /q` shows a non-zero AC standby timeout (`docs/DAY-0.md` §2).
+   **PROPOSED (D-028; delete if rejected):** a cut trial's directory is moved to
+   `<run>/usage_limited/<arm>/<task>/t<k>-a<n>/` instead of wiped (the re-queued attempt starts in
+   a fresh `t<k>`); and, only if Phase 0 found that `-p` emits `rate_limit_event` with a warning
+   status or utilisation, the scheduler stops launching new trials once the latest event says the
+   window is nearly spent, lets running trials finish, then enters the normal pause/probe loop.
    Also stop on SIGINT gracefully (`abb run abort` writes a stop-file the scheduler polls).
 7. **Rate limits.** Claude Code retries transient 429s internally and reports them as `system` events
    (`subtype: api_retry`); the driver counts them into `PhaseCall.rate_limit_retries`. When a

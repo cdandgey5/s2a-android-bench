@@ -5,7 +5,7 @@ tool facts (including how Claude Code behaves headlessly on Windows), an evidenc
 the first two repositories, and one seed task so every later harness piece has a fixture.
 
 **Prerequisites (done by the human — `docs/DAY-0.md`).** Windows 11, PowerShell 7, Git for
-Windows, `gh` (authenticated), `uv`, Claude Code ≥ 2.1.211 pinned and its version written into
+Windows, `gh` (authenticated), `uv`, Claude Code ≥ 2.1.280 pinned and its version written into
 `benchmark/config/toolchain.yaml`; the subscription token from `claude setup-token` as the user
 environment variable `ABB_OAUTH_TOKEN`, with **no** `ANTHROPIC_API_KEY` and **no** global
 `CLAUDE_CODE_OAUTH_TOKEN`; `ABB_HOME`
@@ -48,7 +48,7 @@ reference/build-experiments.md   # results of the repo-selection experiment
 
 1. **Verify the bootstrap.** In `%USERPROFILE%\abb-src` (PowerShell 7): `$PSVersionTable.PSVersion`
    (7.x), `git --version`, `gh auth status`, `uv --version`, `& "$env:USERPROFILE\.local\bin\claude.exe"
-   --version` (≥ 2.1.211 and equal to `toolchain.yaml`), `$env:ABB_HOME` set and on a drive with
+   --version` (≥ 2.1.280 and equal to `toolchain.yaml`), `$env:ABB_HOME` set and on a drive with
    ≥ 60 GB free (`Get-PSDrive`), `$env:ABB_OAUTH_TOKEN` set, `$env:ANTHROPIC_API_KEY` and
    `$env:CLAUDE_CODE_OAUTH_TOKEN` unset (never print the token), `git remote -v` shows the private
    remote. Record everything
@@ -80,9 +80,17 @@ reference/build-experiments.md   # results of the repo-selection experiment
    launch path** (`abb ws smoke`), saving fixtures: `smoke-success`,
    `smoke-maxturns1`, and `smoke-interrupt` (deadline hit → the launcher sends Ctrl+Break to the child's process
    group, then in a second run Ctrl+C → does a `result` line appear? exit code? record both and
-   set `sandbox.yaml: process.interrupt` to the one that ends the turn cleanly). Check every flag the driver spec uses against `claude --help`. Check the
-   settings reference of the pinned version for `switchModelsOnFlag`; keep it in
-   `sandbox/claude-config.template/settings.json` only if documented. Record the resolved model id from
+   set `sandbox.yaml: process.interrupt` to the one that ends the turn cleanly). Then the **scrub
+   check** from the same spec section: both shells must report `UNSET` for
+   `CLAUDE_CODE_OAUTH_TOKEN` and the transcript must not contain the token (stop if not — D-026).
+   Check every flag the driver spec uses against `claude --help`. Check the
+   settings reference of the pinned version for `switchModelsOnFlag` (documented as of
+   2026-10-17: `false` = "Ask each time"; in `-p` a flagged request ends the turn with a refusal);
+   keep it in `sandbox/claude-config.template/settings.json` if the pinned version still documents
+   it. Record in `reference/verified.md`: whether any smoke transcript contains a
+   `rate_limit_event` line and which fields it carries (`status`, `resetsAt`, `rate_limit_type`,
+   anything like utilisation — the Agent SDK documents the event, the `-p` docs do not); and
+   whether Anthropic documents a way to revoke a `setup-token` token. Record the resolved model id from
    the `init` event, and whether the Bash tool runs Git Bash (`echo $BASH_VERSION`). Also confirm the
    hidden launcher console does not flash a Windows Terminal window (else switch to
    `CREATE_NO_WINDOW`), and record the peak job memory of a module test run with two Robolectric
@@ -123,16 +131,18 @@ reference/build-experiments.md   # results of the repo-selection experiment
 uv run abb --help
 uv run pytest -q                                   # incl. tests/platform/test_windows.py
 uv run abb tools check                             # jdk17, jdk21, android-sdk present and checksums match the lock
-& "$env:USERPROFILE\.local\bin\claude.exe" --version   # equals toolchain.yaml
+& "$env:USERPROFILE\.local\bin\claude.exe" --version   # equals toolchain.yaml, >= 2.1.280
+uv run abb auth check                              # exit 0; authMethod oauth_token through the launcher; subscriptionType recorded
 Get-ChildItem benchmark\tests\fixtures\transcripts  # smoke-success.jsonl smoke-maxturns1.jsonl smoke-interrupt.jsonl
-Get-Content reference\verified.md                  # claude version + flags table, interrupt finding (Ctrl+Break and Ctrl+C), resolved model id, Git Bash check, sdk list, disk
+Get-Content reference\verified.md                  # claude version + flags table, interrupt finding (Ctrl+Break and Ctrl+C), scrub check UNSET/UNSET, rate_limit_event finding, resolved model id, Git Bash check, sdk list, disk
 Get-Content reference\build-experiments.md         # >= 2 repos with timings and the choice
 uv run abb repos check antennapod                  # strict: SHAs real, task names filled, case/path-length checks
 Get-ChildItem benchmark\tasks\antennapod-0000      # task.yaml problem.md test.patch gold.patch LICENSE-NOTE.md
 ```
 
-Gate passes when: the toolchain is installed and locked; the three smoke fixtures exist with
-the expected subtypes (and `reference/verified.md` states what happens on Ctrl+Break and on Ctrl+C, and which one both drivers will use); at least
+Gate passes when: the toolchain is installed and locked; `abb auth check` reports
+`oauth_token`; the three smoke fixtures exist with
+the expected subtypes (and `reference/verified.md` states what happens on Ctrl+Break and on Ctrl+C, and which one both drivers will use); the scrub check printed `UNSET` in both shells; at least
 two candidate repos ran unit tests on Windows with wall time recorded; repo #1 and #2 are named
 with evidence; their configs pass `abb repos check`; the seed task exists.
 

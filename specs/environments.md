@@ -78,7 +78,7 @@ would silently break that on Windows and are handled explicitly:
 | SDK packages | `sdkmanager.bat` with the pinned package list; licences accepted by feeding `y` lines on stdin from Python; installed list recorded | `config/toolchain.yaml` + lock |
 | Python for tools + launcher | `uv python install 3.12` with `UV_PYTHON_INSTALL_DIR=ABB_HOME\tools\python` set **in `abb tools install`'s own process environment only** (not as a user variable, so the owner's other uv projects are untouched) | lock |
 | `specify`, `s2a` | `uv tool install` with `UV_TOOL_DIR=ABB_HOME\tools\uvtools`, `UV_TOOL_BIN_DIR=ABB_HOME\tools\bin` (same per-process env); `specify` at `speckit.ref` (a provisional latest tag in Phase 0, re-pinned in Phase 5); `s2a` from `%USERPROFILE%\abb-src\s2a` at `s2a_git_sha` (`abb sandbox install-s2a` re-runs it); the harness calls both by absolute path — adding `tools\bin` to the owner's PATH is optional convenience | `config/toolchain.yaml`, `env.lock.json: s2a_git_sha` |
-| Claude Code | pinned native install for the harness user, **≥ 2.1.211**; the versioned binary is copied to `ABB_HOME\tools\claude\<version>\claude.exe`, the only path the launcher ever runs | `config/toolchain.yaml: claude_code.version` |
+| Claude Code | pinned native install for the harness user, **≥ 2.1.280** (Opus 5.5 floor, D-026); the versioned binary is copied to `ABB_HOME\tools\claude\<version>\claude.exe`, the only path the launcher ever runs | `config/toolchain.yaml: claude_code.version` |
 | Git for Windows | on the host (2.44); provides Git Bash for Claude Code's Bash tool | `git --version` recorded |
 
 Nothing is ever installed *as* the sandbox user (its egress is blocked): it only **reads and

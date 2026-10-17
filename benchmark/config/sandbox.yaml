@@ -45,6 +45,7 @@ process:
     DISABLE_UPDATES: "1"
     CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "60000"
     CLAUDE_CODE_USE_POWERSHELL_TOOL: "1"     # explicit, so every arm has the same shell set (Bash via Git Bash + PowerShell)
+    CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"    # strip credentials from the agent's Bash/PowerShell/hook envs so `env` cannot print the token into a transcript (D-026; Phase 0 step 5 proves it covers CLAUDE_CODE_OAUTH_TOKEN)
     USERPROFILE: "$TRIAL/home"               # also HOME, TEMP, TMP, APPDATA, LOCALAPPDATA -> $TRIAL/home
     JAVA_TOOL_OPTIONS: "-Duser.home=$TRIAL/home -Dfile.encoding=UTF-8"   # Java ignores USERPROFILE; this reaches every JVM incl. test workers
     ANDROID_USER_HOME: "$TRIAL/home/.android"

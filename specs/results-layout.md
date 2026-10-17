@@ -13,6 +13,7 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   audit.json                          # Phase 4+: `abb audit` recomputation from transcripts (pass/fail per trial)
   probes/<ts>-<arm>-<task>-t<k>-<n>.jsonl   # probe calls that justified a usage_limited / harness_error / abort decision (never wiped)
   probes/<ts>-scheduler-<n>.jsonl     # pause-loop probes; `abb audit` recounts manifest.usage_limited_pauses from this directory
+  usage_limited/<arm>/<task_id>/t<k>-a<n>/   # PROPOSED (D-028): cut attempts kept instead of wiped (run.json, transcript/, prompts/); never graded; input to the usage-limit sensitivity check
   setup/<setup_kind>/<repo>/          # one-time per-repo setup, reported separately
     run.json  transcript/  prompts/  artifacts/        # setup_kind = speckit-constitution | s2a-map
   <arm>/<task_id>/t<k>/               # k = 1..trials
@@ -56,8 +57,8 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   "s2a_install": {"sha": "def456", "path": "ABB_HOME\\tools\\bin\\s2a.exe"},
   "interrupt": "ctrl_break",                 # the signal both drivers used for harness-initiated stops (Phase 0 decision)
   "sandbox_mode": "user",                     # user | none (none is refused for split: test)
-  "auth_mode": "subscription",                # subscription | api_key; plan name below is free text from the owner
-  "plan": "Max 5x",
+  "auth_mode": "subscription",                # subscription | api_key
+  "plan": "pro",                              # `subscriptionType` from `claude auth status`, recorded by `abb auth check` (not typed by hand)
   "usage_limited_pauses": {"plain": 2, "s2a": 3},
   "strip_agent_instructions": false,
   "allow_env_drift": false,

@@ -1,4 +1,4 @@
-# Root ignore for the ~/abb working clone (benchmark/.gitignore adds its own rules).
+# Root ignore for the %USERPROFILE%\abb-src working clone (benchmark/.gitignore adds its own rules).
 .venv/
 **/.venv/
 __pycache__/

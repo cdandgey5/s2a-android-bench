@@ -5,7 +5,7 @@ reproducibility package.
 
 **Prerequisites.** Phases 7, 8, 9 gates; S2A tuning finished and `s2a/CHANGELOG.md`
 closed with a "frozen" entry; `docs/RUNS.md` lists the last dev-set confirmation run on the
-pinned model (`claude-opus-5-5`) with cost per arm.
+pinned model (`claude-opus-5-5`, or `claude-sonnet-5-5` if D-001 fell back) with cost per arm.
 
 **Effort.** ~60 h of compute spread over the subscription's usage windows (days to weeks of
 batches; the MVP cut shortens it); ~1 week of writing.
@@ -27,8 +27,10 @@ batches; the MVP cut shortens it); ~1 week of writing.
    (`specs/auth-and-usage.md` §5 — decide this before the freeze, not after).
 3. **Run machine.** The laptop (batches at `--parallel 2` across usage windows) or a Windows VM prepared by
    `scripts/vm-setup.ps1` (`abb tools install`, `abb env warm` for every repo, `abb sandbox
-   setup`; fingerprints must equal `env.lock.json`). Smoke trial (one dev task, plain arm) to
-   confirm `abb auth check`, versions and fingerprints match the manifest you expect.
+   setup`; fingerprints must equal `env.lock.json`). Create a **fresh** `setup-token` token for
+   this run and store it as `ABB_OAUTH_TOKEN` (`docs/DAY-0.md` §3; D-026). Smoke trial (one dev
+   task, plain arm) to confirm `abb auth check`, versions and fingerprints match the manifest you
+   expect.
 4. **Run.** `abb run … --parallel 6 --label heldout-final --grade` → run id
    `<YYYYMMDD>-<HHMM>-heldout-final`. Monitor with `abb run status` (usage-limit pauses show
    as `paused until …` and resume by themselves). If the run aborts (budget/host), `--resume` it; the manifest records every resume. If a **harness
@@ -50,8 +52,9 @@ batches; the MVP cut shortens it); ~1 week of writing.
    size; one-time setup costs; contamination statement (post-cutoff share, no history, no web,
    historical vs authored rows); failure breakdown; known limitations (JVM-only tests, Claude
    Code only, 40 tasks); how to reproduce (`abb tools install`, `abb env warm`, `abb sandbox setup`, `abb run`, `abb report`).
-7. **Reproducibility package.** `<results root>/<run_id>/` (transcripts included — redact
-   nothing except keys, which were never logged), `env.lock.json`, `split.yaml`,
+7. **Reproducibility package.** `<results root>/<run_id>/` (transcripts included, nothing
+   redacted: the token is kept out of subprocess environments by the scrub, and `abb audit` has
+   just proven that no file under the run contains it — D-026), `env.lock.json`, `split.yaml`,
    `tasks/TASKSET.sha256`, `docs/PREREG.md`, the git tag, and `abb repro <run_id>` which
    re-grades 3 random trials from stored diffs, re-runs `abb audit`, and re-generates the report,
    asserting identical numbers.
@@ -63,7 +66,9 @@ batches; the MVP cut shortens it); ~1 week of writing.
    held-out run to `benchmark/published/<run_id>/` and commit; attach a tarball of the full results
    directory (transcripts, diffs, JUnit) to the release. Push the repo (harness + tasks +
    published report); open-source license files in place; task license notes present. Update
-   `S2AFramework/README.md` status table to done.
+   `S2AFramework/README.md` status table to done. Retire the held-out run's token: revoke it if
+   Phase 0 found a documented way, otherwise remove it from `ABB_OAUTH_TOKEN`/`.env` and let it
+   expire.
 
 ## Acceptance gate
 

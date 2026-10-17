@@ -115,7 +115,27 @@ CLI: abb env warm <repo> [--warm-commits ...]   abb env verify <repo> [--sandbox
    PowerShell there (as the agent user with `--as-agent`, via the same launch path).
 9. **Prune** `abb env prune`: deletes workspaces of finished runs (`cleanup()` on each), old warm
    scratch dirs, and reports `caches\` sizes; never touches a running trial.
-10. Repeat 1 and 4 for repo #2. Commit `phase 1: environments + sandbox`.
+10. Repeat 1 and 4 for repo #2.
+10b. **Throughput probe — PROPOSED (D-027; owner decision — delete this step if rejected).**
+   Why: the account is on Claude Pro (`subscriptionType: pro`, the smallest usage windows), the
+   building chats share those windows, and Phase 4 is the first place the plan would otherwise
+   learn whether the matrix fits — about five weeks in. Here the sandbox exists, so one realistic
+   agent session can run safely. Steps: (a) the owner notes the usage meter (claude.ai →
+   Settings → Usage: current session % and weekly %) and does not chat during the probe; (b)
+   `abb ws smoke --sandbox user --repo antennapod --prompt-file tasks/antennapod-0000/problem.md
+   --max-turns 200 --deadline 2700 --model claude-sonnet-5-5` in a fresh workspace (the plain
+   arm's shape: one call, the whole budget; this step adds those five options to Phase 0's
+   `abb ws smoke`); (c) the owner reads the meter again; (d) record in
+   `docs/RUNS.md` and `reference/verified.md`: tokens (in/out/cache), est. USD, turns, wall time,
+   session % and weekly % used, model, plan. Optionally repeat once on `claude-opus-5-5` (its
+   own limit). Then compute and record `trials_per_window ≈ 100 / session_%` and
+   `trials_per_week ≈ 100 / weekly_%`, and the weeks the plan needs:
+   `weeks ≈ trials / min(trials_per_window × windows you can run per week, trials_per_week)` for
+   the dev runs (~430), the final matrix (504, ×2–5 tokens for the multi-stage arms) and the MVP
+   cut. The seed task is trivial, so the result is a **lower bound** on usage per trial. The
+   owner then makes the START-HERE §5 decision (stay on Pro, move to Max, or take the MVP cut
+   now) before Phase 2. This does not replace Phase 4's trials-per-window measurement.
+11. Commit `phase 1: environments + sandbox`.
 
 ## Acceptance gate
 

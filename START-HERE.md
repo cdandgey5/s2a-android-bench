@@ -14,7 +14,7 @@ reported change. Design: `PLAN.md`; contracts: `specs/`; steps: `phases/`.
 ## 1. Before the first agent session (you, ~2 hours) — `docs/DAY-0.md`
 
 Windows 11, **no WSL, no Docker, no API key**: PowerShell 7 · Git for Windows · `gh` · `uv` · Claude
-Code ≥ 2.1.211 pinned · a one-year subscription token from `claude setup-token` stored as the
+Code ≥ 2.1.280 pinned · a one-year subscription token from `claude setup-token` stored as the
 user variable `ABB_OAUTH_TOKEN` (only the harness maps it to `CLAUDE_CODE_OAUTH_TOKEN`, inside
 each trial; `specs/auth-and-usage.md`) · `ABB_HOME` on the drive with
 ≥ 60 GB free on local NTFS (short path, e.g. `C:\abb`; not the Google Drive `G:`) · the plan copied out of OneDrive to
@@ -160,6 +160,7 @@ first table moves to week 6 and the MVP cut is taken as soon as it exists.
 
 | When | Decision |
 |---|---|
+| **PROPOSED (D-027):** after the Phase 1 throughput probe (step 10b, end of week 2) | With the measured trials per window and per week: stay on Pro, move to Max, or take the MVP cut (`PLAN.md` §9) now rather than at week 5. Delete this row if D-027 is rejected. |
 | Before the held-out run | `docs/PREREG.md: auth_mode` — run the matrix under your subscription in batches across usage windows, or ask Anthropic first (`specs/auth-and-usage.md` §5). |
 | When the first results table exists (target end of week 5) | Keep the full plan (~11 weeks) or take the MVP cut (2 repos, ~28 tasks, controls at 1 trial, Spec Kit optional) — `PLAN.md` §9. |
 | Before Phase 6 tuning | `tasks/TASKSET.sha256` is committed; from here the tuning session never sees test tasks. |

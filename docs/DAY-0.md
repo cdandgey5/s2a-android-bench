@@ -14,7 +14,8 @@ winget install --id astral-sh.uv -e                  # uv (Python 3.12 is instal
 gh auth login                                        # browser flow; needs repo scope
 ```
 
-Claude Code is already installed (2.1.197) but the plan needs **≥ 2.1.211**. Install the current
+Claude Code is already installed (2.1.197) but the plan needs **≥ 2.1.280** (the docs: "Opus 5.5
+requires v2.1.280 or later"; the latest release on 2026-10-16 was 2.1.302). Install the current
 release once, then treat the version it prints as **the pin**: write it into
 `benchmark/config/toolchain.yaml` (`claude_code.version`); `abb tools install` later reinstalls
 exactly that number and copies the binary to `ABB_HOME\tools\claude\<version>\`.
@@ -85,15 +86,15 @@ before the freeze.
 
 ## 4. The working clone (out of OneDrive)
 
-The OneDrive folder already has a git repo initialised in it (commit `2f09972`, no remote) from an
-earlier attempt. Move the work out of OneDrive — it syncs `.venv` and every transcript, and a live
-`.git` under OneDrive is a known corruption risk:
+The OneDrive folder already has a git repo in it (no remote), and every plan revision so far is
+committed there (`git log` shows them). Move the work out of OneDrive — it syncs `.venv` and every
+transcript, and a live `.git` under OneDrive is a known corruption risk:
 
 ```powershell
 Copy-Item -Recurse "$env:USERPROFILE\OneDrive\Documents\Claude\S2AFramework" "$env:USERPROFILE\abb-src"
 Set-Location "$env:USERPROFILE\abb-src"
 git config core.autocrlf false
-git add -A; git commit -m "plan: windows-native revision" | Out-Null
+git status --short                             # expect nothing; if it lists files, commit them: git add -A; git commit -m "plan: local edits"
 gh repo create <your-github-user>/s2a-android-bench --private --source . --push
 ```
 
@@ -116,13 +117,17 @@ sets the NTFS denies. Nothing is installed as that user (it has no network); it 
 | Pinned model and its **training-cutoff date** (from the model docs) | `docs/DECISIONS.md` D-001 |
 | Claude Code version pinned (from step 1) | `benchmark/config/toolchain.yaml` |
 | First two repos (default: AntennaPod, Wikipedia Android) | `docs/DECISIONS.md` D-003 (the agent fills in evidence) |
-| Your plan (Pro / Max 5x / Max 20x) and whether `--model claude-opus-5-5` is allowed on it (Phase 0 smoke test decides the pin) | `docs/DECISIONS.md` D-001 |
+| Your plan (Pro / Max 5x / Max 20x — `claude auth status` showed `pro` on 2026-10-17; `abb auth check` records it in every run) and whether `--model claude-opus-5-5` is allowed on it (Phase 0 smoke test decides the pin) | `docs/DECISIONS.md` D-001 |
 | `ABB_HOME` drive, Dev Drive yes/no, Defender exclusion yes/no | this file; `reference/verified.md` |
 
 ## 7. Start
 
 Open Claude Code on `%USERPROFILE%\abb-src` — either the desktop app's Code tab pointed at that
-folder, or a **new** PowerShell 7 window (so the user-level variables are loaded):
+folder, or a **new** PowerShell 7 window. Both must start *after* §2 and §3 set the user-level
+variables, or they will not see `ABB_HOME` and `ABB_OAUTH_TOKEN` and Phase 0 step 1 fails. For
+the desktop app that means **quit it completely** (tray icon → Quit; closing the window is not
+enough) and start it again — a Code-tab chat's shell inherits the app's environment from when
+the app started:
 
 ```powershell
 Set-Location "$env:USERPROFILE\abb-src"

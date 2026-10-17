@@ -17,7 +17,7 @@ phase.
 
 ## How to use this folder
 
-1. Do the human bootstrap in `docs/DAY-0.md` (PowerShell 7, `gh`, `uv`, Claude Code ≥ 2.1.211, a
+1. Do the human bootstrap in `docs/DAY-0.md` (PowerShell 7, `gh`, `uv`, Claude Code ≥ 2.1.280, a
    `claude setup-token` subscription token, `ABB_HOME`, the clone at `%USERPROFILE%\abb-src`).
    **No WSL, no Docker, no API key.**
 2. Open Claude Code in `%USERPROFILE%\abb-src` and paste the kickoff prompt from `START-HERE.md` §2.

@@ -22,7 +22,7 @@ Nothing in this file may change after the freeze tag; if it must, the run is a n
 
 - [ ] Final arms: `plain`, `plain-guided`, `speckit`, `s2a`, `s2a-nomap`, `s2a-noverify` at 3
   trials; optional at 1 trial if budget allows: `plain-gate`, `s2a-norepro`, `speckit-sdd`.
-- [ ] Model: `claude-opus-5-5`; Claude Code version: `[ ]`; Spec Kit ref: `[ ]`; `s2a_git_sha`: `[ ]`.
+- [ ] Model: `[ ]` (`claude-opus-5-5`, or `claude-sonnet-5-5` if D-001 fell back); Claude Code version: `[ ]`; Spec Kit ref: `[ ]`; `s2a_git_sha`: `[ ]`.
 - [ ] Limits: 45 min, $15 est., 200 turns, nudges 2/call 4/trial. Binding: wall-clock and est. USD.
 - [ ] `auth_mode`: `subscription` (batches across usage windows; plan `[ ]`; expected windows `[ ]`) | `api_key` — and whether Anthropic was asked (`specs/auth-and-usage.md` §5): `[ ]`.
 
@@ -46,6 +46,8 @@ Nothing in this file may change after the freeze tag; if it must, the run is a n
 - `usage_limited` trials (subscription window exhausted — limit text, or any call that ended
   without a success result and whose probe failed) are wiped, re-run and **not counted**; the
   count per arm is reported. A call with no model response at all is never `agent_error`.
+  **PROPOSED (D-028; delete if rejected):** cut attempts are kept under `<run>/usage_limited/`
+  rather than wiped, and the sensitivity check in the analysis plan uses them.
 
 ## Harness-bug criteria and rerun rule
 
@@ -65,6 +67,11 @@ if the bug affected arms asymmetrically (shown per arm in the report). Both runs
 - Cost: tokens first; `cost_usd` as est. API-equivalent USD with null-cost share and
   `cost_usd_imputed`; setup cost per setup kind and amortised; gate runs, per-stage turns and
   `usage_limited` pauses per arm.
+- **PROPOSED (D-028; delete if rejected) — usage-limit sensitivity check:** the primary
+  comparison recomputed with each (arm, task, trial) slot's first attempt, a `usage_limited`
+  attempt scored unresolved; reported next to the headline with its own CI, together with the
+  cut count, cut rate and mean elapsed time and tokens at the cut, per arm. If the headline and
+  this check disagree in sign, the write-up says so.
 
 ## Sign-off
 
