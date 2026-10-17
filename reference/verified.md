@@ -12,6 +12,27 @@ Each entry: date, command run, exact output excerpt, verdict.
 | Git for Windows version; `core.autocrlf`/`core.eol` | 2.44.0.windows.1; `core.autocrlf=true` (system), `core.eol`/`core.longpaths`/`core.filemode` unset (global); `LongPathsEnabled=1` (HKLM) | 2026-10-17 |
 | Defender exclusion / Dev Drive (yes/no) | exclusions not readable without admin; Dev Drive: no (C: is NTFS) | 2026-10-17 |
 
+### Phase 0 step 1 — bootstrap check, run 3 (2026-10-17, subscription-auth plan, D-025)
+
+Verdict: **FAIL — Day 0 (Windows) still not done.** Nothing changed since run 2: `pwsh`, `gh`, `uv`
+missing; Claude Code 2.1.197 (needs ≥ 2.1.211); `ABB_HOME`, `ABB_RESULTS_DIR`, `ABB_OAUTH_TOKEN`
+unset (process and user); `%USERPROFILE%\abb-src` and `C:\abb` absent; C: 90.2 GiB free.
+
+| Check | Command | Result | Verdict |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` | process + user env (names only) | all unset | ok |
+| Subscription plan | `claude.exe auth status --json` → `subscriptionType` | `pro` | **Pro: smallest usage windows; see the plan review** |
+| Auth of the building chat | same → `authMethod`, `apiProvider` | `claude.ai`, `firstParty` | ok (normal login) |
+| `auth status` fields | same, keys only | `apiProvider, authMethod, email, loggedIn, orgId, orgName, subscriptionType`; JSON is the default (`--text` for human) | `abb auth check` can record `subscriptionType` instead of a free-text plan |
+| Env inherited by a desktop-app chat's shell | `Get-ChildItem env:` names matching CLAUDE/ANTHROPIC | ~29 vars, e.g. `ANTHROPIC_BASE_URL=https://api.anthropic.com/`, `CLAUDE_CODE_ENTRYPOINT=claude-desktop`, `CLAUDE_CODE_SIMPLE=0`, `CLAUDE_CODE_CHILD_SESSION`, `CLAUDE_CODE_MESSAGING_TOKEN`; no OAuth token or API key | the trial env block must stay built from scratch; the by-hand smoke recipe must not run from a chat |
+
+Pre-pin CLI facts (`claude.exe --help`, 2.1.197; re-check on the pinned version in step 5):
+`--bare` "Sets CLAUDE_CODE_SIMPLE=1. Anthropic auth is strictly ANTHROPIC_API_KEY or apiKeyHelper
+… (OAuth and keychain are never read)" — confirms D-025's "never `--bare`". `--tools ""` disables
+all tools. `--json-schema <schema>` exists. `--max-budget-usd` "only works with --print".
+`setup-token`: "Set up a long-lived authentication token (requires Claude subscription)".
+`--fallback-model` exists (must stay unset).
+
 ### Phase 0 step 1 — bootstrap check, run 2 (2026-10-17, Windows-native plan)
 
 Verdict: **FAIL — Day 0 (Windows) not done.** Phase 0 stops here.
@@ -60,6 +81,25 @@ Verdict then: **FAIL — Day 0 not done.**
 | `~/abb` WSL clone | — | does not exist (no WSL) | **missing** |
 
 ## Claude Code
+
+### Docs check (2026-10-17, code.claude.com; re-check against the pinned version)
+
+| Claim in the plan | Verdict | Source / note |
+|---|---|---|
+| `claude setup-token`: one-year OAuth token, Pro/Max/Team/Enterprise, not saved | confirmed | docs/en/authentication ("generate a one-year OAuth token"; "It does not save the token anywhere.") |
+| Precedence: cloud flags, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `apiKeyHelper`, `CLAUDE_CODE_OAUTH_TOKEN`, `/login` | confirmed | docs/en/authentication ("the key is always used when present") |
+| Token session "can only make model requests" | confirmed | docs/en/authentication |
+| `--bare` never reads the OAuth token | confirmed (also in local `--help`) | docs say `--bare` **"will"** become the `-p` default in a future release (plan says "may") |
+| `claude auth status` `authMethod` values; exit code | confirmed | docs/en/cli-reference: "Exits with code 0 if logged in, 1 if not."; JSON is the default (`--text` for humans) |
+| `total_cost_usd` is a client-side estimate at list price | confirmed for `-p`; "under any auth" not documented | docs/en/headless, docs/en/agent-sdk/cost-tracking |
+| Plan-limit behaviour of `-p` | **not documented**; no result subtype for it | SDK types document `rate_limit_event` with `rate_limit_info.status`, `resetsAt`; Python adds `rate_limit_type` ∈ `five_hour, seven_day, seven_day_opus, seven_day_sonnet, overage`. Whether `-p` stream-json emits it is undocumented — Phase 0 smoke records it |
+| `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` strips credentials from Bash/hook/MCP subprocess envs | exists | docs/en/env-vars; matches "by name or value shape"; the example names `ANTHROPIC_API_KEY`, not `CLAUDE_CODE_OAUTH_TOKEN` — prove it in Phase 0; it also removes `CLAUDE_CONFIG_DIR` from subprocesses |
+| `DISABLE_AUTOUPDATER`, `DISABLE_UPDATES`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (≥ 2.1.182), `CLAUDE_CODE_PROXY_RESOLVES_HOSTS`, `CLAUDE_CODE_USE_POWERSHELL_TOOL`, `CLAUDE_CONFIG_DIR` | confirmed | docs/en/env-vars |
+| `--tools ""`, `--json-schema` → `structured_output`, subtypes `error_max_turns`, `error_max_budget_usd`, `error_max_structured_output_retries` | confirmed | docs/en/cli-reference, docs/en/headless, docs/en/agent-sdk/python |
+| `switchModelsOnFlag` documented | **yes** | docs/en/model-config: `false` = "Ask each time"; in `-p` "a flagged request ends the turn with a refusal instead" → keep it in the template |
+| Full model id `claude-opus-5-5` on `--model`; Pro/Max default to Opus 5.5 | confirmed; per-plan availability not documented | docs/en/model-config: **"Opus 5.5 requires v2.1.280 or later."** — the plan's floor of 2.1.211 is too low |
+| Legal page wording (OAuth for ordinary individual use) | mostly confirmed | docs/en/legal-and-compliance: "assume ordinary, individual usage of Claude Code and the Agent SDK"; "should use API key authentication"; enforcement sentence reads "may do so without prior notice"; use-case questions go to sales |
+| Latest Claude Code release | 2.1.302 (2026-10-16) | docs/en/changelog |
 
 | Item | Value | Date |
 |---|---|---|
