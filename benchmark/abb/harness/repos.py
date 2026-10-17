@@ -99,6 +99,9 @@ def check(key: str) -> list[tuple[str, bool, str]]:
     row("no case collisions", not coll, f"{len(files)} files; collisions: {coll[:5] or 'none'}")
     longest = max(files, key=len)
     row(f"paths < {MAX_PATH_CHARS} chars", len(longest) < MAX_PATH_CHARS, f"longest {len(longest)}: {longest}")
+    links = [ln.split("\t", 1)[1] for ln in git(["ls-tree", "-r", repo.build.cache_commit], m).splitlines()
+             if ln.startswith("120000 ")]
+    row("symlinks (checked out as files)", True, f"{len(links)}: {links[:5]}" if links else "none")
     tree = set(files)
     for mod in t.verify_modules:
         d = "/".join(p for p in mod.split(":") if p)
@@ -119,3 +122,36 @@ def check_cli(key: str) -> int:
     for name, ok, detail in rows:
         print(f"{'OK  ' if ok else 'FAIL'} {name:<28} {detail}")
     return 0 if all(ok for _, ok, _ in rows) else 1
+
+
+def extract_commit(repo: RepoConfig, commit: str, dest: Path, *, exclude: list[str] | None = None) -> list[str]:
+    """`git archive <commit>` from the mirror into an empty `dest` (no .git), as bytes: no CRLF conversion.
+
+    Symlinks (git mode 120000) become plain files holding the link target, exactly what Git for
+    Windows checks out with its default core.symlinks=false (e.g. Wikipedia's values-zh-rHK).
+    Returns the materialized symlink paths.
+    """
+    import tarfile
+    import tempfile
+
+    m = ensure_mirror(repo)
+    dest.mkdir(parents=True, exist_ok=False)
+    out = Path(tempfile.mkdtemp(prefix="abb-archive-"))
+    r = run_capture(get_platform(), ["git", "archive", "--format=tar", commit], cwd=m, timeout_s=1800, out_dir=out)
+    if r.exit_code != 0:
+        raise RuntimeError(f"git archive {commit} failed: {r.stderr()[-1000:]}")
+    excl = [e.strip("/") for e in (exclude or [])]
+    links: list[str] = []
+    with tarfile.open(r.stdout_path) as tf:
+        members = [mm for mm in tf.getmembers()
+                   if not any(mm.name == e or mm.name.startswith(e + "/") for e in excl)]
+        regular = [mm for mm in members if not (mm.issym() or mm.islnk())]
+        tf.extractall(dest, members=regular, filter="data")
+        for mm in members:
+            if mm.issym() or mm.islnk():
+                target = dest / mm.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(mm.linkname.encode("utf-8"))
+                links.append(mm.name)
+    get_platform().rmtree_robust(out)
+    return links

@@ -72,16 +72,31 @@ def run_smoke(
     prompt: str, *, model: str, max_turns: int, max_usd: float, deadline: int | None, grace: int,
     interrupt: str | None, tools: str | None, proxy: bool, label: str = "smoke",
     env_overrides: dict[str, str] | None = None, allowed_tools: str | None = None,
-    permission_mode: str = "bypassPermissions",
+    permission_mode: str = "bypassPermissions", as_user: str | None = None, proxy_running: bool = False,
+    repo: str | None = None, commit: str | None = None,
 ) -> dict:
+    """One headless call shaped like a trial. With `repo`, the work dir is a history-free snapshot
+    (Workspace) at `commit` (default cache_commit); with `as_user`, the call runs as the sandbox user."""
+    from abb.config import load_repo
+    from abb.harness.workspace import Workspace, apply_trial_acls
+
     token = preflight()
     plat = get_platform()
     sb = load_sandbox()
     claude = plat.claude_exe()
     if not claude.exists():
         raise FileNotFoundError(f"{claude} missing: run `abb tools install`")
-    trial = TrialDirs(paths.work_dir() / "smoke" / f"{stamp()}-{label}").create(claude_template=claude_template_dir())
-    env = build_agent_env(trial, token=token, proxy=proxy)
+    root = paths.work_dir() / "smoke" / f"{stamp()}-{label}"
+    rc = load_repo(repo) if repo else None
+    if rc:
+        ws = Workspace(rc, root, sandbox="user" if as_user else "none")
+        ws.snapshot(commit or rc.build.cache_commit)
+        trial = ws.dirs
+    else:
+        trial = TrialDirs(root).create(claude_template=claude_template_dir())
+        if as_user:
+            apply_trial_acls(trial, as_user)
+    env = build_agent_env(trial, token=token, proxy=proxy, repo=rc)
     for k, v in (env_overrides or {}).items():
         if k.upper() in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
             raise AuthError(f"--env may not set {k}")
@@ -95,17 +110,27 @@ def run_smoke(
         argv += ["--tools", tools]
     spec = ProcSpec(
         argv=argv, cwd=trial.work, env=env, stdin_text=prompt, timeout_s=deadline or 900,
-        memory_mb=sb.process.memory_mb, as_user=None, out_dir=trial.agent_out,
+        memory_mb=sb.process.memory_mb, as_user=as_user, out_dir=trial.agent_out,
         interrupt=interrupt or sb.process.interrupt, stop_file=trial.stop_file, grace_s=grace,
     )
     started = utcnow_iso()
-    r = plat.wait(plat.run(spec))
+    if proxy and not proxy_running:
+        from abb.harness.proxy import from_sandbox_config
+
+        with from_sandbox_config("user", trial.root / "proxy.log"):
+            r = plat.wait(plat.run(spec))
+    else:
+        r = plat.wait(plat.run(spec))
     stdout = r.stdout()
     summary = {
         "started_at": started,
         "trial_dir": str(trial.root),
         "argv": redact(argv, token),
         "prompt": prompt,
+        "as_user": as_user,
+        "proxy": proxy,
+        "repo": repo,
+        "model": model,
         "env_overrides": env_overrides or {},
         "prompt_sha256": sha256_bytes(prompt.encode("utf-8")),
         "exit_code": r.exit_code,
@@ -126,14 +151,14 @@ def run_smoke(
 def smoke_cli(prompt: str, *, model: str, max_turns: int, max_usd: float, deadline: int | None, grace: int,
               interrupt: str | None, save: str | None, tools: str | None, proxy: bool,
               env_overrides: dict[str, str] | None = None, allowed_tools: str | None = None,
-              permission_mode: str = "bypassPermissions") -> int:
-    if proxy:
-        print("the harness proxy arrives in Phase 1; run without --proxy")
-        return 2
+              permission_mode: str = "bypassPermissions", sandbox: str = "none", repo: str | None = None,
+              commit: str | None = None) -> int:
+    as_user = load_sandbox().modes["user"].run_as if sandbox == "user" else None
     try:
         s = run_smoke(prompt, model=model, max_turns=max_turns, max_usd=max_usd, deadline=deadline, grace=grace,
                       interrupt=interrupt, tools=tools, proxy=proxy, label=save or "smoke",
-                      env_overrides=env_overrides, allowed_tools=allowed_tools, permission_mode=permission_mode)
+                      env_overrides=env_overrides, allowed_tools=allowed_tools, permission_mode=permission_mode,
+                      as_user=as_user, repo=repo, commit=commit)
     except AuthError as e:
         print(f"ERROR: {e}")
         return 1

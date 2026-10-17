@@ -103,7 +103,7 @@ def agent_path_dirs(jdk_home: Path) -> list[Path]:
 def build_agent_env(
     trial: TrialDirs,
     *,
-    token: str,
+    token: str | None,
     repo: RepoConfig | None = None,
     proxy: bool = True,
     jdk: int | None = None,
@@ -135,7 +135,8 @@ def build_agent_env(
     env["JAVA_HOME"] = str(jdk_home)
     env["ANDROID_HOME"] = str(paths.tools_dir() / "android-sdk")
     env["PATH"] = os.pathsep.join(str(d) for d in agent_path_dirs(jdk_home))
-    env["CLAUDE_CODE_OAUTH_TOKEN"] = token
+    if token:  # None for Gradle-only runs (env verify): no credential where none is needed
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = token
     leaked = [k for k in env if k.upper() in FORBIDDEN_IN_BLOCK]
     if leaked:
         raise AuthError(f"agent environment block must not contain {leaked}")

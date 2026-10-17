@@ -70,7 +70,11 @@ def auth_check() -> None:
 # ---------------------------------------------------------------------------- ws
 @ws_app.command("smoke")
 def ws_smoke(
-    prompt: str = typer.Argument(..., help="prompt sent on stdin"),
+    prompt: Optional[str] = typer.Argument(None, help="prompt sent on stdin (or --prompt-file)"),
+    prompt_file: Optional[Path] = typer.Option(None, help="read the prompt from this file (relative to benchmark/)"),
+    sandbox: str = typer.Option("none", help="user = run as the sandbox user (Phase 1)"),
+    repo: Optional[str] = typer.Option(None, help="work dir = a history-free snapshot of this repo"),
+    commit: Optional[str] = typer.Option(None, help="snapshot commit (default: cache_commit)"),
     model: str = typer.Option("claude-sonnet-5-5", help="full model id (never an alias)"),
     max_turns: int = typer.Option(3),
     max_usd: float = typer.Option(1.0, help="--max-budget-usd (estimate cap)"),
@@ -79,24 +83,48 @@ def ws_smoke(
     interrupt: Optional[str] = typer.Option(None, help="ctrl_break | ctrl_c (default: sandbox.yaml)"),
     save: Optional[str] = typer.Option(None, help="fixture name: copy stdout to tests/fixtures/transcripts/<name>.jsonl"),
     tools: Optional[str] = typer.Option(None, help="pass --tools <value> (e.g. '' for none)"),
-    proxy: bool = typer.Option(False, help="route through the harness proxy (Phase 1)"),
+    proxy: bool = typer.Option(False, help="route through the harness proxy (started for the call)"),
     env: Optional[list[str]] = typer.Option(None, "--env", help="KEY=VALUE override of the agent block (experiments)"),
     allowed_tools: Optional[str] = typer.Option(None, help="pass --allowedTools <value>"),
     permission_mode: str = typer.Option("bypassPermissions"),
 ) -> None:
     """Run the pinned claude.exe headlessly through the platform layer with a trial-shaped env block."""
+    from abb import paths
     from abb.harness import smoke
 
+    if prompt_file is not None:
+        pf = prompt_file if prompt_file.is_absolute() else paths.benchmark_dir() / prompt_file
+        prompt = pf.read_text(encoding="utf-8")
+    if not prompt:
+        typer.echo("give a prompt or --prompt-file", err=True)
+        raise typer.Exit(2)
     raise typer.Exit(smoke.smoke_cli(prompt, model=model, max_turns=max_turns, max_usd=max_usd, deadline=deadline,
                                      grace=grace, interrupt=interrupt, save=save, tools=tools, proxy=proxy,
                                      env_overrides=dict(e.split("=", 1) for e in (env or [])),
-                                     allowed_tools=allowed_tools, permission_mode=permission_mode))
+                                     allowed_tools=allowed_tools, permission_mode=permission_mode,
+                                     sandbox=sandbox, repo=repo, commit=commit))
 
 
-@ws_app.command("create")
-def ws_create(task_id: str) -> None:
-    """Create a history-free trial workspace (Phase 1)."""
-    _stub(1)
+@ws_app.command("open")
+def ws_open(repo: str, commit: Optional[str] = typer.Option(None, help="default: cache_commit"),
+            as_agent: bool = typer.Option(False, "--as-agent", help="open the shell as the sandbox user")) -> None:
+    """Debug helper: a fresh workspace and a visible PowerShell in it (agent env block, no token)."""
+    from abb import paths
+    from abb.config import load_repo, load_sandbox
+    from abb.harness.platform import ProcSpec, get_platform
+    from abb.harness.workspace import Workspace
+    from abb.util import stamp
+
+    rc = load_repo(repo)
+    ws = Workspace(rc, paths.work_dir() / "ws-open" / f"{stamp()}-{repo}", "user" if as_agent else "none")
+    ws.snapshot(commit or rc.build.cache_commit)
+    typer.echo(f"workspace: {ws.dirs.root} (base {ws.base}); close the PowerShell window to finish")
+    plat = get_platform()
+    spec = ProcSpec(argv=[str(paths.tools_dir() / "pwsh" / "pwsh.exe"), "-NoExit", "-NoProfile"], cwd=ws.dirs.work,
+                    env=ws.agent_env(None, proxy=True), stdin_text=None, timeout_s=8 * 3600, memory_mb=None,
+                    as_user=load_sandbox().modes["user"].run_as if as_agent else None, out_dir=ws.dirs.root / "open-out",
+                    hidden=False)
+    plat.wait(plat.run(spec))
 
 
 # ---------------------------------------------------------------------------- repos
@@ -118,33 +146,99 @@ def repos_list() -> None:
 
 # ---------------------------------------------------------------------------- env / sandbox
 @env_app.command("warm")
-def env_warm(repo: str) -> None:
-    _stub(1)
+def env_warm(repo: str, warm_commits: Optional[list[str]] = typer.Option(None, "--warm-commits"),
+             keep_scratch: bool = typer.Option(False)) -> None:
+    """Mirror + warm caches (gradle-ro, robolectric, gradle-pristine) + fingerprint in env.lock.json."""
+    import json
+
+    from abb.harness import env
+
+    try:
+        rec = env.warm(repo, warm_commits, keep_scratch=keep_scratch)
+    except env.WarmError as e:
+        typer.echo(f"ERROR: {e}", err=True)
+        raise typer.Exit(1)
+    typer.echo(json.dumps({k: rec[k] for k in ("fingerprint", "warm_commits", "warm_minutes", "robolectric_jars")}, indent=2))
+    typer.echo(json.dumps(env.cache_sizes(env.load_repo(repo)), indent=2))
 
 
 @env_app.command("verify")
-def env_verify(repo: str, sandbox: str = typer.Option("user")) -> None:
-    _stub(1)
+def env_verify(repo: str, sandbox: str = typer.Option("user", help="user | none (dev only)"),
+               transforms: str = typer.Option("both", help="seed_transforms off | on | both"),
+               keep: bool = typer.Option(False, help="keep the verify workspaces")) -> None:
+    """Fresh workspace, offline unit tests of verify_modules (< 10 min), seed task fail -> pass."""
+    from abb.harness import verify
+
+    rep = verify.verify(repo, sandbox=sandbox, transforms=transforms, keep=keep)
+    ok, msgs = verify.verdict(rep)
+    for m in msgs:
+        typer.echo(m)
+    typer.echo(f"report: {rep['report_file']}")
+    if not ok:
+        raise typer.Exit(1)
 
 
 @env_app.command("fingerprint")
 def env_fingerprint(repo: str) -> None:
-    _stub(1)
+    """Recompute the environment fingerprint and compare it with env.lock.json; print cache sizes."""
+    import json
+
+    from abb.harness import env
+
+    r = env.current_fingerprint(repo)
+    typer.echo(json.dumps(r, indent=2))
+    if not r["match"]:
+        raise typer.Exit(1)
 
 
 @env_app.command("prune")
-def env_prune() -> None:
-    _stub(1)
+def env_prune(include_smoke: bool = typer.Option(False, help="also delete work/smoke (fixture evidence)")) -> None:
+    """Delete scratch workspaces (warm, verify, probe, checks, debug); report cache sizes. Never touches caches."""
+    import json
+
+    from abb import paths
+    from abb.config import load_repo
+    from abb.harness import env
+    from abb.harness.platform import get_platform
+
+    plat = get_platform()
+    kinds = ["warm", "verify", "probe", "sbcheck", "debug", "itest", "_cleanup", "auth", "ws-open"] + (["smoke"] if include_smoke else [])
+    for k in kinds:
+        d = paths.work_dir() / k
+        if d.exists():
+            left = plat.rmtree_robust(d)
+            typer.echo(f"{'deleted' if not left else 'PARTIAL'} {d}" + (f" ({len(left)} leftovers)" if left else ""))
+    sizes = {p.stem: env.cache_sizes(load_repo(p.stem)) for p in sorted(paths.repos_config_dir().glob("*.yaml"))
+             if (paths.caches_dir() / "gradle-ro" / p.stem).exists()}
+    typer.echo(json.dumps(sizes, indent=2))
 
 
 @sandbox_app.command("setup")
-def sandbox_setup() -> None:
-    _stub(1)
+def sandbox_setup(prepare_only: bool = typer.Option(False, help="only the non-elevated part (no UAC prompt)")) -> None:
+    """Create/refresh the sandbox user, ACLs, firewall rule (ONE UAC prompt). Idempotent."""
+    import json
+
+    from abb.harness import sandbox
+
+    if prepare_only:
+        typer.echo(json.dumps(sandbox.prepare(list(sandbox.CHOSEN_REPOS)), indent=2))
+        return
+    res = sandbox.setup()
+    typer.echo(json.dumps(res, indent=2))
+    if res.get("exit_code") != 0:
+        raise typer.Exit(1)
 
 
 @sandbox_app.command("check")
-def sandbox_check() -> None:
-    _stub(1)
+def sandbox_check(smoke: bool = typer.Option(True, help="include the Claude smoke test as the sandbox user")) -> None:
+    """Prove the boundary as the sandbox user: denied paths, firewall, proxy, tools, smoke test."""
+    from abb.harness import sandbox
+
+    rows = sandbox.check(smoke=smoke)
+    for name, ok, detail in rows:
+        typer.echo(f"{'OK  ' if ok else 'FAIL'} {name:<44} {detail}")
+    if not all(ok for _, ok, _ in rows):
+        raise typer.Exit(1)
 
 
 @sandbox_app.command("install-s2a")

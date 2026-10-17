@@ -62,6 +62,60 @@ _k32.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c
 _k32.SetInformationJobObject.restype = wintypes.BOOL
 _JobObjectAssociateCompletionPortInformation = 7
 
+_adv = ctypes.WinDLL("advapi32", use_last_error=True)
+
+
+class _STARTUPINFOW(ctypes.Structure):
+    _fields_ = [
+        ("cb", wintypes.DWORD), ("lpReserved", wintypes.LPWSTR), ("lpDesktop", wintypes.LPWSTR),
+        ("lpTitle", wintypes.LPWSTR), ("dwX", wintypes.DWORD), ("dwY", wintypes.DWORD), ("dwXSize", wintypes.DWORD),
+        ("dwYSize", wintypes.DWORD), ("dwXCountChars", wintypes.DWORD), ("dwYCountChars", wintypes.DWORD),
+        ("dwFillAttribute", wintypes.DWORD), ("dwFlags", wintypes.DWORD), ("wShowWindow", wintypes.WORD),
+        ("cbReserved2", wintypes.WORD), ("lpReserved2", ctypes.c_void_p), ("hStdInput", wintypes.HANDLE),
+        ("hStdOutput", wintypes.HANDLE), ("hStdError", wintypes.HANDLE),
+    ]
+
+
+class _PROCESS_INFORMATION(ctypes.Structure):
+    _fields_ = [("hProcess", wintypes.HANDLE), ("hThread", wintypes.HANDLE),
+                ("dwProcessId", wintypes.DWORD), ("dwThreadId", wintypes.DWORD)]
+
+
+_adv.CreateProcessWithLogonW.argtypes = [
+    wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPWSTR,
+    wintypes.DWORD, ctypes.c_void_p, wintypes.LPCWSTR, ctypes.POINTER(_STARTUPINFOW), ctypes.POINTER(_PROCESS_INFORMATION),
+]
+_adv.CreateProcessWithLogonW.restype = wintypes.BOOL
+LOGON_FLAGS_NO_PROFILE = 0  # sandbox.yaml: logon_flags (HKCU maps to HKU\.DEFAULT, nothing persists)
+
+# A tiny probe run AS the sandbox user by check_access/check_paths: real open()/create attempts.
+_PROBE = r"""
+import json, os, sys, uuid
+res = []
+for path, op in json.load(open(sys.argv[1], encoding="utf-8")):
+    try:
+        if op == "read":
+            if os.path.isdir(path):
+                os.listdir(path)
+            else:
+                with open(path, "rb") as f:
+                    f.read(1)
+        else:
+            target = os.path.join(path, "abb-probe-" + uuid.uuid4().hex) if os.path.isdir(path) else path
+            with open(target, "xb") as f:
+                f.write(b"x")
+            os.remove(target)
+        res.append("ok")
+    except PermissionError:
+        res.append("denied")
+    except FileNotFoundError:
+        res.append("missing")
+    except OSError as e:
+        res.append("error:" + type(e).__name__ + ":" + str(e.errno))
+json.dump(res, open(sys.argv[2], "w", encoding="utf-8"))
+"""
+
+
 # Variables a process needs to function on Windows; everything else in an agent block is explicit.
 SYSTEM_VARS = [
     "SystemRoot", "windir", "SystemDrive", "ComSpec", "PATHEXT", "OS",
@@ -144,8 +198,6 @@ class WindowsPlatform:
 
     # ------------------------------------------------------------------ processes
     def run(self, spec: ProcSpec) -> Proc:
-        if spec.as_user:
-            raise NotImplementedError("launch as the sandbox user arrives in Phase 1 (CreateProcessWithLogonW)")
         out_dir = Path(spec.out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         stop_file = Path(spec.stop_file) if spec.stop_file else out_dir / "STOP"
@@ -184,19 +236,24 @@ class WindowsPlatform:
         ):
             raise OSError(ctypes.get_last_error(), "SetInformationJobObject(completion port) failed")
 
-        si = win32process.STARTUPINFO()
-        if spec.hidden:
-            si.dwFlags = win32con.STARTF_USESHOWWINDOW
-            si.wShowWindow = win32con.SW_HIDE
         cflags = win32process.CREATE_NEW_CONSOLE | win32process.CREATE_SUSPENDED | win32process.CREATE_UNICODE_ENVIRONMENT
         try:
-            h_proc, h_thread, pid, _tid = win32process.CreateProcess(
-                None, cmdline, None, None, False, cflags, _sorted_block(spec.env), str(spec.cwd), si
-            )
-        except pywintypes.error as e:
+            if spec.as_user:
+                h_proc, h_thread, pid = self._create_as_user(spec.as_user, cmdline, cflags, spec)
+            else:
+                si = win32process.STARTUPINFO()
+                if spec.hidden:
+                    si.dwFlags = win32con.STARTF_USESHOWWINDOW
+                    si.wShowWindow = win32con.SW_HIDE
+                h_proc, h_thread, pid, _tid = win32process.CreateProcess(
+                    None, cmdline, None, None, False, cflags, _sorted_block(spec.env), str(spec.cwd), si
+                )
+        except (pywintypes.error, OSError) as e:
             win32api.CloseHandle(job)
             _k32.CloseHandle(port)
-            raise OSError(e.winerror, f"CreateProcess failed for the launcher: {e.strerror}") from e
+            code = getattr(e, "winerror", None) or getattr(e, "errno", 0)
+            who = f" as {spec.as_user}" if spec.as_user else ""
+            raise OSError(code, f"starting the launcher failed{who}: {e}") from e
         try:
             win32job.AssignProcessToJobObject(job, h_proc)
         except pywintypes.error:
@@ -306,11 +363,110 @@ class WindowsPlatform:
             grants += ["/grant:r", f"{o}:(OI)(CI)F"]
         self._icacls(str(root), "/inheritance:r", *grants)
 
-    def check_access(self, path: Path, *, as_user: str, op: Literal["read", "create"]) -> Literal["ok", "denied"]:
-        raise NotImplementedError("check_access runs as the sandbox user: Phase 1")
+    # ------------------------------------------------------------------ the sandbox user
+    @staticmethod
+    def sandbox_password(user: str) -> str | None:
+        import keyring
 
-    def as_user_available(self) -> bool:
-        return False  # Phase 1: sandbox user + credential present
+        return keyring.get_password("abb", user)
+
+    def _create_as_user(self, user: str, cmdline: str, cflags: int, spec: ProcSpec):
+        """CreateProcessWithLogonW without a profile, for the launcher only; returns pywin32 handles."""
+        if len(cmdline) >= 1024:
+            raise OSError(206, f"launcher command line is {len(cmdline)} chars; CreateProcessWithLogonW allows 1024")
+        pw = self.sandbox_password(user)
+        if not pw:
+            raise OSError(1326, f"no password for {user} in Credential Manager (service 'abb'): run `abb sandbox setup`")
+        env = _sorted_block(spec.env)
+        block = "".join(f"{k}={v}\0" for k, v in env.items()) + "\0"
+        env_buf = ctypes.create_unicode_buffer(block, len(block) + 1)
+        cmd_buf = ctypes.create_unicode_buffer(cmdline, len(cmdline) + 1)
+        si = _STARTUPINFOW()
+        si.cb = ctypes.sizeof(si)
+        if spec.hidden:
+            si.dwFlags = win32con.STARTF_USESHOWWINDOW
+            si.wShowWindow = win32con.SW_HIDE
+        pi = _PROCESS_INFORMATION()
+        ok = _adv.CreateProcessWithLogonW(user, ".", pw, LOGON_FLAGS_NO_PROFILE, None, cmd_buf, cflags,
+                                          ctypes.cast(env_buf, ctypes.c_void_p), str(spec.cwd), ctypes.byref(si),
+                                          ctypes.byref(pi))
+        del pw
+        if not ok:
+            err = ctypes.get_last_error()
+            raise OSError(err, f"CreateProcessWithLogonW failed: {ctypes.FormatError(err).strip()}")
+        return pywintypes.HANDLE(pi.hProcess), pywintypes.HANDLE(pi.hThread), pi.dwProcessId
+
+    def run_elevated(self, exe: Path, args: list[str], *, timeout_s: int = 1800) -> int:
+        """ShellExecuteEx "runas": the UAC prompt the human accepts (abb sandbox setup only). Returns the exit code."""
+        from win32com.shell import shell, shellcon
+
+        info = shell.ShellExecuteEx(fMask=shellcon.SEE_MASK_NOCLOSEPROCESS, lpVerb="runas", lpFile=str(exe),
+                                    lpParameters=subprocess.list2cmdline(args), nShow=win32con.SW_SHOWNORMAL)
+        h = info["hProcess"]
+        try:
+            if win32event.WaitForSingleObject(h, timeout_s * 1000) != win32event.WAIT_OBJECT_0:
+                raise TimeoutError(f"elevated {exe.name} did not finish within {timeout_s}s")
+            return int(win32process.GetExitCodeProcess(h))
+        finally:
+            win32api.CloseHandle(h)
+
+    def harness_principal(self) -> str:
+        """DOMAIN\\user of the harness user, for ACL grants."""
+        import win32api as _wa
+
+        return _wa.GetUserNameEx(2)  # NameSamCompatible
+
+    def firewall_rule_present(self, name: str) -> bool:
+        pwsh = paths.tools_dir() / "pwsh" / "pwsh.exe"
+        from abb.harness.platform.base import run_capture
+
+        r = run_capture(self, [str(pwsh), "-NoProfile", "-NonInteractive", "-Command",
+                               f"if (Get-NetFirewallRule -DisplayName '{name}' -ErrorAction SilentlyContinue) {{ 'yes' }} else {{ 'no' }}"],
+                        cwd=Path.cwd(), timeout_s=120)
+        return r.stdout().strip().endswith("yes")
+
+    def user_exists(self, user: str) -> bool:
+        import win32security
+
+        try:
+            win32security.LookupAccountName(None, user)
+            return True
+        except pywintypes.error:
+            return False
+
+    def user_sid(self, user: str) -> str:
+        import win32security
+
+        sid, _dom, _typ = win32security.LookupAccountName(None, user)
+        return win32security.ConvertSidToStringSid(sid)
+
+    def as_user_available(self, user: str = "abb-agent") -> bool:
+        return self.user_exists(user) and bool(self.sandbox_password(user))
+
+    def check_paths(self, items: list[tuple[Path, str]], *, as_user: str, env: dict[str, str] | None = None) -> list[str]:
+        """One launch as `as_user`; per (path, "read"|"create") a REAL attempt -> ok | denied | missing | error:*."""
+        from abb.util import stamp
+
+        d = paths.work_dir() / "probe" / f"{stamp()}-{os.getpid()}"
+        d.mkdir(parents=True)
+        self.grant(d, as_user, "modify")
+        (d / "probe.py").write_text(_PROBE, encoding="utf-8")
+        (d / "items.json").write_text(json.dumps([[str(p), op] for p, op in items]), encoding="utf-8")
+        block = env or {**self.system_env(), "USERPROFILE": str(d), "TEMP": str(d), "TMP": str(d)}
+        spec = ProcSpec(argv=[str(self.python()), "-I", str(d / "probe.py"), str(d / "items.json"), str(d / "result.json")],
+                        cwd=d, env=block, stdin_text=None, timeout_s=120, memory_mb=None, as_user=as_user,
+                        out_dir=d / "out")
+        r = self.wait(self.run(spec))
+        try:
+            res = json.loads((d / "result.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            raise RuntimeError(f"probe as {as_user} failed (exit {r.exit_code}): {r.stderr()[-800:]}") from e
+        self.rmtree_robust(d)
+        return res
+
+    def check_access(self, path: Path, *, as_user: str, op: Literal["read", "create"]) -> Literal["ok", "denied"]:
+        res = self.check_paths([(path, op)], as_user=as_user)[0]
+        return "ok" if res == "ok" else "denied"
 
     # ------------------------------------------------------------------ misc
     def env_fingerprint_parts(self) -> dict:
