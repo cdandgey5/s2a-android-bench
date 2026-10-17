@@ -76,3 +76,8 @@ Passes when the sanity matrix is green for two tasks and the grader never needs 
   untracked files consistently (`git add -A -N` before `git diff`).
 - Binary files (PNG screenshots for Roborazzi): keep `--binary` in diff generation and apply.
 - Never grade inside the agent's trial directories; always a fresh harness-user workspace with the pristine cache.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 4: `phase-4-arm-plain.md`. Hard stop points ahead in it: none; report the first results table and apply the MVP default (`RUN-ALL.md` §3).

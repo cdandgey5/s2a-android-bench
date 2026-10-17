@@ -4,13 +4,18 @@
 caches warmed for every base commit; dev/test split frozen with a seed.
 
 **Prerequisites.** Phase 2 step 3 (mining tooling yields candidates); the rest of Phase 2's
-tooling (lint, validate) lands while this phase is under way. Starts mid-Phase 2 in its own
-session and branch; runs alongside Phases 3–6. Repo #3 (and #4) environments are built **in this phase**
-(Phase 0 step 6 + Phase 1 for each; ~1 week hidden here). **Author isolation (D-019):** this
-session's checkout must not contain `s2a/`: the PowerShell block in `START-HERE.md` §3 clones
+tooling (lint, validate) lands while this phase is under way. In the per-phase-session variant
+it starts mid-Phase 2 in its own session and branch and runs alongside Phases 3–6; **in autopilot
+(`RUN-ALL.md`) it runs right after Phase 4, before any `s2a/` code exists, on `main`, in the
+same checkout, with the human reviewing every drafted task at stop point S2 and author
+isolation by ordering only.** Repo #3 (and #4) environments are built **in this phase**
+(Phase 0 step 6 + Phase 1 for each; ~1 week hidden here; skipped under the MVP cut).
+**Author isolation (D-019), per-phase variant:** this session's checkout must not contain `s2a/`: the PowerShell block in `START-HERE.md` §3 clones
 `<remote>` with `--no-checkout` into `%USERPROFILE%\abb-tasks`, runs `git sparse-checkout init
 --no-cone` and `git sparse-checkout set "/*" "!/s2a/"` (non-cone mode is required to exclude a
-directory), and creates branch `phase-7` from `main`. Every chat of this phase is opened there. `tasks/TRIAGE.md`
+directory), and creates branch `phase-7` from `main`; every session of this phase is opened
+there. **Autopilot variant:** same checkout, `main`; isolation is ordering-only (`RUN-ALL.md` §1)
+and is recorded in PREREG. `tasks/TRIAGE.md`
 entries are timestamped. Shared-machine rules: this is the only session that re-warms
 `caches\gradle\<repo>`; it never runs `abb env prune` while another session has a run active.
 
@@ -44,7 +49,7 @@ CLI: abb tasks coverage      abb tasks lint --setup-leak      abb split --seed N
 
 ## Steps
 
-1. **Environments for repo #3/#4** (Phase 1 procedure). Thunderbird (JDK 21, Compose) is the
+1. **Environments for repo #3/#4** (Phase 1 procedure; **skipped under the MVP cut**). Thunderbird (JDK 21, Compose) is the
    preferred modern-Kotlin repo; NewPipe or Wikipedia fills the "in between" slot depending on
    Phase 0 results.
 2. **Mining sweep** per repo: `abb tasks mine <repo> --since <cutoff> --limit 80` plus a
@@ -52,7 +57,9 @@ CLI: abb tasks coverage      abb tasks lint --setup-leak      abb split --seed N
    with a clear issue, tests in the PR, ≤ 8 non-test files.
 3. **Reverted tasks**: pick feature commits with tests; write tickets in the project's own
    issue style (look at 5 real feature requests first).
-4. **Authored tasks** (14): aim for things real maintainers would ask — a setting that doesn't
+4. **Authored tasks** (14; 6 under the MVP cut): drafted by the agent in autopilot (`drafted_by:
+   agent`, `drafted_with_model`), reviewed and edited by the human at S2 — or written by the
+   human in the per-phase variant. Aim for things real maintainers would ask — a setting that doesn't
    persist, a sort order, a parser edge case, a refactor to an existing pattern (e.g. move a
    class to the repo's DI style), a cross-module change (model + storage + ui). Each needs a
    reference fix and hidden tests you wrote. Keep to the repo's test frameworks.
@@ -61,7 +68,9 @@ CLI: abb tasks coverage      abb tasks lint --setup-leak      abb split --seed N
    to `git merge-base --octopus <all base commits of the repo>` (computed in the upstream
    mirror); `--warm-commits-from-tasks` (step 7) includes it so the
    setup calls can run Gradle offline there. Iterate until within tolerance. Then
-   `abb tasks lint --setup-leak`: fails if any cached one-time setup artifact (constitution,
+   `abb tasks lint --setup-leak` (autopilot: passes trivially here because no constitution or
+   map exists yet — do not create one to satisfy it; the binding run is Phase 10 step 1): fails
+   if any cached one-time setup artifact (constitution,
    map under `results/_setup_cache/`) mentions a path or class name added by any task's
    `gold.patch`; regenerate the setup at the new `setup_commit` if it does.
 6. **License notes**: `LICENSE-NOTE.md` template → GPL-3.0 for AntennaPod/NewPipe-derived
@@ -96,8 +105,9 @@ Get-Content benchmark\tasks\TASKSET.sha256        # committed before any S2A tun
 uv run abb env verify <each repo>             # offline OK after re-warm
 ```
 
-Passes when ≥ 35 tasks are validated, coverage is within tolerance (or documented), every task
-has a license note, and the split is committed.
+Passes when ≥ 35 tasks are validated (**MVP cut: ≥ 24**, two repos, "no repo > 50 %", authored
+≥ 6 — `RUN-ALL.md` §3), coverage is within tolerance (or documented), every task has a license
+note, and the split is committed.
 
 ## Pitfalls
 
@@ -107,3 +117,8 @@ has a license note, and the split is committed.
   `--keep-going` and a summary table.
 - Do not "improve" a task after seeing an arm fail on it unless it is a genuine task bug; log
   every post-split task edit in `tasks/CHANGELOG.md` (this is a credibility artifact).
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 5: `phase-5-arm-speckit.md`. Hard stop points ahead in it: none.

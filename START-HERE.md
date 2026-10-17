@@ -23,15 +23,31 @@ training-cutoff date (D-001), Claude Code version, first two repos (default Ante
 Wikipedia Android), dev estimate cap per trial (default $5 est. API-equivalent). One elevated step comes later (Phase 1:
 `abb sandbox setup`).
 
-## 2. Running the phases chat by chat (no API, your subscription)
+## 2. Running the phases in Claude Code (no API, your subscription)
 
-Every phase is built **in Claude Code** — the desktop app's Code tab or `claude.exe` in a
-PowerShell 7 window, opened on `%USERPROFILE%\abb-src` (Phase 7: `%USERPROFILE%\abb-tasks`, §3)
-— one phase per chat, on your normal login (the headless token is stored under a name Claude Code itself never reads, so no chat
-picks it up). Nothing needs an API key: the benchmark's headless runs use the subscription token
-(`specs/auth-and-usage.md`). The files are the memory, not the chat: at every gate the agent
-rewrites `docs/HANDOFF.md`, commits and stops, so any fresh chat can pick up where the last one
-ended.
+"Session" and "chat" below always mean a **Claude Code session** — the desktop app's Code tab or
+`claude.exe` in a PowerShell 7 window, opened on `%USERPROFILE%\abb-src` — never claude.ai.
+Nothing needs an API key: the benchmark's headless runs use the subscription token
+(`specs/auth-and-usage.md`), and the session itself runs on your normal login (the token is
+stored under a name Claude Code never reads).
+
+**Default: one session builds everything — `phases/RUN-ALL.md`.** Paste its kickoff prompt into
+one Claude Code session; it executes Phases 0 → 10 in order, applies the autopilot defaults,
+and stops only at the hard stop points where you must act (UAC prompt, task review, PREREG and
+the held-out run). A long session auto-compacts; every gate rewrites `docs/HANDOFF.md` and
+commits, so if the session is interrupted (usage limit, restart) you continue it
+(`claude --continue`, or pick it in the app's sidebar) or start a new one with the same prompt.
+
+```
+Read AGENTS.md, then phases/RUN-ALL.md, and run the plan in autopilot: execute every phase in
+the order RUN-ALL.md gives, from the phase docs/HANDOFF.md names (Phase 0 if it is still the
+template). Apply the autopilot defaults for every decision; stop only at the hard stop points,
+tell me exactly what you need, and wait. At every gate rewrite docs/HANDOFF.md and commit.
+```
+
+**Alternative: one session per phase** (review each gate yourself; parallel branches for
+Phases 5/6/7). The prompts below do that; both modes share the same files and handoff, and you
+can switch at any gate.
 
 Phase files: `phase-0-foundations.md`, `phase-1-environments.md`, `phase-2-tasks-and-validation.md`,
 `phase-3-grading.md`, `phase-4-arm-plain.md`, `phase-5-arm-speckit.md`, `phase-6-s2a-orchestrator.md`,
@@ -97,7 +113,8 @@ and re-run the Phase 4, 5, 6 and 7 gate commands. Rewrite docs/HANDOFF.md, commi
 ```
 
 Habits that keep this cheap: `/compact` when the context gets heavy instead of starting over;
-ask for the handoff before the chat is unusable, not after; one phase per chat. **Your chats and
+ask for the handoff before the chat is unusable, not after; one phase per chat (per-phase
+variant). **Your chats and
 the headless trials draw on the same account's usage windows**: a dev run or the canary
 (`abb ws smoke --until-limit`) also locks out the chat you are building in, so run them at the
 end of a work session, and build on Sonnet (`/model claude-sonnet-5-5`) on days an Opus run is
@@ -107,11 +124,16 @@ A "session" in §3 is one chat, or a chain of chats joined by `HANDOFF.md`, on o
 
 ## 3. Phase sequence, sessions and gates
 
+In **autopilot** (`phases/RUN-ALL.md`, the default) there is one session and one branch
+(`main`): the "Session / branch" column below does not apply, nothing is merged, and the order
+is 0 → 1 → 2 → 3 → 4 → 7 → 5 → 6 (bring-up) → 8 → 6 tuning + 9 → 10. The table is the
+per-phase variant with parallel branches.
+
 | Order | Phase | Session / branch | Starts when | You do during it | Gate (what you check) | Est. |
 |---|---|---|---|---|---|---|
-| 1 | **0 Foundations** | main session, `main` | Day 0 done | answer questions | `abb tools check` (pinned JDKs + SDK); three smoke-test fixtures (incl. the interrupt finding); 2 repos built on Windows with timings; seed task `antennapod-0000`; `abb repos check` | 4–6 days |
+| 1 | **0 Foundations** | main session, `main` (autopilot: the one session, always `main`) | Day 0 done | answer questions | `abb tools check` (pinned JDKs + SDK); three smoke-test fixtures (incl. the interrupt finding); 2 repos built on Windows with timings; seed task `antennapod-0000`; `abb repos check` | 4–6 days |
 | 2 | **1 Environments + sandbox** | same | Phase 0 gate | **run `abb sandbox setup` once in an elevated PowerShell when asked; read the usage meter before and after the throughput probe (step 10b), then decide Pro / Max / MVP cut** | offline tests < 10 min per repo as the sandbox user; invariants green (denied paths denied, no build cache); `abb sandbox check` proves firewall + proxy; throughput probe recorded (D-027) | 4–6 days |
-| 3 | **2 Tasks & validation** | same | Phase 1 gate | **hand-edit every mined ticket; write 1 authored task** | 5 tasks + seed validated 3×; lint (incl. interface rule) clean; `setup_commit` set | 1–2 weeks |
+| 3 | **2 Tasks & validation** | same | Phase 1 gate | **review every drafted task (S2) — or hand-edit/write them yourself in the per-phase variant** | 5 tasks + seed validated 3×; lint (incl. interface rule) clean; `setup_commit` set | 1–2 weeks |
 | 3′ | **7 Scale tasks** (long pole) | **new session, branch `phase-7`, worktree without `s2a/`** | mid-Phase 2, once `abb tasks mine` yields candidates (Phase 2 step 3) | **triage mined candidates, author ~14 tasks with reference fixes; review repos 3/4 build results** | ≥ 35 validated; coverage within tolerance; `TASKSET.sha256`; split frozen with dev5 pinned | 3 weeks, parallel |
 | 4 | **3 Grading** | main | Phase 2 gate | nothing | 7-row sanity matrix green on seed + 1 dev task | 3–5 days |
 | 5 | **4 Arm A + controls** | main | Phase 3 gate | **read the first transcripts; record cost per run in RUNS.md** | **first results table**; `abb audit` passes; plain-guided runs | 1 week |
@@ -143,14 +165,19 @@ git checkout -b phase-7 main
 
 ## 4. The first six weeks (part-time; the §3 estimates for Phases 0–4 add up to 5–6 weeks)
 
+Autopilot is serial: full plan 15–18 weeks, ~12–14 with the MVP default (`PLAN.md` §5); the
+parallel-branch variant is ~11 weeks. Weeks 1–5 differ only in the "open the Phase 7 session"
+cell (not applicable in autopilot); from week 6 autopilot runs Phase 7, then 5, 6, 8 one after
+another in the same session.
+
 | Week | First half | Second half |
 |---|---|---|
 | 1 | Day 0 bootstrap; Phase 0 steps 1–5 (skeleton, platform layer, toolchain, three smoke-test fixtures) | Phase 0 step 6: AntennaPod + Wikipedia build experiments (hours of Gradle); steps 7–11; gate; seed task |
 | 2 | Phase 1: AntennaPod warm cache, workspace, invariants; **you run `abb sandbox setup` (elevated)** | Phase 1: proxy + sandbox verify; Wikipedia cache; gate |
-| 3 | Phase 2: mining tooling; mine ≥ 10 candidates; hand-edit the first 3 | Phase 2: reverted + authored task; `setup_commit`; **open the Phase 7 session** once mining works |
+| 3 | Phase 2: mining tooling; mine ≥ 10 candidates; draft/review the first 3 | Phase 2: reverted + authored task; `setup_commit`; per-phase variant: **open the Phase 7 session** once mining works |
 | 4 | Phase 2: validate 3×, fix flaky tests; gate | Phase 3: diffscope, grader |
 | 5 | Phase 3: sanity matrix (7 rows × 2 tasks); gate; Phase 4: parser, driver, audit | Phase 4: plain + plain-guided; dev5 × 1 → **first results table**; `abb audit` green |
-| 6 | **MVP decision** (`PLAN.md` §9); open the Phase 5 and 6 sessions | Phases 5/6 bring-up; Phase 7 continues |
+| 6 | **MVP decision** (`PLAN.md` §9; autopilot applies its default) | Per-phase variant: open the Phase 5 and 6 sessions, Phase 7 continues. Autopilot: Phase 7 drafting + S2 review |
 
 This table owns the week numbers (PLAN §5 mirrors it). Target: first table by the end of week
 5; best case week 4; slip rule: if the Phase 2 gate has not passed by the end of week 4, the

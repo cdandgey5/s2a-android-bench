@@ -53,6 +53,8 @@ needs_emulator: false               # must be false in v1; true tasks are skippe
 split: dev                          # dev | test — written by `abb split`, never by hand
 status: validated                   # draft | validated | flaky | dropped
 created_with_s2a_sha: abc1234       # `s2a/` commit current when the task was created (author-isolation record, D-019)
+drafted_by: agent                   # agent | human — who wrote problem.md/gold/test before human review (RUN-ALL.md defaults; reported in the README)
+drafted_with_model: claude-sonnet-5-5   # required when drafted_by: agent — the model that drafted it (it may be the model under test; a stated limitation)
 validation:                         # written by `abb tasks validate`
   runs: 3
   last_validated: 2026-11-02T14:03:00Z

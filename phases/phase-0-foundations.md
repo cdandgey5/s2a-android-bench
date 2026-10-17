@@ -160,3 +160,8 @@ with evidence; their configs pass `abb repos check`; the seed task exists.
 - Gradle daemons keep files locked; `try_build.py` runs `gradlew.bat --stop` before deleting scratch
   checkouts, and the platform layer's robust delete reports leftovers.
 - Thunderbird uses `.java-version` 21; NewPipe has KMP folders — both deferred to Phase 7.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 1: `phase-1-environments.md`. Hard stop points ahead in it: S1 — the UAC prompt of `abb sandbox setup` (step 6); S1b — usage-meter readings around the throughput probe (step 10b).

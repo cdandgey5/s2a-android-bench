@@ -11,7 +11,8 @@ and folds its open items into this one.
 
 ## Where we are
 
-- Phase: `0` — step: `not started`
+- Mode: `autopilot (RUN-ALL.md)` | `per-phase sessions`
+- Phase: `0` — step: `1 (bootstrap check); blocked: Day-0 incomplete (README status, reference/verified.md run 3)`
 - Last commit: `<sha> <subject>` on branch `<branch>`
 - Working tree: `<clean | N uncommitted files: …>`
 - Date: `<ISO date>`

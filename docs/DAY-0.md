@@ -2,7 +2,7 @@
 
 Everything below is done by you, not by the agent, because it needs installers, an account, or an
 elevated PowerShell. No WSL, no Docker. When it is done, open Claude Code in `%USERPROFILE%\abb-src`
-and paste the kickoff prompt from `START-HERE.md`.
+and paste the kickoff prompt from `phases/RUN-ALL.md`.
 
 ## 1. Tools (regular PowerShell 7; install it first if you only have 5.1)
 
@@ -135,5 +135,6 @@ Set-Location "$env:USERPROFILE\abb-src"
 ```
 
 Either way it runs on your normal login (the token is under a name Claude Code never reads).
-Paste the Phase 0 kickoff prompt from `START-HERE.md` §2. The agent's first step is to verify
+Paste the autopilot kickoff prompt from `phases/RUN-ALL.md` (one session builds everything), or
+the Phase 0 prompt from `START-HERE.md` §2 if you want one session per phase. The agent's first step is to verify
 everything above and stop if something is missing.

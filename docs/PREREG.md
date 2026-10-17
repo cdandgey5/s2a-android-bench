@@ -75,7 +75,10 @@ if the bug affected arms asymmetrically (shown per arm in the report). Both runs
 
 ## Sign-off
 
-- [ ] Author isolation confirmed: test-split tasks authored in sessions without `s2a/`
-  (`tasks/TRIAGE.md` timestamps; task `created_with_s2a_sha` ≤ the hash date).
+- [ ] Author isolation: `[ ] session-based` (test-split tasks authored in sessions without `s2a/`,
+  `tasks/TRIAGE.md` timestamps, task `created_with_s2a_sha` ≤ the hash date) or
+  `[ ] ordering-only (single session, RUN-ALL.md)`: `TASKSET.sha256` committed before any tuning.
+- [ ] Task drafting: `[n]` tasks `drafted_by: agent` (models: `[ ]`; human-reviewed), `[n]`
+  `drafted_by: human`; the README limitations state this.
 - [ ] This file's sha256 recorded in `manifest.prereg_sha256`: `[ ]`.
 - [ ] Freeze tag `v1.0-frozen` = `[commit]`, date `[ ]`.

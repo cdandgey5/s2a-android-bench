@@ -173,3 +173,8 @@ in under 10 minutes, the invariants test is green, the sandbox check proves the 
   per-trial `home/` absorbs `~`-relative state (`.gitconfig`, temp files). If Gradle refuses the
   read-only cache (version-specific layout), fall back to copying `modules-2` per trial on a Dev
   Drive (block clone makes it cheap) and say so in `reference/verified.md`.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 2: `phase-2-tasks-and-validation.md`. Hard stop points ahead in it: S2 — human review of the drafted dev tasks before validation (step 6).

@@ -8,8 +8,8 @@ This folder holds the **complete, agent-executable plan** for S2A's first delive
 > **Brownfield Android agent benchmark.** 30–50 real tasks (bug fixes, features, refactors) across
 > 3–5 open-source Android apps, each graded by hidden tests. Compares a plain coding agent,
 > GitHub Spec Kit, and the S2A workflow on pass rate, cost per task, human interventions and a
-> failure breakdown. Timeline: ~11 weeks part-time with parallel agent sessions; 8 weeks with the
-> MVP cut in `PLAN.md` §9.
+> failure breakdown. Timeline: one autopilot session (the default) is serial — 15–18 weeks
+> part-time, ~12–14 with the MVP cut in `PLAN.md` §9; parallel agent sessions ~11 weeks.
 
 Nothing here is the benchmark itself yet. The plan is written so that a coding agent (Claude Code
 or similar) can build the whole thing phase by phase, with a verifiable gate at the end of each
@@ -20,13 +20,16 @@ phase.
 1. Do the human bootstrap in `docs/DAY-0.md` (PowerShell 7, `gh`, `uv`, Claude Code ≥ 2.1.280, a
    `claude setup-token` subscription token, `ABB_HOME`, the clone at `%USERPROFILE%\abb-src`).
    **No WSL, no Docker, no API key.**
-2. Open Claude Code in `%USERPROFILE%\abb-src` and paste the kickoff prompt from `START-HERE.md` §2.
-   One phase per chat; every gate rewrites `docs/HANDOFF.md` so the next chat can continue.
-3. Review the gate output. Then open a new chat and paste the next-phase prompt from `START-HERE.md`
-   §2 (it reads `docs/HANDOFF.md` first). And so on.
-4. Phases 0–4 are sequential (Phase 4 builds the agent driver and runner the other arms reuse).
-   Phase 7 (tasks at scale) opens mid-Phase 2, as soon as mining yields candidates; Phases 5 and
-   6 open after Phase 4; each runs in its own agent session and branch. Then 8 → 9 → 10.
+2. Open one Claude Code session in `%USERPROFILE%\abb-src` and paste the kickoff prompt from
+   `phases/RUN-ALL.md`. It runs Phases 0 → 10 by itself, stops only where you must act (UAC
+   prompt, task review, pre-registration, the held-out run), and rewrites `docs/HANDOFF.md` at
+   every gate — so an interrupted session is continued, or replaced by a new one with the same
+   prompt, without losing anything.
+3. Prefer to review each gate? `START-HERE.md` §2 has one-session-per-phase prompts (with
+   parallel branches for Phases 5/6/7). Both modes share the same files.
+4. Order in autopilot: 0 → 1 → 2 → 3 → 4 → 7 → 5 → 6 (bring-up) → 8 → 6 tuning + 9 → 10, all on
+   `main` (tasks are drafted before any S2A code exists). In the per-phase variant Phase 7 opens mid-Phase 2 and Phases 5/6 after Phase 4, each
+   in its own session and branch.
 5. Never work from this OneDrive folder: it is the original import. `%USERPROFILE%\abb-src` with
    a private GitHub remote is the working tree (`docs/DAY-0.md`).
 

@@ -210,3 +210,8 @@ reproduction gate demonstrably fails-then-passes on a bug task, the map's comman
   available because Gradle needs it, so the reset is the real guard.
 - **Do not let any prompt mention hidden tests or grading** — the orchestrator is a product;
   benchmark concerns stay in `abb/`.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 8: `phase-8-runner.md`. Hard stop points ahead in it: none.

@@ -33,7 +33,7 @@ back). The write-up reports S2A against both, not only against `plain`.
 | Item | How |
 |---|---|
 | One-time per-repo setup (Spec Kit constitution; S2A codebase map) | `results/<run>/setup/<setup_kind>/<repo>/run.json`. Report as "setup cost per repo" and *also* as an amortised per-task number (`setup / tasks_in_repo`) in a clearly labelled column. Never fold silently into cost per task. |
-| Historical (mined/reverted) vs authored tasks | Separate rows in every headline table. The primary comparison uses all test tasks; the pre-registered **contamination-robustness** check repeats it on historical post-cutoff tasks, and authored tasks are shown on their own (the framework author wrote them). |
+| Historical (mined/reverted) vs authored tasks | Separate rows in every headline table. The primary comparison uses all test tasks; the pre-registered **contamination-robustness** check repeats it on historical post-cutoff tasks, and authored tasks are shown on their own (written by the framework author, or model-drafted — `drafted_by`, `drafted_with_model` — and human-reviewed). |
 | Pre- vs post-cutoff tasks | `upstream.fix_date` **and** `upstream.issue_created` vs the pinned model's published training cutoff (D-001); a task is post-cutoff only if both are. |
 | Trials with no cost line | `cost_usd` null; `cost_usd_imputed` reported alongside; share per arm shown. All `cost_usd` figures are Claude Code's client-side estimate at API list price ("est. API-equivalent USD"); tokens are the primary unit. |
 | Usage-limit pauses | `usage_limited` trials (subscription window exhausted) are re-queued and not counted in the primary metric; the cut attempt is kept under `<run>/usage_limited/` and enters the pre-registered usage-limit sensitivity check; cut count, cut rate and elapsed time/tokens at the cut reported per arm (D-028). |
@@ -48,8 +48,11 @@ person wrote the tasks and the orchestrator, and a sparse worktree still has eve
 repository, with the benchmark pinning `s2a_git_sha` — is recommended once the product has a
 life of its own.
 
-- Test-split tasks are authored and triaged in a worktree **without `s2a/`** (non-cone sparse
-  checkout, recipe in START-HERE.md §3), and `tasks/TRIAGE.md` is timestamped. S2A tuning runs
+- Per-phase-session variant: test-split tasks are authored and triaged in a worktree **without
+  `s2a/`** (non-cone sparse checkout, recipe in START-HERE.md §3), and `tasks/TRIAGE.md` is
+  timestamped. Autopilot variant (`phases/RUN-ALL.md`, D-029): same checkout; isolation is
+  **ordering-only** — tasks drafted before any `s2a/` code exists, `TASKSET.sha256` before
+  tuning, `--setup-leak` lint re-run in Phase 10 — and PREREG/README say which variant applied. S2A tuning runs
   with `ABB_TUNING=1`, under which `abb run`, `abb tasks show` and `abb labels show` refuse any
   `split: test` task id (enforced in code).
 - Phase 6 steps 1–17 are **bring-up** on the pinned-dev `dev5` set only; **tuning** (step 18:

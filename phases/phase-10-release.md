@@ -17,7 +17,8 @@ batches; the MVP cut shortens it); ~1 week of writing.
    schedule** — `specs/auth-and-usage.md` §5) and commit it; its sha256 goes
    into the manifest. Tag the harness `v1.0-frozen`. Complete D-010 in `docs/DECISIONS.md`
    ("test set run once on <date>; no task or prompt changes after the tag"). Re-run `abb tasks
-   lint --all` and `abb env verify` for every repo; confirm `tasks/TASKSET.sha256` matches.
+   lint --all`, `abb tasks lint --setup-leak` (S2A's one-time setup now exists) and `abb env
+   verify` for every repo; confirm `tasks/TASKSET.sha256` matches.
 2. **Usage check.** `abb run --dry-run --arm plain --arm speckit --arm s2a --arm s2a-nomap
    --arm s2a-noverify --tasks test --trials 3 --model claude-opus-5-5` → estimated tokens, est.
    USD and **usage windows**, computed per arm from the **Opus dev-set confirmation run** in
@@ -39,7 +40,7 @@ batches; the MVP cut shortens it); ~1 week of writing.
    applies.
 5. **Report.** `abb audit <run_id>` must pass; then `abb report <run_id>`. Hand-label 20–30
    test-set failures blind (stratified); `abb labels llm` for the rest; `abb labels agreement`
-   must still be ≥ 80 %.
+   must still be ≥ 80 % (S4 skipped: reported as not measured, labeller flagged uncalibrated).
 6. **Benchmark README** (`benchmark/README.md`, public) must state: purpose; repos (URL +
    commit, licenses); task counts by repo/category/source and the dropped-task rate; the
    pinned model id and Claude Code/Spec Kit/s2a versions; limits (timeout, USD, turns, nudge
@@ -87,3 +88,8 @@ required statement, and `abb repro` reproduces the published numbers.
 
 Emulator-based UI tasks; a second coding agent as a 4th arm (adapter = one afternoon); more
 repos; S2A v1 informed by the failure breakdown; non-Android targets.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+This is the last phase. After step 9: rewrite `docs/HANDOFF.md` ("v1.0 released"), commit, push, and
+stop — the plan is complete. The write-up and the published run are the deliverables.

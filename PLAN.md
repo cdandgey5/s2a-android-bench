@@ -89,20 +89,24 @@ The agent must not proceed past a gate that fails.
 | 10 | Release | `docs/PREREG.md` frozen, held-out run once, README statements, repro package, write-up | test set run once; README complete; `abb repro` reproduces the numbers | 1 + compute |
 
 **Dependencies and parallelism.** 0 → 1 → 2 → 3 → 4 are sequential (Phase 4 builds the driver,
-runner, setup support and audit every arm reuses). **Phase 7 starts right after Phase 2** —
-task mining and authoring is the long pole and it includes environment work for repos 3/4.
-Phases 5 and 6 start after Phase 4. 8 needs 4 (and is only meaningful once 5–6 exist); 9 needs
-8; 10 needs 7, 8 and 9. Parallel phases run in **separate agent sessions on separate git
-branches** (`phase-5`, `phase-6`, `phase-7`), merged in the order 7 → 5 → 6; files several
+runner, setup support and audit every arm reuses). Phase 7 needs only Phase 2's tooling; Phases
+5 and 6 need Phase 4; 8 needs 4 (and is only meaningful once 5–6 exist); 9 needs 8; 10 needs
+7, 8 and 9. **Autopilot (the default, `phases/RUN-ALL.md`, D-029):** one session, one branch,
+order 0 → 1 → 2 → 3 → 4 → 7 → 5 → 6 (bring-up) → 8 → 6 tuning + 9 → 10, nothing merged.
+**Per-phase variant:** Phase 7 starts right after Phase 2 (task mining and authoring is the
+long pole and includes environment work for repos 3/4); parallel phases run in **separate
+agent sessions on separate git branches** (`phase-5`, `phase-6`, `phase-7`), merged in the
+order 7 → 5 → 6; files several
 phases touch (`abb/arms/registry.py`, `docs/DECISIONS.md`, `env.lock.json`, `repos/*.yaml`,
 `README.md` status table) are edited append-only to keep merges trivial. **Shared machine state** (one toolchain, one cache tree,
 one results root, one sandbox user): only the Phase 7 session re-warms `caches/gradle/<repo>`;
 Phase 5/6 dev runs record the fingerprint they started with (or pass `--allow-env-drift`,
 recorded); nobody runs `abb env prune` while a run is active; `ABB_HOME`/`ABB_RESULTS_DIR` are
 user-level environment variables so every shell agrees.
-Test-split task authoring (Phase 7) happens in a worktree without `s2a/` and S2A tuning in a
-session that refuses test-split tasks (fairness-protocol.md, "Author isolation" — hygiene against
-accidental reads, not a boundary; clone recipe in START-HERE.md §3).
+Test-split task authoring (Phase 7) happens in a worktree without `s2a/` (per-phase variant;
+autopilot: ordering-only — tasks drafted before any `s2a/` code, hash before tuning) and S2A
+tuning in a session that refuses test-split tasks (fairness-protocol.md, "Author isolation" —
+hygiene against accidental reads, not a boundary; clone recipe in START-HERE.md §3).
 
 ## 4. Decisions already made (do not relitigate without a note in `docs/DECISIONS.md`)
 
@@ -121,6 +125,7 @@ accidental reads, not a boundary; clone recipe in START-HERE.md §3).
 | Trials | 3 per (arm, task). pass@1 and pass^3. Paired bootstrap over tasks. Honesty about power: ~±18–20 pp detectable at the headline n ≈ 28; ~±15 pp only on the exploratory all-task breakdowns. | Agents are stochastic; paired design is the most powerful we can afford. |
 | Repos | **AntennaPod** (Java/XML/multi-module, GPL-3.0) and **Wikipedia Android** (Kotlin/single-module, Apache-2.0) first; **Thunderbird for Android** (Kotlin/Compose/multi-module, Apache-2.0, JDK 21) if its warm unit-test run is < 10 min; **NewPipe** as 4th. Tusky is archived → deprioritised. Avoid *Now in Android*. | See `reference/repo-candidates.md`. |
 | S2A design | Standalone orchestrator (`s2a/`): deterministic Python, fixed stages with machine-checked gates, fresh sessions per stage and per implement task, reproduce/characterize before any change, independent verifier with the verdict derived in code, bounded fix loop under the same gates, resumable state, autonomous default, Android profile first; ablations as `--skip` with the skipped stage's turns removed (D-015, D-016). | Gated workflows beat free-running agents on predictability; the brownfield literature agrees. |
+| Execution mode | One Claude Code session runs all phases in order (`phases/RUN-ALL.md`, autopilot with defaults and hard stop points, D-029); per-phase sessions with parallel branches remain the alternative (`START-HERE.md` §2–3). | The owner starts one session, gives it the plan, and lets it build; files carry the state. |
 | Auth & usage | Subscription only, no API key: building in Claude Code on the owner's login, headless trials via a `claude setup-token` OAuth token stored as `ABB_OAUTH_TOKEN` and mapped to `CLAUDE_CODE_OAUTH_TOKEN` only inside the trial block (never under the repo or `ABB_HOME`), `ANTHROPIC_API_KEY` scrubbed; tokens are the primary cost unit, `cost_usd` is est. API-equivalent; usage limits pause the runner, never count against a trial; the held-out matrix's auth is a PREREG decision (D-025). | The owner has no API key and does not plan to use one. |
 | Platform | **Windows-first, no WSL, no Docker.** PowerShell 7 for humans; Python 3.12 (`uv`) for everything else; Typer, pydantic, PyYAML, pandas, matplotlib, keyring, pywin32/ctypes — the OS-specific parts only inside `abb/harness/platform/` and `s2a/s2a/platform/` (`specs/platform-layer.md`); macOS later via `posix.py`; no `.sh` scripts anywhere. MIT (D-024). | The owner develops and runs on Windows; the framework must be independent of any one OS. |
 
@@ -128,7 +133,8 @@ accidental reads, not a boundary; clone recipe in START-HERE.md §3).
 
 Two honest numbers. **Full plan, parallel sessions: ~11 weeks part-time.** **8 weeks is
 achievable only with the MVP cut in §9** (2 repos, ~28 tasks, controls at 1 trial). Serial, one
-person: 15–18 weeks. The per-phase effort lines in `phases/` sum to 13–17 weeks plus S2A tuning;
+person — which is what the default autopilot mode is (`phases/RUN-ALL.md`, one session, D-029):
+15–18 weeks, ~12–14 with the MVP default. The per-phase effort lines in `phases/` sum to 13–17 weeks plus S2A tuning;
 agents parallelise the building, not the human work (hand-editing every mined task, writing
 reference fixes for authored tasks, reviewing maps, hand-labelling failures).
 
@@ -136,11 +142,11 @@ reference fixes for authored tasks, reviewing maps, hand-labelling failures).
 |---|---|
 | 1 | Phase 0: skeleton, platform layer, pinned toolchain, fixtures, AntennaPod + Wikipedia built, seed task. |
 | 2 | Phase 1 for both repos (warm caches, sandbox user + firewall + proxy, invariants). |
-| 3–4 | Phase 2: mining, hand-editing, authoring, 3× validation (dev5). The Phase 7 session opens mid-Phase 2, as soon as `abb tasks mine` yields candidates (Phase 2 step 3, ~end of week 3). |
+| 3–4 | Phase 2: mining, drafting/review, 3× validation (dev5). Per-phase variant: the Phase 7 session opens mid-Phase 2, as soon as `abb tasks mine` yields candidates (Phase 2 step 3, ~end of week 3). |
 | 4 | Phase 3: grader + sanity matrix (overlaps the end of Phase 2). |
 | 5 | Phase 4: driver, audit, controls, minimal runner → **first results table** (the one rule: it exists by the end of week 5; best case week 4; slip rule: week 6 at the latest). **MVP decision** as soon as it exists. START-HERE.md §4 owns the week numbers. |
-| 6–7 | Phases 5 and 6 in parallel sessions (bring-up on dev5); Phase 7 continues (repos 3/4 environments, authored tasks). |
-| 8 | Phase 7 finishes: 40 tasks validated, task-set hash, split frozen. Merge 7 → 5 → 6. Phase 8 runner. |
+| 6–7 | Per-phase variant: Phases 5 and 6 in parallel sessions (bring-up on dev5); Phase 7 continues (repos 3/4 environments, authored tasks). Autopilot: Phase 7 (drafting, S2 review, validation nights), then 5, then 6 — serially, weeks 6–10. |
+| 8 | Phase 7 finishes: 40 tasks validated (MVP: ≥ 24), task-set hash, split frozen. Per-phase variant: merge 7 → 5 → 6. Phase 8 runner (autopilot: ~week 11). |
 | 9 | Phase 6 tuning on dev (now allowed); Phase 9 built against dev-set runs (stats, blind labelling, labeller calibrated). |
 | 10 | `docs/PREREG.md` committed; dev-set confirmation on the pinned model; freeze tag; held-out run (three laptop nights or a Windows VM). |
 | 11 | Phase 9 applied to the held-out run; write-up; README; publish. |

@@ -50,7 +50,8 @@ CLI: abb tasks new <id> --repo --base-commit   abb tasks lint [--all]   abb task
    - write `tasks/<repo>-<NNNN>/` with the next free number and a `NOTES.md` listing the PR's
      test files and any non-test helper the tests need;
    - print a ranked list (fewest non-test files first, tests present, issue quality).
-   Mining is a starting point; **every mined task is hand-edited** before validation.
+   Mining is a starting point; **every mined task is rewritten and reviewed** before validation
+   (autopilot: drafted by the agent, reviewed by the human at S2; per-phase variant: hand-edited).
 4. **Authoring guide** (`tasks/README.md`): how to write `problem.md` like a real issue; how
    to write hidden tests that pin the behaviour but not the implementation; using Robolectric
    for Android-dependent code; how to turn a feature commit into a `reverted` task; the
@@ -62,8 +63,9 @@ CLI: abb tasks new <id> --repo --base-commit   abb tasks lint [--all]   abb task
    `tasks/<id>/.validation/<timestamp>/` (git-ignored). `--keep-going` continues past failures
    and prints a summary table.
 6. **Build dev5 for repo #1.** Mine ≥ 10 candidates, pick/edit 3 mined; create 1 `reverted`
-   (feature commit with tests); write 1 `authored` task (e.g. a small behavioural change in a
-   core module with a Robolectric test). Aim for ≥ 2 bugfix, ≥ 1 feature, ≥ 1 refactor.
+   (feature commit with tests); draft 1 `authored` task (e.g. a small behavioural change in a
+   core module with a Robolectric test; `drafted_by`/`drafted_with_model` set). **Stop point S2**
+   (`RUN-ALL.md`): the human reviews every drafted task before validation. Aim for ≥ 2 bugfix, ≥ 1 feature, ≥ 1 refactor.
 7. **Warm caches** for the dev5 base commits: `abb env warm antennapod --warm-commits …`
    (Phase 1 step 5) and re-run `abb env verify`. Mining records `upstream.issue_created` as
    well as `fix_date`.
@@ -94,3 +96,8 @@ and lint is clean.
 - Flaky Robolectric tests: usually ordering, `Looper` idling, or time. Fix in `test.patch`
   (`ShadowLooper.idleMainLooper()`, fixed clocks) rather than dropping the task.
 - Keep `.validation/` out of git; keep `NOTES.md` in.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 3: `phase-3-grading.md`. Hard stop points ahead in it: none.

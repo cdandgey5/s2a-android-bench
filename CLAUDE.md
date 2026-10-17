@@ -45,13 +45,16 @@ file fully before doing anything.
     table current.
 11. **Transcripts are the truth.** `run.json` and `calls.jsonl` are derived; `abb audit` recomputes
     them from the verbatim transcripts for every arm and a report is not valid until it passes.
-12. **Phases run one per chat, files are the memory.** At every phase gate, and whenever the user
-    says stop or asks for a handoff, rewrite the handoff file (template kept; exact step, what
-    exists, what is verified, blockers, next action), commit and stop. On `main` that file is
-    `docs/HANDOFF.md`; on a parallel-phase branch `phase-<N>` it is `docs/HANDOFF-phase-<N>.md`
-    and `docs/HANDOFF.md` is never touched there (the merge deletes the branch file). A new chat
-    starts from `AGENTS.md` + the handoff file + `git log`; never assume anything from a previous
-    chat that is not in those files.
+12. **Files are the memory; the session is disposable.** The default is one Claude Code session
+    running every phase in order (`phases/RUN-ALL.md`, autopilot: gate → handoff → commit → next
+    phase, stopping only at its hard stop points, applying its defaults). At every phase gate,
+    and whenever the user says stop or asks for a handoff, rewrite the handoff file (template
+    kept; exact step, what exists, what is verified, blockers, next action) and commit. On `main`
+    that file is `docs/HANDOFF.md`; in the per-phase-session variant a parallel branch
+    `phase-<N>` uses `docs/HANDOFF-phase-<N>.md` and never touches `docs/HANDOFF.md` (the merge
+    deletes the branch file). A continued or new session starts from `AGENTS.md` + the handoff
+    file + `git log`; never assume anything from earlier conversation that is not in those
+    files (context auto-compacts).
 13. **Two packages, one contract.** `s2a/` (the framework) and `benchmark/` (the harness) are
     separate Python packages. Neither imports the other: the benchmark shells out to the `s2a`
     CLI, and the only shared things are the headless-driver contract

@@ -150,3 +150,10 @@ drives the budget in PLAN.md §6).
   is one extra short turn. Accept it; it is identical across arms.
 - Keep `--max-budget-usd` ≥ 3× the observed mean so it only catches runaways (it caps the
   client-side estimate; there is no bill).
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push. **Report the first results table and apply the MVP default (`RUN-ALL.md` §3),
+logging it as `D-0xx (autopilot default)` — Phase 7's step 1 and gate depend on it.** Then start
+Phase 7: `phase-7-scale-tasks.md` (on `main`, same checkout; before any S2A code). Hard stop points ahead in it: S2 — review of drafted tasks (steps 2–4); S3 — the 3× validation nights (step 8).

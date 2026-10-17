@@ -112,3 +112,8 @@ results spec.
   `Workspace.cleanup()` on every unfinished trial of the run, and `abb env prune` reports leftovers.
 - Prompt-cache benefits come from running the same repo's trials close together **per arm**;
   interleaving arms reduces that a little — accept it, record it.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 6 step 18 (tuning, `ABB_TUNING=1`) then 9: `phase-6-s2a-orchestrator.md` §18 and `phase-9-analysis.md`. Hard stop points ahead in it: S4 — manual failure labels (Phase 9 step 8), or `skip`.

@@ -69,7 +69,9 @@ uv run abb report <dev_run_id> --out $env:TEMP\r1; uv run abb report <dev_run_id
 ```
 
 Passes when the report is fully generated and deterministic, statistics have known-answer
-tests, and the LLM labeller is calibrated against ≥ 20 manual labels.
+tests, and the LLM labeller is calibrated against ≥ 20 manual labels (**autopilot with S4
+skipped:** labels generated, `agreement: not measured`, labeller flagged uncalibrated in the
+report — `RUN-ALL.md` §3).
 
 ## Pitfalls
 
@@ -77,3 +79,8 @@ tests, and the LLM labeller is calibrated against ≥ 20 manual labels.
   tasks, trials averaged within task).
 - Separate "setup" rows from trial rows before any mean.
 - Keep the labeller blind to the arm name (strip it from the bundle) to avoid bias.
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 10: `phase-10-release.md`. Hard stop points ahead in it: S5 — PREREG, freeze, `auth_mode` and a fresh token (steps 1, 3); S6 — the held-out run batches (steps 2–4); S4 again (step 5).

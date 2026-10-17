@@ -74,3 +74,8 @@ separately, and `reference/verified.md` documents the exact Spec Kit commands us
 - `--script ps` makes Spec Kit generate PowerShell scripts; `git` is on PATH for both users.
 - The constitution should describe the *existing* codebase; check the first one by hand and
   tune `prompts/constitution.md` (allowed: it is one-time setup, not task-specific).
+
+## Next (autopilot, `RUN-ALL.md`)
+
+Gate passed → paste the gate output, rewrite `docs/HANDOFF.md`, update the README status table,
+commit, push — then start Phase 6: `phase-6-s2a-orchestrator.md` (bring-up, steps 1–17 only; step 18 tuning runs after Phase 8). Hard stop points ahead in it: none.
