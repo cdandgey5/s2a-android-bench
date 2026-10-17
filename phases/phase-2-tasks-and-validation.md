@@ -56,16 +56,16 @@ CLI: abb tasks new <id> --repo --base-commit   abb tasks lint [--all]   abb task
    for Android-dependent code; how to turn a feature commit into a `reverted` task; the
    category and tag definitions; the license note template; the validation loop.
 5. **Validation** (`validate.py`): per `specs/task-format.md`. Each run = fresh workspace
-   (`--network none`): V1 apply test.patch → run F2P + P2P → expect F2P fail/error, P2P pass;
+   (offline (proxy stopped)): V1 apply test.patch → run F2P + P2P → expect F2P fail/error, P2P pass;
    V2 apply gold.patch + test.patch → expect all pass. `--runs 3`; results must agree; write
-   `validation:` block, `status: validated|flaky`, `image_digest`. Save logs under
+   `validation:` block, `status: validated|flaky`, `env_fingerprint`. Save logs under
    `tasks/<id>/.validation/<timestamp>/` (git-ignored). `--keep-going` continues past failures
    and prints a summary table.
 6. **Build dev5 for repo #1.** Mine ≥ 10 candidates, pick/edit 3 mined; create 1 `reverted`
    (feature commit with tests); write 1 `authored` task (e.g. a small behavioural change in a
    core module with a Robolectric test). Aim for ≥ 2 bugfix, ≥ 1 feature, ≥ 1 refactor.
-7. **Warm images** for the dev5 base commits: `abb images build antennapod --warm-commits …`
-   (Phase 1 step 5) and re-run `abb images verify`. Mining records `upstream.issue_created` as
+7. **Warm caches** for the dev5 base commits: `abb env warm antennapod --warm-commits …`
+   (Phase 1 step 5) and re-run `abb env verify`. Mining records `upstream.issue_created` as
    well as `fix_date`.
 8. **`setup_commit`.** Compute `git merge-base --octopus <dev5 base commits + antennapod-0000>` in
    the upstream clone, write it to `repos/antennapod.yaml: build.setup_commit`, and include it in

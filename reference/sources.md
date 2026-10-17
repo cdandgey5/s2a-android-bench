@@ -25,6 +25,19 @@ CLAUDE.md/commands; `switchModelsOnFlag`; `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS`
 installer `curl -fsSL https://claude.ai/install.sh | bash -s <version>`; no official Docker
 image.
 
+## Claude Code on Windows (verified 2026-10-17 via the docs above)
+
+Native Windows is supported (no WSL needed): installer `irm https://claude.ai/install.ps1 | iex`
+(pin with `& ([scriptblock]::Create((irm https://claude.ai/install.ps1))) <version>`), binary at
+`%USERPROFILE%\.local\bin\claude.exe`; Git for Windows provides Git Bash for the Bash tool
+(`CLAUDE_CODE_GIT_BASH_PATH`), PowerShell tool toggled by `CLAUDE_CODE_USE_POWERSHELL_TOOL`;
+`--disallowedTools Bash` would also remove PowerShell; settings at `%USERPROFILE%\.claude\settings.json`
+(`CLAUDE_CONFIG_DIR` moves them); credentials file-based; stdin piping needs ≥ 2.1.211; the
+root/sudo refusal of `bypassPermissions` is Linux/macOS only; graceful interruption on Windows
+(Ctrl+Break) is **not documented** — measured in Phase 0. Android command-line tools for Windows:
+`commandlinetools-win-15859902_latest.zip`, sha256
+`90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a`.
+
 ## Models
 
 - Models overview — https://platform.claude.com/docs/en/about-claude/models/overview.md
@@ -40,7 +53,7 @@ Current ids used in this plan: `claude-opus-5-5` (pinned for final runs), `claud
 - Quickstart — https://github.com/github/spec-kit/blob/main/docs/quickstart.md
 
 Key facts used: `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@<tag>`;
-`specify init --here --force --non-interactive --integration claude --script sh --ignore-agent-tools`;
+`specify init --here --force --non-interactive --integration claude --script ps --ignore-agent-tools` (`ps` on Windows, `sh` elsewhere);
 hyphenated commands `/speckit-constitution`, `/speckit-specify`, `/speckit-clarify`,
 `/speckit-plan`, `/speckit-checklist`, `/speckit-tasks`, `/speckit-analyze`,
 `/speckit-implement`, `/speckit-converge`; bug extension (`specify extension add bug` →

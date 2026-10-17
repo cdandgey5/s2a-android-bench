@@ -56,7 +56,7 @@ created_with_s2a_sha: abc1234       # `s2a/` commit current when the task was cr
 validation:                         # written by `abb tasks validate`
   runs: 3
   last_validated: 2026-11-02T14:03:00Z
-  image_digest: sha256:...
+  env_fingerprint: sha256:...
   p2p_stable: ["de...PlaybackSpeedTest"]   # P2P tests that passed 3/3; whole-module P2P at grading is restricted to these
   screenshot_tolerance: null                 # Roborazzi/Paparazzi tasks: the comparison threshold the hidden test uses
 ```
@@ -120,7 +120,7 @@ authored separately in Phase 9.
 
 ## Validation (`abb tasks validate <id> --runs 3`)
 
-For each run, in a fresh container:
+For each run, in a fresh workspace as the harness user, offline (proxy stopped):
 
 | Step | State | Expectation |
 |---|---|---|
@@ -131,7 +131,7 @@ For each run, in a fresh container:
 A task is `validated` only if all 3 runs agree on V1 and V2. Any disagreement → `status: flaky`
 with the differing test names recorded in `validation.flaky_tests`; P2P tests that passed 3/3
 are listed in `validation.p2p_stable` (whole-module P2P at grading is restricted to them).
-`abb tasks validate` writes the `validation:` block and the image digest used.
+`abb tasks validate` writes the `validation:` block and the environment fingerprint used.
 
 ## Template
 

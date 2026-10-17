@@ -1,14 +1,14 @@
 # Spec: Results layout
 
-Root: `$ABB_RESULTS_DIR` (default `~/abb-results`, resolved in `abb/paths.py`). Everywhere this
-plan writes `benchmark/results/` it means that root. Keep it on the WSL filesystem — never under
-`/mnt/c` or OneDrive. **The results root is never mounted into an agent container**; the
-harness pulls files out with `Workspace.get` (docker cp). Phase 1's invariants test checks that
-`/results` does not exist inside an agent workspace.
+Root: `$ABB_RESULTS_DIR` (default `ABB_HOME\results`, resolved in `abb/paths.py`). Everywhere this
+plan writes `benchmark/results/` it means that root. Never under OneDrive. **The results root is
+access-denied to the sandbox user**; the harness user copies files in and out (`Workspace.put/get`).
+Phase 1's invariants test, run as the sandbox user, proves the deny.
 
 ```
 <results root>/<run_id>/
   manifest.json                       # what this run is (below)
+  proxy.log                           # every CONNECT the egress proxy allowed or denied
   events.jsonl                        # scheduler log: start/end/skip/retry/resume per trial
   audit.json                          # Phase 4+: `abb audit` recomputation from transcripts (pass/fail per trial)
   setup/<setup_kind>/<repo>/          # one-time per-repo setup, reported separately
@@ -22,7 +22,7 @@ harness pulls files out with `Workspace.get` (docker cp). Phase 1's invariants t
     diff.full.patch                   # unscoped, for forensics
     artifacts/                        # arm artifacts (spec.md, plan.md, map.md, verify.md, state.json …)
     grade.json                        # GradeResult
-    junit/                            # TEST-*.xml copied from the grading container
+    junit/                            # TEST-*.xml copied from the grading workspace
     gradle.log                        # grading build output
     metrics.json                      # flattened row used by report.py (below)
     labels.json                       # Phase 9: failure labels (manual and/or llm)
@@ -48,17 +48,19 @@ harness pulls files out with `Workspace.get` (docker cp). Phase 1's invariants t
   "agent_version": "2.1.x",
   "speckit_version": "0.x.y",
   "s2a_git_sha": "def456",                    # commit of s2a/ installed in the s2a layer (Phase 6)
-  "images": {"antennapod": "sha256:...", "wikipedia": "sha256:..."},
-  "s2a_images": {"antennapod": "abb-antennapod-s2a:def4567"},
-  "base_digests": {"jdk17": "sha256:...", "jdk21": "sha256:..."},
-  "network_mode": "api-only",
+  "platform": "windows",
+  "env_fingerprints": {"antennapod": "sha256:...", "wikipedia": "sha256:..."},
+  "toolchain_lock_sha256": "...",
+  "s2a_install": {"sha": "def456", "path": "ABB_HOME\\tools\\bin\\s2a.exe"},
+  "interrupt": "ctrl_break",                 # the signal both drivers used for harness-initiated stops (Phase 0 decision)
+  "sandbox_mode": "user",                     # user | none (none is refused for split: test)
   "strip_agent_instructions": false,
-  "allow_image_drift": false,
+  "allow_env_drift": false,
   "harness_git_sha": "abc123",
   "split_file_sha256": "...",                 # proves the frozen split was used
   "resumes": [{"at": "2026-12-04T02:10:00Z", "reason": "host reboot"}],
   "aborted_reason": null,                     # budget | sigint | null
-  "host": {"os": "linux", "cpus": 16, "mem_gb": 64}
+  "host": {"os": "windows", "release": "11 26200", "cpus": 32, "mem_gb": 32}
 }
 ```
 
@@ -76,7 +78,7 @@ harness pulls files out with `Workspace.get` (docker cp). Phase 1's invariants t
 | input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cache_hit_rate | run.json (summed over calls) | arm |
 | calls_n, calls (json list of {name, cost_usd, num_turns}) | run.json | arm |
 | retried (bool), retry_reason | events.jsonl | runner |
-| model, agent_version, image_digest, workspace_base | run.json / manifest | runner |
+| model, agent_version, env_fingerprint, workspace_base, platform | run.json / manifest | runner |
 | audit_ok | audit.json | `abb audit` |
 | failure_label, failure_label_source (manual/llm), label_confidence | labels.json | Phase 9 |
 | convention_score | labels.json | Phase 9 (optional) |

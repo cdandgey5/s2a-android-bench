@@ -8,7 +8,7 @@ autonomous mode.
 
 ```
 s2a run "Playback speed resets to 1.0x after the app is restarted; it should persist." \
-        --repo /work --profile android          # autonomous by default; --interactive adds two approval pauses
+        --repo <workspace> --profile android          # autonomous by default; --interactive adds two approval pauses
 ```
 
 The orchestrator is **deterministic Python**; the agent does the thinking inside each stage.
@@ -37,13 +37,14 @@ s2a/
     gates.py                     # machine checks (file exists, schema valid, tests fail/pass, paths exist, diff rules)
     render.py                    # prompt rendering ({{ticket}}, {{map}}, …) with size caps
     profile.py                   # profile loading; command templates (test for module/class/method)
+    platform/{base,windows,posix}.py   # same contract as specs/platform-layer.md (own copy; no import from the benchmark)
     stages/
       __init__.py base.py intake.py map.py locate.py reproduce.py spec.py plan.py implement.py verify.py fix.py report.py
   tests/
 ```
 
 Data files (`pipeline.yaml`, `profiles/`, `prompts/`) are loaded with `importlib.resources`, so
-`uv tool install /opt/s2a` and `pip install git+…` both work; `S2A_PIPELINE`, `S2A_PROFILE_DIR`
+`uv tool install <repo>\s2a` and `pip install git+…` both work; `S2A_PIPELINE`, `S2A_PROFILE_DIR`
 and `S2A_PROMPT_DIR` env vars override them for experiments.
 
 Everything the orchestrator writes lives under `.s2a/` in the target repo:
@@ -197,10 +198,14 @@ session (this is how context survives fresh sessions).
 `s2a/driver.py` implements `run_headless` exactly as `specs/headless-agent-driving.md`
 (flags, verbatim transcript, nudge protocol, PhaseCall records, model assertion), plus one
 harness-health field: `tool_errors` (count of `tool_result` blocks with `is_error`), reported per
-stage in `status`. It runs `claude` as a **local subprocess** (no Docker involved from s2a's
-point of view) with the same argv, and enforces its own per-call deadline the same way the
-benchmark does on the `docker exec` side: SIGINT first so the `result` line is still emitted,
-SIGKILL 30 s later (`timeout -s INT -k 30` semantics, implemented in Python). The benchmark
+stage in `status`. It runs `claude` as a **local subprocess** of whatever user runs `s2a` (inside
+the benchmark that is the sandbox user; no sandboxing of its own) with the same argv, and enforces its own per-call deadline through its platform
+layer exactly as the benchmark does: the interrupt named in `sandbox.yaml: process.interrupt`
+(Ctrl+Break to the child's own process group by default; SIGINT elsewhere), wait 30 s for the
+`result` line, then kill the process tree; a harness-initiated stop is `timeout`. When the outer
+harness interrupts the orchestrator itself (SIGBREAK/`KeyboardInterrupt`), it forwards the same
+interrupt to its running child, waits `grace_s`, writes `state.json` with `exit_reason: timeout`
+and exits 4. The benchmark
 does **not** import it (the benchmark's own driver serves the plain and Spec Kit arms); both are
 kept identical by a shared test fixture set (`benchmark/tests/fixtures/transcripts/`) that both
 packages' parsers must pass. The orchestrator writes `calls.jsonl` in the `PhaseCall` schema so
@@ -229,21 +234,21 @@ stack later = one profile file + optional prompt overrides; the orchestrator doe
 
 ## 9. How the benchmark uses it (Arm C)
 
-- S2A is installed as a **thin layer on top of each repo image**: `abb-<repo>-s2a:<s2a_sha>`
-  is built `FROM abb-<repo>:<tag>` with `COPY s2a /opt/s2a && uv tool install /opt/s2a`
-  (`benchmark/docker/s2a/Dockerfile`, build context = repo root, seconds to rebuild). Prompt
-  tweaks during tuning therefore never rebuild the base or repo images, and the task-validation
-  digest (of `abb-<repo>`) stays valid; `s2a_git_sha` goes into `images.lock.json` and the
-  manifest. All arms still share the same `abb-<repo>` layers, JDK, SDK and Claude Code version.
+- S2A is installed by the **harness user** via `abb sandbox install-s2a`: `uv tool install
+  <repo>\s2a` into `ABB_HOME\tools\uvtools` with `s2a.exe` in `ABB_HOME\tools\bin` (read/execute
+  for the sandbox user) at the current `s2a_git_sha`,
+  which goes into `env.lock.json` and the manifest. Prompt tweaks during tuning re-run that
+  install in seconds; the per-repo environment fingerprint is unaffected. All arms share the same
+  toolchain, warm caches and Claude Code version.
 - `one_time_setup` (setup kind `s2a-map`, **shared by every `s2a-*` arm except `s2a-nomap`**, so
-  ablations differ only in the skipped stage, not in a re-rolled map): `s2a map --repo /work
+  ablations differ only in the skipped stage, not in a re-rolled map): `s2a map --repo <workspace>
   --profile android --model <pinned> --max-turns 25 --max-usd <X> --timeout-min 20
   --append-system-prompt-file environment.md` in a workspace at `setup_commit`; the arm copies
   `.s2a/map.md`, `map.json`, `map.calls.jsonl`, `map/transcripts/`, `map/prompts/` into
   `setup/s2a-map/<repo>/` (the calls become the setup `PhaseCall`s) and later `map.md` +
   `map.json` into every S2A task workspace.
-- `run`: `S2A_AUTONOMOUS=1 s2a run "$(cat problem.md)" --repo /work --profile android
-  --map /work/.s2a/map.md --append-system-prompt-file environment.md --model <pinned>
+- `run`: `s2a run <problem.md text> --repo <workspace> --profile android` with `S2A_AUTONOMOUS=1` in the environment block
+  --map <workspace>/.s2a/map.md --append-system-prompt-file environment.md --model <pinned>
   --max-turns 200 --max-usd <X> --timeout-min 45 [--skip …]`. `--map` is essential: task
   workspaces are history-free (`git init` + one commit), so a cache keyed on the commit would
   never match and the map would be rebuilt per task, at the wrong commit. The arm then reads

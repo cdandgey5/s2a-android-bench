@@ -14,10 +14,10 @@ from typing import Literal, Protocol
 ExitReason = Literal[
     "completed",          # agent ended its final turn normally
     "max_turns",          # hit the per-call or total turn budget
-    "timeout",            # harness wall-clock timeout (exit 124/137)
+    "timeout",            # harness-initiated stop at the deadline (stopped_by_harness)
     "budget",             # --max-budget-usd tripped
     "agent_error",        # non-zero exit, error_during_execution, no result line, orchestrator crash
-    "harness_error",      # OUR bug (docker down, transcript unparsable, model drift); trial is re-runnable
+    "harness_error",      # OUR bug (platform failure, transcript unparsable, model drift); trial is re-runnable
 ]
 
 @dataclass
@@ -69,7 +69,7 @@ class RunResult:
     exit_reason: ExitReason
     diff_path: Path                    # scoped agent diff (input to grading)
     transcript_dir: Path
-    workspace_base: str                # `git rev-parse HEAD` of /work after snapshot
+    workspace_base: str                # `git rev-parse HEAD` of the workspace after snapshot
     calls: list[PhaseCall] = field(default_factory=list)
     artifacts: dict[str, str] = field(default_factory=dict)
     # Harness-side verification the arm's own tooling performed (S2A gates; plain-gate hook):
@@ -93,7 +93,7 @@ class Arm(Protocol):
 
     def one_time_setup(self, repo_key: str, ws: "Workspace", limits: Limits) -> list[PhaseCall]:
         """Per-repo setup whose cost is reported separately. Idempotent; cached per
-        (setup_kind, repo, setup_commit, image digest, prompt hash)."""
+        (setup_kind, repo, setup_commit, environment fingerprint, prompt hash)."""
 
     def run(self, task: "Task", ws: "Workspace", limits: Limits) -> RunResult:
         """Attempt the task. Must respect Limits. Must never read task.test_patch or
@@ -123,7 +123,7 @@ class Arm(Protocol):
 7. **No hidden retries, same policy for every arm.** The nudge protocol is the only retry and
    it is counted. A non-zero exit, a missing result line, or an orchestrator crash is
    `agent_error` — the product failed — and is **never re-run**. Only `harness_error` (our bug:
-   docker down, unparsable transcript, model drift) is re-queued once, identically for all arms.
+   platform failure, unparsable transcript, model drift) is re-queued once, identically for all arms.
    Retry counts are reported per arm.
 8. **Transcripts are the source of truth.** `abb audit <run_id>` recomputes every `run.json`
    total from the verbatim transcripts and fails the run report on mismatch (see
@@ -140,7 +140,7 @@ class Arm(Protocol):
 | `plain-gate` (control, optional) | `arms.plain.PlainArm(gate=True)` | Plain arm plus **one harness-side check**: after the single call, the harness runs the unit tests of the modules the diff touches; on failure it resumes the session once with the failing test output (recorded as `gate_gradle_runs`, not as an intervention) and stops. Harness-side, not a Claude Code hook (hooks are stripped at snapshot, and arms never shell out to `claude`). Separates "orchestrator-run tests" from "workflow". | none |
 | `speckit` | `arms.speckit.SpecKitArm` | `specify init` → bug path for bugfix tasks, SDD path otherwise → implement/converge loop. | `speckit-constitution` |
 | `speckit-sdd` (optional) | `arms.speckit.SpecKitArm(path="sdd")` | Forces the SDD path for every task. | `speckit-constitution` |
-| `s2a` | `arms.s2a.S2AArm` | Calls the orchestrator in the `abb-<repo>-s2a` image: `S2A_AUTONOMOUS=1 s2a run … --map … --append-system-prompt-file …`; lifts `calls.jsonl` into `PhaseCall`s. See `specs/s2a-orchestrator.md` §9. | `s2a-map` (shared) |
+| `s2a` | `arms.s2a.S2AArm` | Calls the orchestrator with `s2a` installed for the sandbox user: `s2a run … --map … --append-system-prompt-file …` with `S2A_AUTONOMOUS=1` in its environment; lifts `calls.jsonl` into `PhaseCall`s. See `specs/s2a-orchestrator.md` §9. | `s2a-map` (shared) |
 | `s2a-nomap` | `arms.s2a.S2AArm(skip=["map"])` | `--skip map`; gates stay on. | none |
 | `s2a-noverify` | `arms.s2a.S2AArm(skip=["verify"])` | `--skip verify` (also skips fix). | `s2a-map` (shared) |
 | `s2a-norepro` (optional) | `arms.s2a.S2AArm(skip=["reproduce"])` | `--skip reproduce`. | `s2a-map` (shared) |

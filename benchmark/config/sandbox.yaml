@@ -1,0 +1,51 @@
+# Sandbox modes for agent runs (specs/environments.md §5). Windows-native; no containers.
+modes:
+  user:                       # REQUIRED for any run that includes split: test tasks (D-024)
+    run_as: abb-agent         # local Windows user created by `abb sandbox setup` (admin, once; `net user ... /add`)
+    credential: keyring       # password stored in Windows Credential Manager under service "abb", username "abb-agent"
+    logon_flags: 0            # CreateProcessWithLogonW without a profile: HKCU -> HKU\.DEFAULT, nothing persists between trials
+    firewall_rule: abb-agent-block-out   # outbound block APPLIED TO that principal (SDDL with an `A` ACE); loopback stays open for the proxy
+    proxy:
+      listen: 127.0.0.1:8888
+      allow_hosts: ["api.anthropic.com"]
+      resolve_dns: true       # CLAUDE_CODE_PROXY_RESOLVES_HOSTS=1 in the agent env (a per-user firewall rule does not block Dnscache)
+      log: proxy.log          # under results/<run_id>/
+    acl:                      # $TRIAL = the trial directory; $REPO = repo key; $REPO_CLONE = the harness source checkout
+      reset_inheritance: ["$ABB_HOME", "$REPO_CLONE"]   # icacls /inheritance:r; full control: harness user, SYSTEM, Administrators
+      deny:   ["caches/repos", "caches/gradle-pristine", "results", "env.lock.json", "$REPO_CLONE", "$TRIAL/transcript", "$TRIAL/prompts", "$TRIAL/artifacts"]
+      rx:     ["tools", "caches/gradle-ro/$REPO", "caches/robolectric/$REPO", "sandbox/claude-config.template", "$TRIAL"]   # read AND execute
+      modify: ["$TRIAL/work", "$TRIAL/home", "$TRIAL/gradle-home", "$TRIAL/claude-config", "$TRIAL/agent-out"]
+      deny_write_files: ["$TRIAL/claude-config/settings.json"]
+      deny_write_dirs:  ["C:/Users/abb-agent"]            # the real profile must never change between trials
+  none:                       # DEV ONLY: harness user, nothing enforced; refused for split: test; recorded in the manifest
+    run_as: null
+    proxy:
+      listen: 127.0.0.1:8888
+      allow_hosts: ["api.anthropic.com"]
+      resolve_dns: true
+
+process:
+  memory_mb: 8192             # Job Object JOB memory limit per trial (whole tree); confirm in Phase 0 with two Robolectric test workers
+  grace_s: 30                 # STOP file -> launcher sends Ctrl+Break to the child's process group -> wait -> terminate the job
+  interrupt: ctrl_break       # ctrl_break | ctrl_c — decided once in Phase 0 from smoke-interrupt; both drivers use the same value
+  launcher: tools/abb_launch.py   # started under ABB_HOME/tools/python; the only command line that crosses CreateProcessWithLogonW
+  per_trial_dirs: [work, home, gradle-home, claude-config, agent-out]   # created fresh; nothing writable is shared between trials
+  seed_gradle_home: [wrapper/dists]       # copied from caches/gradle-pristine/$REPO into $TRIAL/gradle-home before launch
+  seed_transforms: false                  # also copy caches/<version>/transforms (Phase 1 measures cold-trial time and decides)
+  env:                        # added to every agent environment block (never inherit the harness env); $-paths are filled in by the runner
+    HTTPS_PROXY: http://127.0.0.1:8888
+    HTTP_PROXY: http://127.0.0.1:8888
+    NO_PROXY: 127.0.0.1,localhost
+    CLAUDE_CODE_PROXY_RESOLVES_HOSTS: "1"
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+    DISABLE_AUTOUPDATER: "1"
+    DISABLE_UPDATES: "1"
+    CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "60000"
+    CLAUDE_CODE_USE_POWERSHELL_TOOL: "1"     # explicit, so every arm has the same shell set (Bash via Git Bash + PowerShell)
+    USERPROFILE: "$TRIAL/home"               # also HOME, TEMP, TMP, APPDATA, LOCALAPPDATA -> $TRIAL/home
+    JAVA_TOOL_OPTIONS: "-Duser.home=$TRIAL/home -Dfile.encoding=UTF-8"   # Java ignores USERPROFILE; this reaches every JVM incl. test workers
+    ANDROID_USER_HOME: "$TRIAL/home/.android"
+    GRADLE_USER_HOME: "$TRIAL/gradle-home"
+    GRADLE_RO_DEP_CACHE: "caches/gradle-ro/$REPO"
+    CLAUDE_CONFIG_DIR: "$TRIAL/claude-config"
+  disallowed_tools: ["WebFetch", "WebSearch"]   # never deny Bash: on Windows that also removes the PowerShell tool

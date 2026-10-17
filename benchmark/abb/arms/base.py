@@ -16,10 +16,10 @@ if TYPE_CHECKING:  # pragma: no cover
 ExitReason = Literal[
     "completed",      # agent ended its final turn normally
     "max_turns",      # hit the per-call or total turn budget
-    "timeout",        # harness wall-clock timeout (exit 124/137)
+    "timeout",        # harness-initiated stop at the deadline (stopped_by_harness)
     "budget",         # --max-budget-usd tripped
     "agent_error",    # non-zero exit, no result line, orchestrator crash; never re-run
-    "harness_error",  # our bug (docker down, unparsable transcript, model drift); re-queued once
+    "harness_error",  # our bug (platform failure, unparsable transcript, model drift); re-queued once
 ]
 
 
@@ -77,7 +77,7 @@ class RunResult:
     exit_reason: ExitReason
     diff_path: Path                  # scoped diff (input to grading)
     transcript_dir: Path
-    workspace_base: str              # `git rev-parse HEAD` of /work after snapshot
+    workspace_base: str              # `git rev-parse HEAD` of the workspace after snapshot
     calls: list[PhaseCall] = field(default_factory=list)
     artifacts: dict[str, str] = field(default_factory=dict)
     gate_gradle_runs: int = 0        # Gradle runs performed by the arm's own tooling (S2A gates, plain-gate hook)
@@ -118,7 +118,7 @@ class Arm(Protocol):
 
     def one_time_setup(self, repo_key: str, ws: "Workspace", limits: Limits) -> list[PhaseCall]:
         """Per-repo setup whose cost is reported separately. Idempotent; cached per
-        (setup_kind, repo, setup_commit, image digest, prompt hash)."""
+        (setup_kind, repo, setup_commit, environment fingerprint, prompt hash)."""
         ...
 
     def run(self, task: "Task", ws: "Workspace", limits: Limits) -> RunResult:

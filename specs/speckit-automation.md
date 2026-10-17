@@ -4,7 +4,7 @@ Facts as of 2026-10-16 (re-verify in Phase 5 step 1 with `specify --version`, `s
 and by listing the command files `specify init` writes):
 
 - Install: `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@<tag>`.
-- Init in an existing repo: `specify init --here --force --non-interactive --integration claude --script sh --ignore-agent-tools`.
+- Init in an existing repo: `specify init --here --force --non-interactive --integration claude --script ps --ignore-agent-tools` (`--script ps` on Windows; `sh` on macOS later).
 - Commands are **hyphenated**: `/speckit-constitution`, `/speckit-specify`, `/speckit-clarify`
   (optional), `/speckit-plan`, `/speckit-checklist` (optional), `/speckit-tasks`,
   `/speckit-analyze` (optional), `/speckit-implement`, `/speckit-converge` (new; "repeat
@@ -20,13 +20,12 @@ In a workspace at the repo's `setup_commit` (the octopus merge-base of the repo'
 commits — see `repo-config.md` and `fairness-protocol.md`; never at `cache_commit`, which
 already contains the fixes), network `api-only`:
 
-1. `specify init --here --force --non-interactive --integration claude --script sh --ignore-agent-tools`
+1. `specify init --here --force --non-interactive --integration claude --script ps --ignore-agent-tools`
 2. `specify extension add bug`
 3. Headless call `speckit-constitution`: prompt
    `"/speckit-constitution Derive the constitution from this existing codebase: its languages, architecture, testing conventions, code style and release constraints. Do not invent principles the code does not follow."`
 4. Save `.specify/` and `.claude/` (command files) as `setup/speckit/<repo>/artifacts/`. The
    runner copies these into every Spec Kit task workspace for that repo before `run()`.
-   (Alternative: bake into a derived image `abb-<repo>-speckit`; choose in Phase 5 and record.)
 
 Setup cost = the constitution call (`setup/speckit/<repo>/run.json`).
 

@@ -48,7 +48,7 @@ Nothing in this file may change after the freeze tag; if it must, the run is a n
 A rerun of the held-out set is permitted only if, during or after the run, one of these is
 shown from the stored artifacts: (a) `patch_apply_failed` on a diff that applies cleanly by
 hand; (b) `abb audit` fails for a reason traceable to the harness, not the agent; (c) the
-grading container or image differs from the manifest digest; (d) a gate/revert bug that
+grading environment fingerprint differs from the manifest; (d) a gate/revert bug that
 changes `resolved` for ≥ 1 trial. The **first run remains primary**; a rerun replaces it only
 if the bug affected arms asymmetrically (shown per arm in the report). Both runs are published.
 

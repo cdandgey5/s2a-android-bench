@@ -25,9 +25,17 @@ in the experiment.
 
 Phase 0 step 7 decides with measurements, not with this table.
 
+## Windows notes (all candidates)
+
+- Clone with `core.autocrlf=false` and `core.longpaths=true`; `abb repos check` fails a repo with two
+  paths differing only by case or a path longer than 200 characters from the root.
+- The Gradle wrapper is `gradlew.bat` from PowerShell and `./gradlew` from Git Bash; both ship
+  with every candidate.
+- Thunderbird's `mise.toml` is a developer convenience; the harness supplies JDK 21 itself.
+
 ## What to discover per repo in Phase 0
 
-- Unit-test task names per module (`./gradlew tasks --all | grep -iE 'UnitTest$'`).
+- Unit-test task names per module (`gradlew.bat tasks --all | Select-String UnitTest`).
 - Which modules use Robolectric and which SDK levels (`@Config(sdk=…)`).
 - Any required files (`google-services.json`, `secrets.properties`, keystores) and whether a
   stub is enough.

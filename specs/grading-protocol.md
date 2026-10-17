@@ -1,14 +1,14 @@
 # Spec: Grading protocol
 
-Grading is deterministic, runs in a **fresh** container with `--network none`, and never sees
-the agent's transcript — only its diff.
+Grading is deterministic, runs in a **fresh** workspace as the harness user with the proxy
+stopped (offline), and never sees the agent's transcript — only its diff.
 
 ## Inputs
 
 - `task.yaml`, `test.patch`, `gold.patch` (the grader reads `gold.patch` only to compute
   `scope_creep` and the protected-path exception below; no arm ever sees it).
 - `diff.patch` — the agent's changes, produced by the arm as
-  `git -C /work add -A -N && git -C /work diff --binary base -- . ':(exclude)<diff_exclude globs>'`,
+  `git add -A -N && git diff --binary base -- . ":(exclude)<diff_exclude globs>"` (run in the workspace),
   i.e. everything the agent changed relative to the `base` tag (new files included), minus the
   workflow folders listed in `repos.workspace.diff_exclude`.
 
@@ -35,8 +35,9 @@ the agent's transcript — only its diff.
 4. git apply --check test.patch && git apply test.patch
      if it fails: GradeResult(resolved=False, reason="test_patch_apply_failed")   # should never happen after validation
 5. Build + run F2P tests, per module:
-     ./gradlew --offline --console=plain --continue --no-build-cache \
-        <module>:cleanTest <module>:<unit_test_task> --tests '<class>[.<method>]' [--tests ...]
+     {gradlew} --offline --console=plain --continue --no-build-cache --no-daemon `
+        <module>:cleanTest <module>:<unit_test_task> --tests <class>[.<method>] [--tests ...]
+     # GRADLE_USER_HOME = caches\gradle-pristine\<repo> (harness only); JAVA_TOOL_OPTIONS -Duser.home = a scratch home
      parse JUnit XML written AFTER grading started (file mtime) -> status per test id
      build_ok: false when the Gradle run exits non-zero AND no TEST-*.xml was produced for a
        requested module, OR the log shows compile-task failure markers
@@ -48,7 +49,7 @@ the agent's transcript — only its diff.
        touches the F2P module(s); whether it is a correct fix with a different shape is the
        blind Phase 9 label `INTERFACE`, not a grader decision (task-format.md rule 7).
 6. Run P2P tests similarly (whole classes or whole modules).
-   Flakiness guard: any P2P test that failed is re-run ONCE in a fresh container; if it passes,
+   Flakiness guard: any P2P test that failed is re-run ONCE in a fresh workspace; if it passes,
    it is recorded in flaky_p2p and excluded from regressions.
 7. resolved = build_ok and all(F2P == passed) and all(P2P == passed, after the flakiness guard)
    regressions = [t for t in P2P if status != passed and t not in flaky_p2p]
@@ -61,8 +62,12 @@ the agent's transcript — only its diff.
 
 ### Gradle invocation notes
 
-- `--continue` so one failing module does not hide others; `--no-build-cache` so nothing is
-  served from a cache (images are built with `org.gradle.caching=false` as well).
+- `--continue` so one failing module does not hide others; `--no-build-cache` and `--no-daemon`
+  so nothing is served from a cache and no daemon holds locks (caches are warmed with
+  `org.gradle.caching=false` as well).
+- Any `android-all`/`Downloading` line in `gradle.log` means the pristine cache is incomplete:
+  `build_ok=False, reason="env_incomplete"` (a harness problem, re-queued once), never silently
+  resolved from the network.
 - `cleanTest` forces the tests to execute in this run; the parser additionally requires each
   F2P `<testcase>` to carry a `time` attribute and the XML to be newer than the grading start.
 - Timeout: `limits.grade_timeout_minutes` (default 30) per module call. Timeout →
@@ -100,7 +105,7 @@ uses; the grader does not alter it.
   "scope_creep": {"files_outside_gold_modules": 0, "paths": []},
   "lint_delta": null,
   "grade_duration_s": 412.3,
-  "image_digest": "sha256:...",
+  "env_fingerprint": "sha256:...",
   "graded_at": "2026-11-05T10:12:44Z"
 }
 ```

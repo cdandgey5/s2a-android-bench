@@ -10,14 +10,15 @@ commands:
   # flavors change the names (testDebugUnitTest vs testFreeDebugUnitTest; the AGP anchor task
   # compile<Variant>UnitTestSources vs plain-JVM `testClasses`). The orchestrator renders these
   # templates with map.json values; `offline_flag` is always appended.
+  # {gradlew} is filled by the platform layer: gradlew.bat on Windows, ./gradlew elsewhere.
   offline_flag: "--offline"
-  common_flags: "--console=plain --continue"
-  build: "./gradlew {flags} {module}:{compile_task}"
-  test_module: "./gradlew {flags} {module}:{task}"
-  test_class: "./gradlew {flags} {module}:{task} --tests '{class}'"
-  test_method: "./gradlew {flags} {module}:{task} --tests '{class}.{method}'"
-  lint: "./gradlew {flags} {module}:{lint_task}"        # lint_task from map.json (e.g. lintFreeDebug); gate times it once
-  test_smoke: "./gradlew {flags} {module}:{task}"       # the map gate runs this on map.json.smoke
+  common_flags: "--console=plain --continue --no-daemon"
+  build: "{gradlew} {flags} {module}:{compile_task}"
+  test_module: "{gradlew} {flags} {module}:{task}"
+  test_class: "{gradlew} {flags} {module}:{task} --tests {class}"
+  test_method: "{gradlew} {flags} {module}:{task} --tests {class}.{method}"
+  lint: "{gradlew} {flags} {module}:{lint_task}"        # lint_task from map.json (e.g. lintFreeDebug); gate times it once
+  test_smoke: "{gradlew} {flags} {module}:{task}"       # the map gate runs this on map.json.smoke
   junit_results: "{module_dir}/build/test-results/{task}/TEST-*.xml"
   defaults:                                             # used only when map.json lacks a value
     task: "testDebugUnitTest"
@@ -50,6 +51,8 @@ notes_for_prompts: |
   - Gradle runs offline; the dependency cache is warm. If a build fails on resolution, the fix is
     never to change repositories or add dependencies.
   - Product flavors change unit-test task names (testFreeDebugUnitTest vs testDebugUnitTest).
+  - Run Gradle through the wrapper: `./gradlew` from Bash (Git Bash on Windows) or `gradlew.bat`
+    from PowerShell/cmd. Never install Gradle separately.
   - Test at the lowest layer that gives real feedback: plain JVM unit tests first; Robolectric
     only when the code depends on Android classes; prefer extracting logic into a plain class
     with a plain unit test when the surrounding code already does that. Device/instrumented

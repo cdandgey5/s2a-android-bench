@@ -57,7 +57,7 @@ CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label �
    findings into `reference/verified.md`; the nudge detection in the spec covers the documented
    outcome and the "session ended" outcome.
 4. **Shared preamble + plain arm.** `abb/arms/common/environment.md` (every arm, every call):
-   > You are working in an existing Android repository checked out at /work. There is no
+   > You are working in an existing Android repository checked out in the current directory. There is no
    > network access except the model API; Gradle must be run with `--offline`. No human is
    > available: make reasonable assumptions and state them briefly. Keep changes consistent
    > with the surrounding code and the repository's own conventions. Do not disable, delete or
@@ -75,7 +75,7 @@ CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label �
    >
    > {{ticket}}
    >
-   > Resolve this ticket in the repository at /work. When finished, summarise what you changed
+   > Resolve this ticket in this repository. When finished, summarise what you changed
    > and which tests you ran.
 
    After the call: `diff.patch` (scoped) and `diff.full.patch`; `RunResult` with
@@ -83,7 +83,7 @@ CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label �
    `error_max_budget_usd`→budget, timeout→timeout, else agent_error).
 5. **Minimal runner** (`run.py`): resolve task set (`dev5` = the 5 validated tasks of repo #1
    plus the seed, or explicit ids, or `split: dev|test` later); for each task × trial:
-   `Workspace(network="api-only")`, `snapshot`, `put` only `problem.md`'s text via the prompt,
+   `Workspace(sandbox="user")`, `snapshot`, `put` only `problem.md`'s text via the prompt,
    `arm.run`, pull `run.json`, prompts, transcripts, diffs with `Workspace.get`. Run
    `one_time_setup` once per (setup kind, repo) through `setup.py` (a no-op for plain). Then
    call the grader (`abb grade <run_id>` or inline `--grade`) and `abb audit`. Write
@@ -100,8 +100,9 @@ CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label �
    not as an intervention; S2A allows ≤ 2 retries per task, plain-gate exactly 1 — say so in the
    report), then stops. Both register in `registry.py`; `plain-gate` is optional in the final
    matrix.
-7. **Pin versions.** Set `CLAUDE_CODE_VERSION` to the exact version used; rebuild base and
-   repo images if the arg changed; record in `images.lock.json`.
+7. **Pin versions.** Set `claude_code.version` in `config/toolchain.yaml` to the exact version used
+   (≥ 2.1.211), reinstall for both users (`abb tools install`, `abb sandbox setup --refresh`), and
+   record it in `env.lock.json`.
 8. **Run dev5 × 1 trial on Sonnet 5.5.** Then run it again (trial 2) to see variance. Keep both
    run ids in `docs/RUNS.md` with a one-line note each (this file is the lab notebook from now on).
 9. Commit `phase 4: plain arm + first results`.
@@ -114,8 +115,8 @@ uv run abb run --arm plain --tasks dev5 --trials 1 --model claude-sonnet-5-5 --l
 uv run abb report <run_id>                      # table with 6 rows of real numbers (dev5 = 5 validated tasks + the seed)
 uv run abb audit <run_id>                       # all trials: run.json == transcripts
 uv run abb run --arm plain-guided --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-guided-1 --grade
-ls results/<run_id>/plain/*/t1/                 # run.json transcript/ prompts/ diff.patch grade.json metrics.json
-cat reference/verified.md                       # has the AskUserQuestion-in-print-mode finding
+Get-ChildItem $env:ABB_RESULTS_DIR\<run_id>\plain\*\t1   # run.json transcript\ prompts\ diff.patch grade.json metrics.json
+Get-Content reference\verified.md                 # has the AskUserQuestion-in-print-mode finding
 ```
 
 Passes when the table exists with real grades and costs, every trial dir is complete per the
@@ -124,8 +125,8 @@ drives the budget in PLAN.md §6).
 
 ## Pitfalls
 
-- `docker exec` output buffering: use `exec_run(stream=True)` and write each chunk immediately;
-  stream-json lines are newline-delimited.
+- Output capture: the agent process writes stream-json to a file in the trial directory (cross-user
+  handle inheritance is unreliable); the driver tails the file and parses newline-delimited JSON.
 - If `-p` ever defaults to `--bare` in a newer version, repo `CLAUDE.md` would be ignored for
   the plain arm but not for others — the version pin protects you; re-check on every upgrade.
 - The nudge heuristic will have false positives (a summary ending in "?"). Cap is 2; the cost

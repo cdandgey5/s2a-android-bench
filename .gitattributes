@@ -1,6 +1,7 @@
-# Everything here runs in Linux containers: keep LF even on a Windows checkout.
+# Patches are applied as bytes on every host: keep LF in the repository and on checkout.
 * text=auto eol=lf
 *.png binary
 *.jpg binary
 *.zip binary
 *.jar binary
+*.patch -text

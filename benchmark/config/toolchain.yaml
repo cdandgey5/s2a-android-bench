@@ -1,0 +1,43 @@
+# Pinned toolchain for `abb tools install` (specs/environments.md §2). Windows x64 in v1; add a
+# `macos` block when that host is supported. Installed ONCE by the harness user into ABB_HOME/tools
+# (readable by the sandbox user); resolved versions/checksums go to config/toolchain.lock.yaml on
+# first install and are verified (and re-fetched by exact release) on every later install.
+platform: windows-x64
+
+jdk:
+  source: adoptium
+  majors: [17, 21]
+  image_type: jdk
+  # first install: assets/latest/<major>/hotspot?os=windows&architecture=x64&image_type=jdk&vendor=eclipse
+  # later installs: assets/release_name/eclipse/<locked release_name>?os=windows&architecture=x64&image_type=jdk  (sha256 verified)
+
+android:
+  cmdline_tools_zip: commandlinetools-win-15859902_latest.zip
+  cmdline_tools_sha256: 90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a   # 2026-10-16; re-verify on developer.android.com/studio
+  base_url: https://dl.google.com/android/repository/
+  packages:
+    - "platform-tools"
+    - "platforms;android-35"
+    - "build-tools;35.0.0"
+
+python:
+  version: "3.12"
+  uv_python_install_dir: "$ABB_HOME/tools/python"     # shared by both users; also runs the launcher
+  uv_tool_dir: "$ABB_HOME/tools/uvtools"
+  uv_tool_bin_dir: "$ABB_HOME/tools/bin"              # specify.exe, s2a.exe
+
+claude_code:
+  installer: "irm https://claude.ai/install.ps1"     # run as: & ([scriptblock]::Create((irm https://claude.ai/install.ps1))) <version>
+  version: "TODO_PIN"          # the exact version printed by `claude.exe --version` on Day 0; must be >= 2.1.211
+  exe_copy: "$ABB_HOME/tools/claude/<version>/claude.exe"   # copied from the harness user's install; the launcher runs ONLY this path
+
+speckit:
+  ref: "TODO_PIN"              # git tag, e.g. v0.12.11; set in Phase 5 step 1
+  script_flavor: ps            # `specify init --script ps` on Windows
+
+git:
+  global_config:               # harness user's --global and every per-trial home/.gitconfig
+    core.autocrlf: "false"
+    core.eol: "lf"             # an upstream .gitattributes `text=auto` would otherwise still emit CRLF
+    core.longpaths: "true"
+    core.filemode: "false"

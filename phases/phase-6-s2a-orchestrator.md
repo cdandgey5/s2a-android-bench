@@ -3,12 +3,12 @@
 **Goal.** Build `s2a/` — the standalone orchestrator from `specs/s2a-orchestrator.md` — so that
 `s2a run "<prompt>"` executes a change in an existing Android repo end to end (intake → map →
 locate → reproduce/characterize → spec → plan → implement → verify → fix → report) with
-machine-checked gates, budgets and resumable state. Then install it into the benchmark images
+machine-checked gates, budgets and resumable state. Then install it for the sandbox user
 and wrap it as Arm C with its ablations. After Phase 7 freezes the split, tune on the dev set
 only.
 
 **Prerequisites.** Phase 4 gate (the driver contract and transcript fixtures exist). Phase 1
-images. Written from scratch in this repo; no external prompts or scripts.
+environments. Written from scratch in this repo; no external prompts or scripts.
 
 **Effort.** ~2 weeks to build; ~2 weeks of dev-set tuning interleaved with Phases 7–9. Can run
 in parallel with Phases 5 and 7.
@@ -23,8 +23,8 @@ s2a/s2a/stages/{base,intake,map,locate,reproduce,spec,plan,implement,verify,fix,
 s2a/tests/{test_gates,test_state,test_render,test_plan_parse,test_verdict,test_driver_parser}.py
 s2a/tests/fixtures/                      # sample artifacts; transcript fixtures shared with the benchmark
 s2a/CHANGELOG.md                         # every prompt/pipeline change with date and dev-set result before/after
-benchmark/docker/s2a/Dockerfile          # thin layer FROM abb-<repo>: COPY s2a /opt/s2a && uv tool install /opt/s2a (seed provided)
-benchmark/abb/arms/s2a/arm.py            # Arm C wrapper: one_time_setup -> `s2a map`; run -> `S2A_AUTONOMOUS=1 s2a run …`
+benchmark/abb/harness/sandbox.py         # + `abb sandbox install-s2a`: uv tool install <repo>\s2a into ABB_HOME\tools\uvtools (s2a.exe in tools\bin) at s2a_git_sha; harness user
+benchmark/abb/arms/s2a/arm.py            # Arm C wrapper: one_time_setup -> `s2a map`; run -> `s2a run …` (env `S2A_AUTONOMOUS=1`)
 benchmark/abb/arms/s2a/config.yaml       # ablation -> --skip mapping; limits pass-through
 benchmark/abb/arms/registry.py           # + s2a, s2a-nomap, s2a-noverify, s2a-norepro
 benchmark/tests/test_s2a_arm.py          # calls.jsonl -> PhaseCall mapping; ablation flags; artifact capture
@@ -121,25 +121,24 @@ docs/DECISIONS.md                        # D-015 (orchestrator), D-016 (principl
     save state `paused_at`, exit 5; `s2a resume` re-reads the (possibly edited) artifact,
     re-runs its gate, continues. Default (autonomous): never pauses; nudge protocol applies;
     `S2A_AUTONOMOUS=1` overrides `--interactive`.
-13. **Local end-to-end.** `abb ws shell antennapod --commit <dev task base>` → install the
-    package in the container (`uv tool install /opt/s2a` or `pip install -e`) → `S2A_AUTONOMOUS=1
-    s2a run "$(cat problem.md)" --profile android --model claude-sonnet-5-5` → inspect
-    `.s2a/runs/<id>/`. Iterate on prompts/gates until one dev task runs through all stages.
-14. **Image.** `abb images build-s2a <repo>` builds the thin layer
-    `abb-<repo>-s2a:<s2a_sha7>` from `benchmark/docker/s2a/Dockerfile` (`FROM abb-<repo>:<tag>`,
-    `COPY s2a /opt/s2a`, `uv tool install /opt/s2a`; build context = repo root with the root
-    `.dockerignore`; seconds to rebuild, so tuning never touches base or repo images and the
-    task-validation digest of `abb-<repo>` stays valid). Write `s2a_git_sha` and the layer tag
-    into `images.lock.json`; the manifest records both. The drift guard compares the parent
-    `abb-<repo>` digest.
-15. **Arm C wrapper** (`abb/arms/s2a/arm.py`), running in `abb-<repo>-s2a`: `one_time_setup`
-    (setup kind `s2a-map`, shared by all `s2a-*` arms except `nomap`) → `s2a map --repo /work
+13. **Local end-to-end.** `abb ws open antennapod --commit <dev task base> --as-agent` →
+    `s2a.exe` comes from `ABB_HOME\tools\bin` (installed by step 14) → `$env:
+    S2A_AUTONOMOUS=1; s2a run (Get-Content problem.md -Raw) --profile android --model
+    claude-sonnet-5-5` → inspect `.s2a\runs\<id>\`. Iterate on prompts/gates until one dev task
+    runs through all stages.
+14. **Install the package.** `abb sandbox install-s2a` (harness user) runs `uv tool install
+    <repo>\s2a` into `ABB_HOME\tools\uvtools` with `s2a.exe` in `ABB_HOME\tools\bin` (read/execute
+    for the sandbox user, on the agent PATH) and
+    writes `s2a_git_sha` into `env.lock.json`; the manifest records it. Re-run after every
+    prompt/pipeline change (seconds); per-repo fingerprints are unaffected.
+15. **Arm C wrapper** (`abb/arms/s2a/arm.py`), with `s2a.exe` on the agent PATH: `one_time_setup`
+    (setup kind `s2a-map`, shared by all `s2a-*` arms except `nomap`) → `s2a map --repo <workspace>
     --profile android --model <limits.model> --max-turns 25 --max-usd <limits.max_usd>
     --timeout-min 20 --append-system-prompt-file <environment.md>` at `setup_commit`; copy
     `.s2a/map.md`, `map.json`, `map.calls.jsonl`, `map/transcripts/`, `map/prompts/` into the
     setup artifacts (the calls become the setup `PhaseCall`s). `run` → copy `map.md` +
-    `map.json` into `/work/.s2a/` (unless `nomap`), then `S2A_AUTONOMOUS=1 s2a run
-    "<problem.md>" --repo /work --profile android --map /work/.s2a/map.md
+    `map.json` into `<workspace>/.s2a/` (unless `nomap`), then (env `S2A_AUTONOMOUS=1`) `s2a run
+    "<problem.md>" --repo <workspace> --profile android --map <workspace>/.s2a/map.md
     --append-system-prompt-file <environment.md> --model <limits.model> --max-turns
     <limits.max_turns_total> --max-usd <limits.max_usd> --timeout-min <limits.timeout_minutes>
     [--skip map|verify|reproduce]`; then read `.s2a/runs/<id>/calls.jsonl` → `PhaseCall`s; copy
@@ -173,10 +172,10 @@ docs/DECISIONS.md                        # D-015 (orchestrator), D-016 (principl
 
 ```
 cd s2a && uv run pytest -q && uv run s2a --help
-# inside a dev-task workspace container, autonomous end-to-end on one task:
-S2A_AUTONOMOUS=1 s2a run "$(cat /tmp/problem.md)" --repo /work --profile android --model claude-sonnet-5-5
+# inside a dev-task workspace as the sandbox user, autonomous end-to-end on one task:
+$env:S2A_AUTONOMOUS=1; s2a run (Get-Content <trial>\problem.md -Raw) --repo <workspace> --profile android --model claude-sonnet-5-5
 s2a status <run_id>                         # every stage done; verdict recorded; exit code 0 or 2
-ls /work/.s2a/runs/<run_id>/                # ticket.md locate.md spec.md plan.md plan.json verify.md report.md calls.jsonl progress.md state.json
+Get-ChildItem <workspace>\.s2a\runs\<run_id>       # ticket.md locate.md spec.md plan.md plan.json verify.md report.md calls.jsonl progress.md state.json
 # kill a run during implement, then:
 s2a resume <run_id>                         # continues at the first unfinished task, no re-done work
 # benchmark:
@@ -200,7 +199,7 @@ reproduction gate demonstrably fails-then-passes on a bug task, the map's comman
   gate compiles the test source set.
 - **`.s2a/` hygiene.** Append `.s2a/` to `.git/info/exclude` (not `.gitignore`, which would
   change the repo); the benchmark's `diff_exclude` already lists `.s2a/**`.
-- **Git identity.** Containers have none; the orchestrator sets `-c user.name=s2a -c
+- **Git identity.** The sandbox user has none; the orchestrator sets `-c user.name=s2a -c
   user.email=s2a@local` on every commit.
 - **Verifier isolation** is three layers (prompt, denied edit tools, reset after); Bash remains
   available because Gradle needs it, so the reset is the real guard.

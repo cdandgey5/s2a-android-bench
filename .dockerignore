@@ -1,6 +1,0 @@
-# Build context for the abb-<repo>-s2a thin layer (benchmark/docker/s2a/Dockerfile) is the repo root. Ship only what it needs.
-*
-!s2a/
-!benchmark/docker/
-s2a/.venv/
-s2a/**/__pycache__/

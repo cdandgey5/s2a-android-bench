@@ -1,7 +1,7 @@
 [project]
 name = "abb"
 version = "0.1.0"
-description = "Android Brownfield Bench - harness for the S2A brownfield Android agent benchmark"
+description = "Android Brownfield Bench - Windows-native harness for the S2A brownfield Android agent benchmark"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -10,7 +10,8 @@ dependencies = [
     "rich>=13",
     "pydantic>=2.7",
     "pyyaml>=6",
-    "docker>=7",
+    "keyring>=25",
+    "pywin32>=306; sys_platform == 'win32'",
     "pandas>=2.2",
     "numpy>=1.26",
     "matplotlib>=3.9",
@@ -36,4 +37,4 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["integration: needs Docker and built images (set ABB_INTEGRATION=1)"]
+markers = ["integration: needs the toolchain, warm caches and the sandbox (set ABB_INTEGRATION=1)"]

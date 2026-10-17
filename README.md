@@ -17,15 +17,16 @@ phase.
 
 ## How to use this folder
 
-1. Do the human bootstrap in `docs/DAY-0.md` (WSL clone at `~/abb`, Docker, keys, disk).
-2. Open Claude Code **inside WSL at `~/abb`** and paste the kickoff prompt from `START-HERE.md`
+1. Do the human bootstrap in `docs/DAY-0.md` (PowerShell 7, `gh`, `uv`, Claude Code ≥ 2.1.211, key,
+   `ABB_HOME`, the clone at `%USERPROFILE%\abb-src`). **No WSL, no Docker.**
+2. Open Claude Code in `%USERPROFILE%\abb-src` and paste the kickoff prompt from `START-HERE.md`
    (it says: read `AGENTS.md`, then `PLAN.md`, then execute Phase 0 and stop at its gate).
 3. Review the gate output. Then: *"Execute Phase 1."* And so on.
 4. Phases 0–4 are sequential (Phase 4 builds the agent driver and runner the other arms reuse).
    Phase 7 (tasks at scale) opens mid-Phase 2, as soon as mining yields candidates; Phases 5 and
    6 open after Phase 4; each runs in its own agent session and branch. Then 8 → 9 → 10.
-5. Never work from this OneDrive folder: it is the original import. The WSL clone `~/abb` with a
-   private GitHub remote is the working tree (`docs/DAY-0.md`).
+5. Never work from this OneDrive folder: it is the original import. `%USERPROFILE%\abb-src` with
+   a private GitHub remote is the working tree (`docs/DAY-0.md`).
 
 Everything the agent needs is in three places:
 
@@ -34,9 +35,9 @@ Everything the agent needs is in three places:
 | `START-HERE.md` | The startable runbook: prerequisites, kickoff prompt, session map, first-six-weeks calendar (owns the week numbers), MVP cut. **Start here.** |
 | `PLAN.md` | The master plan: goals, phases, gates, timeline, risks, cost. |
 | `phases/` | One file per phase: deliverables, exact steps, code contracts, acceptance checks. |
-| `specs/` | Contracts shared across phases: task format, grading protocol, adapter interface, results layout, metrics, fairness rules, Docker images, headless-agent driving. |
+| `specs/` | Contracts shared across phases: task format, grading protocol, adapter interface, results layout, metrics, fairness rules, environments (Windows-native, no containers), platform layer, headless-agent driving. |
 | `reference/` | Facts gathered on 2026-10-16 (repo candidates, tool versions, sources) with "re-verify" notes. |
-| `benchmark/` | Seed files that are concrete contracts (repo configs, base Dockerfile, task template, `pyproject.toml`, adapter base class). The harness code is built here by the agent. |
+| `benchmark/` | Seed files that are concrete contracts (repo configs, `config/{limits,sandbox,toolchain}.yaml`, task template, `pyproject.toml`, adapter base class). The harness code is built here by the agent. |
 | `docs/` | `DAY-0.md` (human bootstrap), `PREREG.md` (pre-registration, completed before the freeze), `DECISIONS.md`, `RUNS.md` (lab notebook). |
 | `s2a/` | **The S2A framework itself**: a standalone orchestrator CLI (`s2a run "<prompt>"`) that drives a coding agent through gated stages to a verified change, autonomously by default. Seeds inside the package: `s2a/s2a/pipeline.yaml`, `profiles/android.yaml`, `prompts/*.md`. Design in `specs/s2a-orchestrator.md`; principles in `specs/brownfield-principles.md`; built in Phase 6. |
 
@@ -50,8 +51,8 @@ already works end to end.
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Foundations: repo layout, CLI skeleton, base image, repo selection experiment | blocked at step 1: Day-0 bootstrap incomplete (2026-10-17, see `reference/verified.md`) |
-| 1 | Per-repo environments: warm images, offline builds, history-free workspaces | not started |
+| 0 | Foundations (Windows-native): CLI skeleton, platform layer, pinned toolchain, repo selection experiment | not started |
+| 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | not started |
 | 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | not started |
 | 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | not started |
 | 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | not started |

@@ -64,7 +64,7 @@ CLI: abb report <run_id> [--arms …] [--breakdowns …]      abb labels init|sh
 uv run pytest -q tests/test_stats.py tests/test_report.py
 uv run abb report <dev_run_id>                     # report/summary.md + tables/ + charts/ regenerated from scratch
 uv run abb labels agreement <dev_run_id>           # >= 80 % primary-label agreement on the manual set
-uv run abb report <dev_run_id> --out /tmp/r1 && uv run abb report <dev_run_id> --out /tmp/r2 && diff -r /tmp/r1 /tmp/r2   # deterministic: no output
+uv run abb report <dev_run_id> --out $env:TEMP\r1; uv run abb report <dev_run_id> --out $env:TEMP\r2; uv run abb report-diff $env:TEMP\r1 $env:TEMP\r2   # deterministic: "identical"
 ```
 
 Passes when the report is fully generated and deterministic, statistics have known-answer

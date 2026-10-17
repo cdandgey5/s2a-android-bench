@@ -1,10 +1,10 @@
 # Spec: Repository configuration (`benchmark/repos/<repo>.yaml`)
 
-One file per benchmark repository. Everything the harness needs to build an image, create a
+One file per benchmark repository. Everything the harness needs to warm an environment, create a
 workspace, run tests and scope diffs.
 
 ```yaml
-key: antennapod                         # used in task ids, image names (abb-antennapod)
+key: antennapod                         # used in task ids and cache dirs (caches\gradle\antennapod)
 display_name: AntennaPod
 url: https://github.com/AntennaPod/AntennaPod
 license: GPL-3.0
@@ -14,23 +14,21 @@ ui: xml                                 # xml | compose | mixed
 structure: multi_module                 # single_module | multi_module
 
 toolchain:
-  jdk: 17                               # major version; image picks eclipse-temurin:<jdk>-jdk
+  jdk: 17                               # major version; resolved to ABB_HOME\tools\jdk<N> (config/toolchain.yaml pins the build)
   android:
-    cmdline_tools_zip: commandlinetools-linux-15859902_latest.zip
-    cmdline_tools_sha256: 4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583
-    packages:                           # sdkmanager packages, pinned; discovered in Phase 0
-      - "platform-tools"
+    packages:                           # sdkmanager packages THIS repo needs beyond config/toolchain.yaml; discovered in Phase 0
       - "platforms;android-35"
       - "build-tools;35.0.0"
   gradle_user_home_props: |             # appended to $GRADLE_USER_HOME/gradle.properties
     org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g
     kotlin.daemon.jvmargs=-Xmx2g
+    kotlin.compiler.execution.strategy=in-process   # no shared Kotlin daemon between trials
     org.gradle.parallel=false
     org.gradle.caching=false            # a build cache would carry compiled classes of later commits into workspaces
     org.gradle.configuration-cache=false
 
 build:
-  # Commands run during image build to warm the cache (network ON). Run at `cache_commit`,
+  # Commands run by `abb env warm` (network ON, harness user). Run at `cache_commit`,
   # then again at every task base_commit for this repo (Phase 1, step 5).
   cache_commit: 3f2a9c1d...             # a recent commit that all tasks' deps are close to
   # Commit at which one-time per-repo setup artifacts (Spec Kit constitution, S2A map) are
@@ -39,15 +37,15 @@ build:
   # because of a task's fix. Set by `abb tasks coverage` (Phase 7), which also adds it to the
   # warm commits; until then = merge-base of the dev-task base commits.
   setup_commit: 1a2b3c4d...
-  warm_commands:
-    - cmd: "./gradlew --console=plain assembleFreeDebug"        # discovered in Phase 0; must exit 0
-    - cmd: "./gradlew --console=plain testFreeDebugUnitTest"    # also fetches Robolectric jars
-      allow_failure: true                                       # test failures are irrelevant while warming
+  warm_commands:                        # {gradlew} = gradlew.bat on Windows, ./gradlew elsewhere (platform layer)
+    - cmd: "{gradlew} --console=plain --no-daemon assembleFreeDebug"        # discovered in Phase 0; must exit 0
+    - cmd: "{gradlew} --console=plain --no-daemon testFreeDebugUnitTest"    # also fetches Robolectric jars
+      allow_failure: true                                                   # test failures are irrelevant while warming
   # Secrets stubbing: files to create so the build does not need real keys.
   stubs:
     - path: "app/google-services.json"
-      content_from: "docker/antennapod/stubs/google-services.json"   # only if needed
-  env:                                  # extra env for Gradle inside the container
+      content_from: "stubs/antennapod/google-services.json"   # under benchmark/; only if needed
+  env:                                  # extra env for Gradle in agent and grading processes
     JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
 
 tests:
@@ -55,7 +53,7 @@ tests:
     default: "testDebugUnitTest"
     ":app": "testFreeDebugUnitTest"
   junit_dir: "build/test-results"       # relative to module dir; task name is appended
-  verify_modules: [":model", ":app"]    # `abb images verify` runs these (one library module + the app module)
+  verify_modules: [":model", ":app"]    # `abb env verify` runs these (one library module + the app module)
   test_dirs:                            # globs; edits here are REVERTED before grading
     - "**/src/test/**"
     - "**/src/testDebug/**"
@@ -100,21 +98,21 @@ workspace:
     - "*.log"
 
 lint:                                   # optional secondary metric (Phase 3 step 7)
-  command: "./gradlew --offline --console=plain :app:lintFreeDebug"
+  command: "{gradlew} --offline --console=plain :app:lintFreeDebug"
   report_glob: "app/build/reports/lint-results-*.xml"
 ```
 
 ## Notes
 
 - `warm_commands` entries are `{cmd, allow_failure?}`. Only test-running commands should carry
-  `allow_failure: true`; a failing assemble/compile command must fail the image build.
+  `allow_failure: true`; a failing assemble/compile command must fail the warm.
 - `warm_commands` must fetch everything the agent or grader will later need offline, including
-  Robolectric's `android-all-instrumented` jars (they are downloaded on first test run into
-  `~/.m2/repository/org/robolectric/`). The Phase 1 gate checks this by running the tests with
-  `--network none`.
+  Robolectric's `android-all-instrumented` jars (they are downloaded on first test run into the
+  Maven local repo, `ABB_HOME\caches\m2\<repo>`). The Phase 1 gate checks this by running the
+  tests as the sandbox user with the proxy stopped.
 - `test_task_for_module` exists because app modules with product flavors use
   `test<Flavor>DebugUnitTest` while library modules use `testDebugUnitTest`. Discover with
-  `./gradlew :app:tasks --all | grep -i unittest`.
+  `gradlew.bat :app:tasks --all | Select-String UnitTest`.
 - `strip_agent_instructions` — AntennaPod ships `CLAUDE.md` and `AGENTS.md`. Keeping them is the
   realistic brownfield condition and is identical across arms. Record the choice in the run
   manifest. Independently of this flag, the snapshot script always removes repo-shipped agent

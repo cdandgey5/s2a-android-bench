@@ -1,161 +1,146 @@
-# Phase 0 — Foundations
+# Phase 0 — Foundations (Windows-native)
 
-**Goal.** A runnable `abb` CLI skeleton, the shared `abb-base` Docker image, verified tool facts,
-an evidence-based choice of the first two repositories, and one seed task so every later
-harness piece has a fixture from day one.
+**Goal.** A runnable `abb` CLI skeleton, the pinned toolchain installed under `ABB_HOME`, verified
+tool facts (including how Claude Code behaves headlessly on Windows), an evidence-based choice of
+the first two repositories, and one seed task so every later harness piece has a fixture.
 
-**Prerequisites (done by the human, before the first agent session — see `docs/DAY-0.md`).**
-WSL2 Ubuntu with Docker Desktop's **WSL integration enabled for that distro**; `claude`, `gh`
-(authenticated) and `uv` installed **inside WSL**; a Console API key with credit exported as
-`ANTHROPIC_API_KEY` (or in `benchmark/.env`); `.wslconfig` set (24 GB / 8 CPU / 8 GB swap) and
-WSL restarted; **≥ 120 GB free** on the drive holding the WSL vhdx; the plan cloned to `~/abb`
-with a private GitHub remote; the pinned model's training-cutoff date written into D-001; a
-dev budget agreed (`profiles.dev.max_usd` in `config/limits.yaml`). The agent runs **in
-`~/abb`**, never under `/mnt/c/...`.
+**Prerequisites (done by the human — `docs/DAY-0.md`).** Windows 11, PowerShell 7, Git for
+Windows, `gh` (authenticated), `uv`, Claude Code ≥ 2.1.211 pinned and its version written into
+`benchmark/config/toolchain.yaml`; `ANTHROPIC_API_KEY` as a user environment variable; `ABB_HOME`
+on the drive with the most space (≥ 60 GB free); the plan cloned to `%USERPROFILE%\abb-src` with a
+private GitHub remote; the pinned model's training-cutoff date in D-001. No admin rights are
+needed in this phase.
 
 **Effort.** ~1 week part-time. Most of it is waiting for Gradle.
 
 ## Deliverables
 
 ```
-.gitignore                     # root: .venv/, results/, *.tmp, __pycache__/, .env  (benchmark/.gitignore stays)
+.gitignore                     # root: .venv/, __pycache__/, *.tmp, .env
 benchmark/
-  pyproject.toml                 # uv project; package `abb`; console script `abb`
-  README.md                      # how to run the harness (short; grows per phase)
-  LICENSE                        # MIT
-  .env.example                   # ANTHROPIC_API_KEY=, GITHUB_TOKEN=
+  pyproject.toml                 # package `abb`; deps: typer, rich, pydantic, pyyaml, pandas, numpy, matplotlib, anthropic, keyring; windows: pywin32
+  README.md  LICENSE (MIT)  .env.example
   abb/__init__.py
-  abb/cli.py                     # Typer app: images, tasks, repos, run, grade, grade-patch, report, split, labels, audit, repro, ws
-  abb/config.py                  # pydantic models: RepoConfig, TaskConfig, NetworkConfig, LimitsConfig (re-exports arms.base.Limits); 5-line .env loader (no dotenv dependency)
-  abb/paths.py                   # BENCH_ROOT, REPOS_DIR, TASKS_DIR, RESULTS_DIR (= $ABB_RESULTS_DIR, default ~/abb-results), DOCKER_DIR
-  abb/log.py                     # rich logging; every long command echoes its argv
-  abb/harness/images.py          # build-base only in this phase (per-repo images are Phase 1)
-  config/limits.yaml             # seed provided (source of truth for limits)
-  config/network.yaml            # seed provided
-  docker/base/Dockerfile         # seed provided; adjust only via build-args
-  repos/{antennapod,wikipedia,thunderbird,newpipe}.yaml   # seeds provided; fill in discovered values for the two chosen repos
-  scripts/try_build.sh           # repo-selection experiment (below)
+  abb/cli.py                     # Typer app: tools, env, sandbox, tasks, repos, run, grade, grade-patch, report, split, labels, audit, repro, ws
+  abb/config.py                  # pydantic models: RepoConfig, TaskConfig, SandboxConfig, ToolchainConfig, LimitsConfig (re-exports arms.base.Limits); 5-line .env loader
+  abb/paths.py                   # ABB_HOME, TOOLS, CACHES, WORK, RESULTS (= ABB_RESULTS_DIR), REPO_CLONE; all pathlib
+  abb/log.py
+  abb/harness/platform/{base,windows}.py   # specs/platform-layer.md (posix.py is a stub raising NotImplementedError)
+  abb/harness/platform/abb_launch.py       # the launcher (stdlib + ctypes only); copied to ABB_HOME/tools by `abb tools install`
+  abb/harness/smoke.py                     # `abb ws smoke [--deadline N] "<prompt>"`: runs claude.exe through the platform layer as the harness user
+  abb/harness/tools.py           # `abb tools install|check`: JDK 17/21 + cmdline-tools + sdk packages, checksummed, lock file
+  config/limits.yaml  config/sandbox.yaml  config/toolchain.yaml     # seeds provided
+  repos/{antennapod,wikipedia,thunderbird,newpipe}.yaml                # seeds provided; fill in discovered values for the two chosen repos
+  scripts/try_build.py           # repo-selection experiment (below); Python, not shell
   tasks/antennapod-0000/         # seed task (step 8)
   tests/test_config.py           # schemas load the seed yaml files
-  tests/fixtures/transcripts/{smoke-success,smoke-maxturns1}.jsonl   # from step 5
-docs/RUNS.md                     # lab notebook from day one: run id, what, model, cost
-docs/DECISIONS.md                # confirm D-001…D-005 (already drafted), fill D-003 with evidence
-reference/verified.md            # dated verification of external facts
+  tests/platform/test_windows.py # start/stop a process, memory limit, tree kill, robust delete with a locked file
+  tests/fixtures/transcripts/{smoke-success,smoke-maxturns1,smoke-interrupt}.jsonl   # from step 5
+docs/RUNS.md                     # lab notebook from day one: date, run id or activity, model, cost
+docs/DECISIONS.md                # confirm D-001…D-005, D-024 (Windows-native); fill D-003 with evidence
+reference/verified.md            # dated verification of external facts (Windows section)
 reference/build-experiments.md   # results of the repo-selection experiment
 ```
 
 ## Steps
 
-1. **Verify the bootstrap.** In `~/abb`: `docker info | grep -iE 'operating system|total memory|cpus'`
-   (≥ 20 GB, ≥ 6 CPUs), `df -h /mnt/c` (the Windows drive that holds both vhdx files: ≥ 120 GB
-   free; `df -h ~` reports the vhdx's virtual size and proves nothing), `docker system df`,
-   `curl -s 'https://api.anthropic.com/v1/models?limit=1000' … | jq -r '.data[].id'` lists both pinned ids (the endpoint pages at 20 by default), `claude --version`,
-   `gh auth status`, `uv --version`, `git remote -v` (the private GitHub remote), `echo
-   ${ANTHROPIC_API_KEY:+set}`. Record the numbers in `reference/verified.md`. If anything is
-   missing, stop and ask the human to finish `docs/DAY-0.md`.
-2. **Project skeleton.** `uv init --package` style layout with the files above (root
-   `.gitignore` included). Dependencies: `typer`, `rich`, `pydantic>=2`, `pyyaml`, `docker>=7`,
-   `pandas`, `numpy`, `matplotlib`, `anthropic`; dev: `pytest`, `ruff`. `uv run abb --help`
-   must list every command group (commands may be stubs that print "not implemented in this
-   phase"). The `.env` loader is a five-line parser in `abb/config.py`.
-3. **Config models.** Implement `RepoConfig`, `TaskConfig`, `NetworkConfig` and `LimitsConfig`
-   per `specs/repo-config.md`, `specs/task-format.md`, `specs/headless-agent-driving.md`;
-   `Limits` itself lives in `abb/arms/base.py` (seed) and `config.py` re-exports it. Unknown
-   keys are errors (`extra="forbid"`). **SHA fields accept either 40 hex characters or the
-   literal `TODO_*`**; the strict check lives in `abb repos check <repo>` so the seeds still
-   load. `tests/test_config.py` loads every `repos/*.yaml`, `tasks/_template/task.yaml` and
-   `config/*.yaml`.
-4. **Base image.** Implement `abb images build-base --jdk 17|21` (Docker SDK, streams build
-   logs, tags `abb-base:jdk<N>`; build context `benchmark/docker/base/`). Re-verify the
-   command-line-tools filename/sha256 on https://developer.android.com/studio and update the
-   build-arg defaults if changed. Build both JDK variants. Record the resolved base-image digest
-   (`docker inspect --format '{{index .RepoDigests 0}}' eclipse-temurin:17-jdk-noble`) in
-   `images.lock.json` under `base_digests` (Phase 4 pins it in the `FROM` line).
-5. **Tool verification inside the image.** Run and paste outputs into `reference/verified.md`:
-   ```
-   docker run --rm abb-base:jdk17 bash -lc 'id; java -version; sdkmanager --list_installed; claude --version; specify --version; specify init --help; cloc --version'
-   ```
-   Then the three Claude smoke tests from `specs/headless-agent-driving.md` (with `-e
-   ANTHROPIC_API_KEY`), saving the stream-json files as the parser fixtures (`smoke-success`,
-   `smoke-maxturns1`, `smoke-sigint` — the last proves SIGINT yields a `result` line and exit 124). Check every flag
-   the driver spec uses against `claude --help` and mark each CONFIRMED/CHANGED. Pin the exact
-   Claude Code version via `CLAUDE_CODE_VERSION` (rebuild). If the model id is rejected, look
-   up the current ids, update D-001, continue. Also run one prompt likely to trip a safety
-   flag inside `-p` and confirm the call *ends* (no model switch, no hang); check the pinned
-   version's settings reference for `switchModelsOnFlag` — keep the image setting if documented,
-   remove it otherwise — and confirm no `fallbackModel`/`ANTHROPIC_MODEL` is set; record the
-   behaviour and the resolved model id the `init` event reports.
-6. **Repo-selection experiment (two repos are enough for the gate).** `scripts/try_build.sh
-   <repo_url> <ref> <jdk> [<lib-module> <lib-test-task>] [<app-module> <app-test-task>]` runs
-   in a plain `abb-base:jdk<N>` container with 8 GB memory. Run it once with the first three
-   arguments to discover the test tasks, then again with module/task arguments:
-   ```
-   git clone --filter=blob:none <url> /home/bench/x && cd /home/bench/x && git checkout <ref>   # blobless clone works for any ref
-   ./gradlew --console=plain tasks --all | grep -oE '^[A-Za-z0-9:_-]*UnitTest' | sort -u   # discover test tasks (lines are `name - description`)
-   time ./gradlew --console=plain <lib-module>:<lib-test-task>                   # e.g. :model:testDebugUnitTest
-   time ./gradlew --console=plain <app-module>:<app-test-task>                   # e.g. :app:testFreeDebugUnitTest
-   cloc --include-lang=Java,Kotlin .                                             # size
-   du -sh ~/.gradle ~/.m2
-   ```
-   Do **AntennaPod** and **Wikipedia Android** now (expect half a day of waiting each);
-   Thunderbird (JDK 21) and NewPipe may run in the background but are otherwise deferred to
-   Phase 7, which repeats this step and Phase 1 for repos 3/4. Record per repo: clone size,
-   discovered unit-test task names, build+test wall time (cold and warm), peak memory (`docker
-   stats`), failures, whether any secret/stub was needed, Robolectric presence and SDK levels,
-   test counts, LOC, merged-PRs-with-linked-issue count in the last two years (`gh pr list -R
-   <owner/repo> --state merged --search "fixes OR closes OR resolves merged:>=$(date -d '2 years
-   ago' +%F)" --limit 500 --json number | jq length`). Write `reference/build-experiments.md` with a table and a decision: repo #1 and
-   repo #2. Criteria: builds without secrets; unit tests pass offline after one warm run; warm
-   test run < 10 min; Robolectric or plain JUnit tests across several modules; roughly
-   20k–150k LOC (deviations go into D-003 with how tasks are scoped); ≥ 100 linked merged PRs.
-7. **Fill repo configs** for the two chosen repos from the experiment (JDK, sdk packages the
-   build actually resolved — `sdkmanager --list_installed` after the build —, test task names,
-   warm commands, test dirs, `tests.verify_modules`, `cache_commit` = the ref you built).
-8. **Seed task.** While the AntennaPod clone is at hand, author `benchmark/tasks/antennapod-0000`
-   per `specs/task-format.md`: a trivial, self-contained change in a pure-Java utility class
-   (`:model` or `:parser`) with a plain JUnit hidden test, `problem.md` written like an issue,
-   `gold.patch`, `test.patch`, `LICENSE-NOTE.md`, `source: authored`, `status: draft`. It is the
-   fixture for Phase 1 verification, Phase 2 validation and Phase 3 grading before real tasks
-   exist; it is pinned to `dev` by the split rule.
-9. **Decisions log.** Confirm D-001…D-005 in `docs/DECISIONS.md` (write the training-cutoff
-   date and the current model ids into D-001), fill D-003 with the experiment evidence.
-10. **Lab notebook.** Start `docs/RUNS.md` with a table (date, run id or activity, model,
-    cost USD from the Console, note). Every API-spending activity from now on gets a row.
+1. **Verify the bootstrap.** In `%USERPROFILE%\abb-src` (PowerShell 7): `$PSVersionTable.PSVersion`
+   (7.x), `git --version`, `gh auth status`, `uv --version`, `& "$env:USERPROFILE\.local\bin\claude.exe"
+   --version` (≥ 2.1.211 and equal to `toolchain.yaml`), `$env:ABB_HOME` set and on a drive with
+   ≥ 60 GB free (`Get-PSDrive`), `$env:ANTHROPIC_API_KEY` set, `git remote -v` shows the private
+   remote, `(irm "https://api.anthropic.com/v1/models?limit=1000" …).data.id` lists both pinned ids
+   (the endpoint pages at 20 by default). Record everything in `reference/verified.md`. If anything
+   is missing, stop and tell the human exactly what to do.
+2. **Project skeleton.** `uv init --package` style layout with the files above. `uv run abb --help`
+   must list every command group (stubs print "not implemented in this phase"). No `.sh` files
+   anywhere; helper scripts are Python or `.ps1`.
+3. **Config models.** Implement `RepoConfig`, `TaskConfig`, `SandboxConfig`, `ToolchainConfig`,
+   `LimitsConfig` (`extra="forbid"`); `Limits` lives in `abb/arms/base.py`. **SHA fields accept 40
+   hex characters or the literal `TODO_*`**; the strict check is `abb repos check <repo>`.
+   `tests/test_config.py` loads every `repos/*.yaml`, `tasks/_template/task.yaml`, `config/*.yaml`.
+4. **Platform layer + toolchain.** Implement `platform/windows.py` and the launcher for the
+   harness-user path first (launcher under the shared Python, Job Object with a job-wide memory
+   limit, STOP-file → Ctrl+C on the launcher's console, robust delete; the sandbox-user launch via
+   `CreateProcessWithLogonW` is Phase 1). `abb ws smoke` is the thin command that exercises it.
+   Implement `abb tools install`: resolve JDK 17 and 21 from the Adoptium API (first install
+   records `release_name` + sha256 in the lock; later installs fetch exactly that release), download
+   zips into `ABB_HOME\tools\jdk17|21`; `uv python install 3.12` into `UV_PYTHON_INSTALL_DIR`; copy the
+   harness user's pinned `claude.exe` to `ABB_HOME\tools\claude\<version>\`; download the Windows command-line tools zip,
+   verify its sha256, unpack to `ABB_HOME\tools\android-sdk\cmdline-tools\latest`, accept licenses
+   by piping `y` lines, install the pinned packages with `sdkmanager.bat`; apply the git global
+   config from `toolchain.yaml`; write `config/toolchain.lock.yaml`. `abb tools check` re-verifies.
+5. **Tool verification.** Paste outputs into `reference/verified.md`: `java -version` from both
+   JDKs, `sdkmanager.bat --list_installed`, `claude.exe --version`, `specify --version`, `specify
+   init --help`. Then the Claude smoke tests from `specs/headless-agent-driving.md` **through the
+   harness driver's launch path** (`abb ws smoke`), saving fixtures: `smoke-success`,
+   `smoke-maxturns1`, and `smoke-interrupt` (deadline hit → the launcher sends Ctrl+Break to the child's process
+   group, then in a second run Ctrl+C → does a `result` line appear? exit code? record both and
+   set `sandbox.yaml: process.interrupt` to the one that ends the turn cleanly). Check every flag the driver spec uses against `claude --help`. Check the
+   settings reference of the pinned version for `switchModelsOnFlag`; keep it in
+   `sandbox/claude-config.template/settings.json` only if documented. Record the resolved model id from
+   the `init` event, and whether the Bash tool runs Git Bash (`echo $BASH_VERSION`). Also confirm the
+   hidden launcher console does not flash a Windows Terminal window (else switch to
+   `CREATE_NO_WINDOW`), and record the peak job memory of a module test run with two Robolectric
+   workers — that number sets `sandbox.yaml: process.memory_mb`.
+6. **Repo-selection experiment (two repos are enough for the gate).** `uv run python
+   scripts/try_build.py <repo_url> <ref> <jdk> [--lib-module :m --lib-task t] [--app-module :app
+   --app-task t]` in a scratch dir under `ABB_HOME\work\experiments`, using the installed JDK and
+   a scratch `GRADLE_USER_HOME` and `JAVA_TOOL_OPTIONS=-Duser.home=<experiment>\home` (keeps
+   Robolectric's downloads out of your profile); a Job Object caps memory at 8 GB and reports the peak. First
+   run: `gradlew.bat tasks --all` and print the `*UnitTest` task names; second run with
+   module/task arguments: time the library-module and app-module unit tests (cold and warm),
+   peak memory from the job, LOC via a small Python counter (Java/Kotlin lines), Robolectric
+   presence and SDK levels, test counts, failures, secrets needed, merged-PRs-with-linked-issue
+   count (`gh pr list -R <owner/repo> --state merged --search "fixes OR closes OR resolves
+   merged:>=<date 2 years ago>" --limit 500 --json number | ConvertFrom-Json | Measure-Object`).
+   Do **AntennaPod** and **Wikipedia Android** now; Thunderbird (JDK 21) and NewPipe are deferred
+   to Phase 7. Write `reference/build-experiments.md` with the table and the decision: repo #1 and
+   #2. Criteria: builds without secrets; unit tests pass offline after one warm run; warm test run
+   < 10 min; Robolectric or plain JUnit tests across several modules; roughly 20k–150k LOC
+   (deviations into D-003); ≥ 100 linked merged PRs; **no two paths differing only by case**;
+   **longest path < 200 characters** from the repo root (Windows).
+7. **Fill repo configs** for the two chosen repos (JDK, sdk packages actually resolved, test task
+   names, warm commands, test dirs, `tests.verify_modules`, `cache_commit` = the ref you built).
+8. **Seed task.** While the AntennaPod checkout is at hand, author `benchmark/tasks/antennapod-0000`
+   per `specs/task-format.md`: a trivial change in a pure-Java utility class with a plain JUnit
+   hidden test; `problem.md` like an issue; `gold.patch`, `test.patch` (LF line endings, applied
+   as bytes), `LICENSE-NOTE.md`, `source: authored`, `status: draft`.
+9. **Decisions log.** Confirm D-001…D-005 and D-024; write the training-cutoff date, the current
+   model ids and the resolved id into D-001; fill D-003.
+10. **Lab notebook.** Start `docs/RUNS.md` (date, run id or activity, model, cost USD from the
+    Console, note). Every API-spending activity from now on gets a row.
 11. Commit `phase 0: foundations` and push.
 
 ## Acceptance gate
 
-```
+```powershell
 uv run abb --help
-uv run pytest -q
-docker images | grep abb-base                      # jdk17 and jdk21 present
-docker run --rm abb-base:jdk17 bash -lc 'id -u; claude --version; specify --version'   # 1000, pinned versions
-ls benchmark/tests/fixtures/transcripts/           # smoke-success.jsonl smoke-maxturns1.jsonl smoke-sigint.jsonl
-cat reference/verified.md                          # date, claude version+flags table, specify version+init flags, cmdline-tools filename/sha, WSL memory, disk, safety-flag behaviour
-cat reference/build-experiments.md                 # >=2 repos with timings and the choice
-uv run abb repos check antennapod                  # strict: SHAs real, task names filled
-ls benchmark/tasks/antennapod-0000/                # task.yaml problem.md test.patch gold.patch LICENSE-NOTE.md
+uv run pytest -q                                   # incl. tests/platform/test_windows.py
+uv run abb tools check                             # jdk17, jdk21, android-sdk present and checksums match the lock
+& "$env:USERPROFILE\.local\bin\claude.exe" --version   # equals toolchain.yaml
+Get-ChildItem benchmark\tests\fixtures\transcripts  # smoke-success.jsonl smoke-maxturns1.jsonl smoke-interrupt.jsonl
+Get-Content reference\verified.md                  # claude version + flags table, interrupt finding (Ctrl+Break and Ctrl+C), resolved model id, Git Bash check, sdk list, disk
+Get-Content reference\build-experiments.md         # >= 2 repos with timings and the choice
+uv run abb repos check antennapod                  # strict: SHAs real, task names filled, case/path-length checks
+Get-ChildItem benchmark\tasks\antennapod-0000      # task.yaml problem.md test.patch gold.patch LICENSE-NOTE.md
 ```
 
-Gate passes when: both base images build; both smoke tests produced fixtures with the expected
-subtypes; at least two candidate repos ran unit tests inside the container with wall time
-recorded; repo #1 and #2 are named with evidence; their `repos/<repo>.yaml` pass `abb repos
-check`; the seed task exists.
+Gate passes when: the toolchain is installed and locked; the three smoke fixtures exist with
+the expected subtypes (and `reference/verified.md` states what happens on Ctrl+Break and on Ctrl+C, and which one both drivers will use); at least
+two candidate repos ran unit tests on Windows with wall time recorded; repo #1 and #2 are named
+with evidence; their configs pass `abb repos check`; the seed task exists.
 
 ## Pitfalls
 
-- Work only in the WSL clone (`~/abb`); OneDrive holds the original import, not the working
-  tree. Docker Desktop file sharing of `/mnt/c` is slow and OneDrive syncs everything it sees.
-- `useradd -u 1000` fails on the noble base unless the default `ubuntu` user is removed first
-  (the seed Dockerfile does this).
-- `sdkmanager` needs `yes | sdkmanager --licenses`; Gradle's Android plugin may demand a newer
-  `build-tools` than you pinned — read the error, pin that version.
-- Claude Code refuses `bypassPermissions` as root. The Dockerfile sets `USER bench`. The image
-  also disables autoupdate and non-essential traffic; keep those env vars.
-- The `uv tool install specify-cli` step needs Python ≥ 3.11 in the image (Ubuntu 24.04 has 3.12).
-- Thunderbird uses `mise.toml`/`.java-version` (JDK 21). Build with `abb-base:jdk21`.
-- NewPipe now has KMP (`shared/`, `desktopApp/`, `iosApp/`); if `./gradlew tasks` tries to
-  configure iOS targets and fails, pass `-Pkotlin.native.ignoreDisabledTargets=true` or drop
-  the repo.
-- Keep an eye on disk: `docker system df` after each image build; `abb images prune` arrives in
-  Phase 1.
+- Work only in `%USERPROFILE%\abb-src`; never under OneDrive.
+- `claude.exe` must be called by its absolute path — Claude Desktop can register a `Claude.exe`
+  that wins on PATH.
+- Git line endings: `core.autocrlf=false` before cloning anything; a CRLF-converted checkout makes
+  every patch fail to apply.
+- Gradle on Windows is slower under Defender real-time scanning; an exclusion for `ABB_HOME` is a
+  human decision (`docs/DAY-0.md`).
+- `sdkmanager.bat` needs `JAVA_HOME` pointing at a JDK ≥ 17; licenses are accepted by feeding `y`
+  lines on stdin from Python (there is no `yes` command).
+- Gradle daemons keep files locked; `try_build.py` runs `gradlew.bat --stop` before deleting scratch
+  checkouts, and the platform layer's robust delete reports leftovers.
+- Thunderbird uses `.java-version` 21; NewPipe has KMP folders — both deferred to Phase 7.

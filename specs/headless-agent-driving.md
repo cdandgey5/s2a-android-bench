@@ -1,7 +1,7 @@
 # Spec: Driving Claude Code headlessly
 
 Verified against the Claude Code docs on 2026-10-16 (see `reference/sources.md`). **Re-verify
-with `claude --help` inside the image before Phase 4's gate** and record in
+with the pinned `claude.exe --help` before Phase 4's gate** and record in
 `reference/verified.md`.
 
 Two implementations exist and must stay identical in behaviour:
@@ -18,14 +18,15 @@ Two implementations exist and must stay identical in behaviour:
 | Cap agentic turns | `--max-turns N` → on hit: non-zero exit, result `subtype: "error_max_turns"` |
 | Cap spend | `--max-budget-usd X` → `subtype: "error_max_budget_usd"` (client-side estimate, may overshoot one response) |
 | Continue a session | `claude -p --resume <session_id> "<prompt>"` (sessions made by `-p` are resumable; never pass `--no-session-persistence`) |
-| Skip permission prompts | `--permission-mode bypassPermissions` (= `--dangerously-skip-permissions`). **Refused when running as root** → image user `bench`. Always pass it explicitly (the `-p` default mode varies by version and feature flags). |
+| Skip permission prompts | `--permission-mode bypassPermissions` (= `--dangerously-skip-permissions`). Refused as root/sudo on Linux and macOS only; on Windows just never run the harness as Administrator. Always pass it explicitly (the `-p` default mode varies by version and feature flags). |
 | Deny tools | `--disallowedTools "WebFetch,WebSearch"` (deny rules apply in every mode); arms may deny more in their own calls |
 | Pin model | `--model claude-opus-5-5` — the id as listed by `GET /v1/models` (checked on Day 0); never an alias like `opus`. If the CLI reports a dated snapshot (`claude-opus-5-5-2026…`) in `init.model`/`modelUsage`, the driver matches by prefix and records the resolved id in `run.json` |
 | System prompt | `--append-system-prompt "<text>"` (keeps Claude Code's defaults; recorded on the first request and reused on `--resume`) |
 | Slash commands | Put `/name args` in the prompt string; Claude Code expands the first one. The `init` event lists `slash_commands`; Phase 5's gate checks it contains `speckit-specify`. |
 | Auth | `ANTHROPIC_API_KEY` env (always used with `-p` when set) |
-| No self-update, no telemetry | Image env: `DISABLE_AUTOUPDATER=1 DISABLE_UPDATES=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (a native install otherwise updates itself in the background and would move off the pinned version; feature-flag/telemetry hosts would also be blocked by the proxy and retried). Version floors from the docs: `DISABLE_UPDATES` ≥ 2.1.118, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` ≥ 2.1.182 → pin `CLAUDE_CODE_VERSION` ≥ 2.1.182 |
-| Proxy DNS | `CLAUDE_CODE_PROXY_RESOLVES_HOSTS=1` so the CLI lets the proxy resolve `api.anthropic.com` (on the internal network the container cannot resolve it itself) |
+| No self-update, no telemetry | Agent env (`config/sandbox.yaml`): `DISABLE_AUTOUPDATER=1 DISABLE_UPDATES=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (a native install otherwise updates itself in the background and would move off the pinned version; feature-flag/telemetry hosts would also be blocked by the firewall and retried). Version floors: `DISABLE_UPDATES` ≥ 2.1.118, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` ≥ 2.1.182, stdin fix on Windows ≥ 2.1.211 → **pin ≥ 2.1.211** |
+| Proxy DNS | `CLAUDE_CODE_PROXY_RESOLVES_HOSTS=1` so the CLI lets the proxy resolve `api.anthropic.com` (a per-user firewall rule does not block DNS — Windows resolves through the `Dnscache` service — but with the proxy doing the lookup nothing else needs name resolution) |
+| Windows specifics | Call the pinned binary by absolute path (`ABB_HOME\tools\claude\<version>\claude.exe`; Claude Desktop can shadow `claude` on PATH). The Bash tool runs Git Bash; `CLAUDE_CODE_USE_POWERSHELL_TOOL=1` is set explicitly so every arm has the same shell set; never deny `Bash` (that would also remove PowerShell). Settings and sessions live in a per-trial `CLAUDE_CONFIG_DIR` (`<trial>\claude-config`, seeded from `ABB_HOME\sandbox\claude-config.template`, `settings.json` deny-write). Credentials are file-based on Windows; the key is passed only via the environment block. |
 | Background work after final turn | `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=60000` so a trial cannot hang 10 min after finishing |
 | Model-switch guard | The certain guard is the `modelUsage` assertion below. No `fallbackModel` setting and no `ANTHROPIC_MODEL` env are set. `~/.claude/settings.json: {"switchModelsOnFlag": false}` is baked in **only if the pinned version documents the key** (two of three checks today found it, one did not — Phase 0 step 5 decides and records) |
 | Do NOT use | `--bare` (skips CLAUDE.md, commands, skills — breaks Spec Kit and repo instructions; docs say it may become the `-p` default, which is why `CLAUDE_CODE_VERSION` is pinned) and `--restricted` (refuses bypassPermissions) |
@@ -34,7 +35,7 @@ Two implementations exist and must stay identical in behaviour:
 
 ```python
 def run_headless(
-    ws: Workspace,                # container + /work (benchmark) — or a local subprocess runner (s2a)
+    ws: Workspace,                # the trial workspace (benchmark) — or a local subprocess runner (s2a)
     prompt: str,
     *,
     call_name: str,
@@ -62,12 +63,19 @@ Behaviour:
           --append-system-prompt "<environment.md + arm text>"
           "<prompt>"
    ```
-   There is no global per-call turn cap (fairness-protocol.md, "Turn budget"). The benchmark
-   runs this via `docker exec -u bench -w /work <container> …`; s2a runs it as a local
-   subprocess. Both wrap the process in `timeout -s INT -k 30 <seconds_left>` semantics:
-   SIGINT ends the turn so Claude Code still emits its `result` line (with cost and turns);
-   SIGKILL follows 30 s later. Exit 124 or 137 → `timeout`. Exit 143 means an *external*
-   SIGTERM killed it without a result → `agent_error`, cost unknown.
+   There is no global per-call turn cap (fairness-protocol.md, "Turn budget"). Both drivers start
+   the process through their platform layer (`specs/platform-layer.md`): the benchmark as the
+   sandbox user in the workspace, s2a as the current user; a Job Object (Windows) limits memory
+   and kills the tree. At the deadline the platform layer stops the process gracefully
+   (on Windows the launcher sends `CTRL_BREAK_EVENT` to the child's own process group — the one
+   console signal that can be targeted —, SIGINT elsewhere; `sandbox.yaml: process.interrupt`
+   holds the choice and **both drivers use the same one**), waits 30 s for the `result` line, then
+   kills the job. **Whether Claude Code writes its `result` line after Ctrl+Break (or Ctrl+C) on
+   Windows is not documented**; Phase 0 measures both (`smoke-interrupt`) and, if only one works,
+   the interrupt is switched for both drivers together. The driver therefore maps outcomes
+   itself: a harness-initiated stop → `timeout` (cost from the result line if present, else
+   `null` + imputed); a process that ends without a result line for any other reason →
+   `agent_error`. POSIX exit codes are never interpreted.
    Save the prompt to `prompts/<call_name>.md` and its sha256 (and the sha256 of the combined
    system prompt) in the `PhaseCall`.
 2. Stream stdout to `transcript/<call_name>.jsonl` **verbatim**. Parse as it arrives:
@@ -119,7 +127,7 @@ Behaviour:
    - Decision D-005: `AskUserQuestion` stays available — do **not** pass
      `--permission-prompts none` — so the question signal stays observable.
 4. Map `subtype`/exit code → `PhaseCall.subtype`; the adapter maps to `ExitReason`.
-5. Return `PhaseCall`. Never raise on agent failure; raise only on harness errors (docker down,
+5. Return `PhaseCall`. Never raise on agent failure; raise only on harness errors (platform failure,
    transcript unparsable).
 
 **Source of truth.** The verbatim transcripts are the record; `run.json` is derived. Phase 4
@@ -167,23 +175,24 @@ The plain arm gets the whole total in one call (`--max-turns 200`). Multi-call a
 
 ## Smoke test (Phase 0 gate)
 
-Inside `abb-base`, as user `bench`, with `ANTHROPIC_API_KEY` set:
+Through the harness launch path (`abb ws smoke`, which builds the agent environment block exactly
+as a trial would and runs the pinned `claude.exe`), with `ANTHROPIC_API_KEY` set; the equivalent
+PowerShell by hand:
 
-```
-claude -p --output-format stream-json --verbose --model claude-sonnet-5-5 \
-  --max-turns 3 --permission-mode bypassPermissions "Print the current directory and exit." \
-  | tee benchmark/tests/fixtures/transcripts/smoke-success.jsonl | tail -1 \
-  | jq '{subtype, total_cost_usd, num_turns, session_id, usage, modelUsage}'
-```
+```powershell
+& "$env:USERPROFILE\.local\bin\claude.exe" -p --output-format stream-json --verbose --model claude-sonnet-5-5 `
+  --max-turns 3 --permission-mode bypassPermissions "Print the current directory and exit." `
+  | Tee-Object benchmark\tests\fixtures\transcripts\smoke-success.jsonl | Select-Object -Last 1 `
+  | ConvertFrom-Json | Select-Object subtype, total_cost_usd, num_turns, session_id, usage, modelUsage
 
 Must print a `result` with `subtype: "success"` whose `modelUsage` keys start with the
 configured id. Repeat with `--max-turns 1` and a prompt that needs two tool calls → save as
-`smoke-maxturns1.jsonl` (`subtype: "error_max_turns"`). Third: `timeout -s INT -k 30 20 claude
--p … "Count slowly to 100 using the shell"` → save as `smoke-sigint.jsonl`; it must contain a
-`result` line and exit 124 (this is the assumption the per-call deadline rests on). These three
-files are the parser fixtures Phases 4 and 6 use. When asserting the SIGINT run's exit code,
-read `timeout`'s status, not the pipeline's (`set -o pipefail` or `${PIPESTATUS[0]}` when piping
-through `tee`/`jq`). If the model id is rejected (404), list the current ids (`curl -s
-'https://api.anthropic.com/v1/models?limit=1000' -H "x-api-key: $ANTHROPIC_API_KEY" -H
-"anthropic-version: 2023-06-01" | jq -r '.data[].id'` — the endpoint pages at 20 by default),
-update D-001 and `config/limits.yaml`, and continue. Record `claude --version` in `reference/verified.md`.
+`smoke-maxturns1.jsonl` (`subtype: "error_max_turns"`). Third: `abb ws smoke --deadline 20
+"Count slowly to 100 using the shell"` → at 20 s the launcher sends Ctrl+Break (and, in a second run,
+Ctrl+C) → save as `smoke-interrupt.jsonl` and record in `reference/verified.md` whether a
+`result` line was written and what the exit code was for each signal (this decides whether timed-out trials carry a measured or an imputed
+cost; either way it is applied identically to every arm). These three files are the parser
+fixtures Phases 4 and 6 use. If the model id is rejected (404), list the current ids
+(`(irm "https://api.anthropic.com/v1/models?limit=1000" -Headers @{"x-api-key"=$env:ANTHROPIC_API_KEY;
+"anthropic-version"="2023-06-01"}).data.id` — the endpoint pages at 20 by default), update D-001
+and `config/limits.yaml`, and continue. Record `claude --version` in `reference/verified.md`.

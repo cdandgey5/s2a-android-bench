@@ -9,12 +9,12 @@ committed before the freeze.
 | Item | Rule |
 |---|---|
 | Model | One exact model id per run for every arm and every call, including sub-agents. `switchModelsOnFlag: false`, and the driver fails a call as `harness_error` if `modelUsage` shows any non-background foreign model. |
-| Agent runtime | Same Claude Code version (asserted from the `init` event), same permission mode, same **baseline** tool deny list (`WebFetch,WebSearch`); an arm may deny *more* tools in some of its own calls (S2A's read-only stages do), never fewer. Autoupdate and telemetry disabled in the image. |
-| Container | Same `abb-<repo>` image digest for every arm; the `s2a-*` arms run in a thin layer on top of it that adds only the `s2a` package. |
+| Agent runtime | Same pinned `claude.exe` (version asserted from the `init` event), same permission mode, same shell set (`CLAUDE_CODE_USE_POWERSHELL_TOOL=1`, Bash via Git Bash), same **baseline** tool deny list (`WebFetch,WebSearch`); an arm may deny *more* tools in some of its own calls (S2A's read-only stages do), never fewer. Autoupdate and telemetry disabled in the agent env. |
+| Environment | Same environment fingerprint (toolchain + warm cache + platform) for every arm; the `s2a-*` arms additionally have the `s2a` package installed for the sandbox user at `s2a_git_sha`. |
 | Input | Byte-identical `problem.md`. Arms may wrap it in their own prompt template, but may not add task-specific hints. |
 | Environment preamble | `abb/arms/common/environment.md` is the first part of `--append-system-prompt` on every call of every arm, byte-identical (the s2a arm passes it via `s2a run --append-system-prompt-file`; s2a's own stage preamble follows it). |
 | Limits | Same wall-clock timeout, USD cap, turn total, nudge caps (2 per call, 4 per trial). **Wall-clock and USD are the binding, comparable limits.** Turns are identical but not comparable work units: an orchestrator-run Gradle gate costs no turn while a plain-arm Gradle run does. Turns, gate runs and gate seconds are reported per arm so the reader can see it. |
-| Network | Same `api-only` mode for every arm (internal Docker network + allow-list proxy). |
+| Sandbox | Same `user` sandbox for every arm (sandbox user, outbound firewall block, allow-list proxy on loopback). |
 | Repo instructions | `strip_agent_instructions` identical for all arms; repo-shipped hooks/MCP removed for all. |
 | Retries | None on `agent_error` for any arm; one re-queue on `harness_error` for every arm. Counts reported. |
 
@@ -83,18 +83,19 @@ every task workspace. They are generated at `repos.<repo>.build.setup_commit` =
 base (never at `cache_commit`, which already contains every mined/reverted fix). `abb tasks lint
 --setup-leak` fails if a setup artifact mentions a path or class name that any task's
 `gold.patch` adds, and reports counts of mentions of files any gold patch *modifies*. Cache key:
-(**setup kind**, repo, setup_commit, image digest, prompt hash), where setup kind is
+(**setup kind**, repo, setup_commit, environment fingerprint, prompt hash), where setup kind is
 `speckit-constitution` or `s2a-map`; all `s2a-*` arms except `s2a-nomap` share one map.
 
 ## Things an arm may NOT do
 
 - Read `test.patch` or `gold.patch` (the runner hides them).
-- See another trial's output: the results root is never mounted into agent containers.
-- Reach the network beyond the model API (internal network + proxy; `WebFetch`/`WebSearch`
-  denied; no git remotes; Gradle offline).
-- Find compiled artifacts of later commits: images are warmed with `org.gradle.caching=false`,
-  the snapshot script removes Gradle daemon logs, and Phase 1's invariants test greps the Gradle
-  home for class names added by any gold patch.
+- See another trial's output or the hidden tests: the results root, the bare mirror and the code
+  checkout are access-denied to the sandbox user.
+- Reach the network beyond the model API (per-user firewall block + loopback proxy;
+  `WebFetch`/`WebSearch` denied; no git remotes; Gradle offline).
+- Find compiled artifacts of later commits: caches are warmed with `org.gradle.caching=false`
+  and `--no-daemon`, daemon directories are removed, and Phase 1's invariants test greps the warm
+  caches for class names added by any gold patch.
 - Receive per-task hints, file lists or test names beyond `problem.md`.
 - Retry silently. All retries are the counted nudge protocol.
 
@@ -118,6 +119,12 @@ cap>` so the skipped stage's turns are not reallocated. They are labelled **expl
   differences below ~18–20 percentage points are within noise (the 40-task all-task breakdowns
   reach ~15 pp; the robustness subset is wider). PREREG prints the computed numbers. Say so in
   the README.
+
+## Known limits to state in the README
+
+- The sandbox is a low-privilege **user** boundary (NTFS ACLs + per-user firewall + proxy), not
+  a kernel or VM boundary; it answers the questions this benchmark asks (fix lookup, cross-trial
+  leakage, egress) and nothing more.
 
 ## Known biases to state in the README
 

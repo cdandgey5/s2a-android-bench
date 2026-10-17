@@ -18,21 +18,23 @@ file fully before doing anything.
    command names (`specify --version`, `specify init --help`), the Android command-line-tools
    filename, and each candidate repo's default branch, JDK and test task names. Record what you
    found in `reference/verified.md` with the date.
-5. **Everything runs inside Docker.** The host is Windows 11 with WSL2 + Docker Desktop. Gradle,
-   the agents and grading all run in Linux containers. Host-side code is Python 3.12 (managed
-   with `uv`). Do not run Gradle on the Windows host. Work from the git clone on the WSL
-   filesystem (`~/abb`, set up by the human per `docs/DAY-0.md`), never from `/mnt/c/...` or
-   OneDrive; results go to `ABB_RESULTS_DIR` (default `~/abb-results`), which is never mounted
-   into a container.
-6. **Secrets never enter images or the repo.** The API key arrives only as `-e ANTHROPIC_API_KEY`
-   on `docker run`, read from the host environment or a git-ignored `.env` (a five-line parser in
+5. **Everything runs natively on Windows, through the platform layer.** No WSL, no Docker, no
+   `.sh` scripts, no Linux-only tools. Humans use PowerShell 7; the harness and `s2a` are Python
+   3.12 (`uv`) and start every process (Gradle, git, `claude.exe`) through
+   `abb/harness/platform/` (`specs/platform-layer.md`), which is the only place OS-specific code
+   may live (macOS comes later as `posix.py`). Work in `%USERPROFILE%\abb-src` (set up by the human
+   per `docs/DAY-0.md`), never under OneDrive; data lives under `ABB_HOME` (toolchain, caches,
+   workspaces) and `ABB_RESULTS_DIR`. Agent runs execute as the low-privilege sandbox user
+   (`specs/environments.md`).
+6. **Secrets never enter the repo or any config file.** The API key reaches agent processes only
+   through the environment block the platform layer builds, read from the user environment or a git-ignored `.env` (a five-line parser in
    `abb/config.py`; no dotenv dependency). Log every API-spending activity in `docs/RUNS.md`.
 7. **No employer code.** The S2A arm (Phase 6) is written from scratch in this repo. Do not
    import prompts, skills or scripts from anywhere else.
 8. **Keep the fairness protocol** (`specs/fairness-protocol.md`). In particular: once Phase 7
    freezes the dev/test split, the held-out test set is run **once**, in Phase 10, and never
    used for tuning.
-9. **Prefer boring tools.** Python + Typer + Docker SDK + PyYAML + pydantic + pandas. JUnit XML
+9. **Prefer boring tools.** Python + Typer + PyYAML + pydantic + pandas + keyring, pywin32/ctypes only inside the platform layer. JUnit XML
    via `xml.etree`. No frameworks beyond that unless a phase names one.
 10. **Commit at every gate.** `git commit -m "phase N: <gate summary>"`. Keep `README.md` status
     table current.
@@ -47,8 +49,9 @@ file fully before doing anything.
 
 ## Conventions
 
-- Package name: `abb` (android brownfield bench). CLI entry point: `abb` (e.g. `abb images build antennapod`).
-- All paths in configs are relative to `benchmark/`.
+- Package name: `abb` (android brownfield bench). CLI entry point: `abb` (e.g. `abb env warm antennapod`).
+- All paths in configs are relative to `benchmark/`; code uses `pathlib` only (no string joins,
+  no `/tmp`, no hard-coded separators).
 - Task IDs: `<repo>-<NNNN>` with 4 digits, e.g. `antennapod-0012`. `dev5` = the five tasks
   validated in Phase 2 **plus** the seed `antennapod-0000` (six tasks); it is the fixed
   bring-up set and is pinned to `dev`.
@@ -61,8 +64,7 @@ file fully before doing anything.
 
 - `s2a run "<prompt>" --profile android` in a real Android repository runs every stage to a
   verified change and a report, and `s2a resume` continues an interrupted run.
-- `abb run --arm plain --arm speckit --arm s2a --tasks test --trials 3` completes on a rented
-  machine and writes `benchmark/results/<run_id>/`.
+- `abb run --arm plain --arm speckit --arm s2a --tasks test --trials 3` completes on the laptop (or a Windows VM) and writes `benchmark/results/<run_id>/`.
 - `abb audit <run_id>` passes and `abb report <run_id>` produces `report/summary.md` with the
   pre-registered primary comparison, pass@1, pass^3, paired-bootstrap CIs, cost per task,
   one-time setup cost per repo, interventions, control-arm comparison, and a failure breakdown.

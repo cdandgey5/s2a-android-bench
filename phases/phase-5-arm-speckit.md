@@ -3,7 +3,7 @@
 **Goal.** Spec Kit driven headlessly per `specs/speckit-automation.md`, with one-time per-repo
 setup accounted separately, completing dev5 end to end.
 
-**Prerequisites.** Phase 4 gate. Spec Kit CLI present in the image (Phase 0).
+**Prerequisites.** Phase 4 gate. Spec Kit CLI installed for both users (Phase 0 / Phase 1).
 
 **Effort.** ~1 week part-time. Can run in parallel with Phase 6 (separate folders).
 
@@ -20,23 +20,26 @@ docs/DECISIONS.md                               # + D-006 skip clarify/checklist
 
 ## Steps
 
-1. **Verify Spec Kit** inside the image: `specify --version`, `specify init --help`,
-   `specify extension --help`. In a scratch workspace run
-   `specify init --here --force --non-interactive --integration claude --script sh --ignore-agent-tools`
-   and `specify extension add bug`; list what was created (`find .specify .claude -maxdepth 3`).
-   Record exact command names and file locations. Pin `SPEC_KIT_REF` to the tag you verified
-   and rebuild images.
+1. **Verify Spec Kit** with the installed toolchain (`ABB_HOME\tools\bin\specify.exe`, installed by the
+   harness user — the sandbox user has no network and never runs installers): `specify --version`,
+   `specify init --help`, `specify extension --help`. In a scratch workspace, **as the harness user**, run
+   `specify init --here --force --non-interactive --integration claude --script ps --ignore-agent-tools`
+   and `specify extension add bug`; list what was created (`Get-ChildItem .specify, .claude -Recurse -Depth 2`).
+   Record exact command names and file locations. Pin `speckit.ref` in `config/toolchain.yaml` to
+   the tag you verified and re-run `abb tools install` (harness user; the sandbox user only executes
+   `tools\bin\specify.exe`).
 2. **Slash-command expansion check** (spec step "Slash command invocation check"). Record the
    mechanism (native expansion vs template inlining) and implement both in the arm with a
    config switch; default to whichever worked. Gate: the `init` event's `slash_commands` lists
    `speckit-specify` (this is also the canary for a future `--bare`-by-default CLI).
 3. **One-time setup** (`one_time_setup`), in a workspace at `repos.<repo>.build.setup_commit`
-   (not `cache_commit`; see `specs/fairness-protocol.md`, "One-time setup artifacts"): init +
-   bug extension + constitution call. Store the produced `.specify/` + command files under
+   (not `cache_commit`; see `specs/fairness-protocol.md`, "One-time setup artifacts"): `specify init`
+   and `specify extension add bug` run **as the harness user** (they download templates from GitHub),
+   then the workspace is handed to the sandbox user for the constitution call. Store the produced `.specify/` + command files under
    `results/<run>/setup/speckit-constitution/<repo>/artifacts/` through Phase 4's `setup.py`
-   (cache key: setup kind, repo, setup_commit, image digest, prompt hash); the cost is recorded
+   (cache key: setup kind, repo, setup_commit, environment fingerprint, prompt hash); the cost is recorded
    in the run that first produced it.
-4. **Per-task `run`**: copy setup artifacts into `/work`, choose the path by category, execute
+4. **Per-task `run`**: copy setup artifacts into the workspace, choose the path by category, execute
    the call table with `--resume` across calls, nudge protocol per call, stop when limits are
    exhausted, implement/converge loop ≤ 1 extra implement. Copy `specs/**` and `.specify/**`
    to `artifacts/`. Produce the scoped diff (these folders are in `diff_exclude`).
@@ -56,7 +59,7 @@ docs/DECISIONS.md                               # + D-006 skip clarify/checklist
 uv run pytest -q tests/test_speckit_arm.py
 uv run abb run --arm speckit --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-speckit-1 --grade
 uv run abb report <run_id>            # 6 rows (dev5) + a "setup" section with the constitution cost per repo
-ls results/<run_id>/speckit/*/t1/artifacts/     # spec.md / plan.md / tasks.md or .specify/bugs/* present
+Get-ChildItem $env:ABB_RESULTS_DIR\<run_id>\speckit\*\t1\artifacts   # spec.md / plan.md / tasks.md or .specify\bugs\* present
 ```
 
 Passes when all five tasks complete (any grade), artifacts are captured, setup cost is listed
@@ -68,6 +71,6 @@ separately, and `reference/verified.md` documents the exact Spec Kit commands us
   is computed against the `base` tag, so branches don't matter; but if it commits, `git diff
   base` must use the working tree **and** commits: use `git add -A -N && git diff --binary base`
   (working tree vs base tag) — this already includes committed changes.
-- Spec Kit scripts assume `bash` and may call `git` — available in the image.
+- `--script ps` makes Spec Kit generate PowerShell scripts; `git` is on PATH for both users.
 - The constitution should describe the *existing* codebase; check the first one by hand and
   tune `prompts/constitution.md` (allowed: it is one-time setup, not task-specific).
