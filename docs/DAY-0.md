@@ -64,13 +64,20 @@ docker system df                                           # baseline before any
 
 ## 4. The working clone
 
+The OneDrive folder is already a git repository (commit "plan: initial import", 2026-10-17),
+so clone it rather than copying it:
+
 ```bash
-cp -r /mnt/c/Users/<you>/OneDrive/Documents/Claude/S2AFramework ~/abb   # one-time import
+git clone /mnt/c/Users/<you>/OneDrive/Documents/Claude/S2AFramework ~/abb   # one-time import
 cd ~/abb
-git init -b main && git add -A && git commit -m "plan: initial import"
+git remote remove origin                     # drop the OneDrive path; GitHub becomes origin
 gh repo create <your-github-user>/s2a-android-bench --private --source . --push
 mkdir -p ~/abb-results && echo 'export ABB_RESULTS_DIR=$HOME/abb-results' >> ~/.bashrc
 ```
+
+If the clone stops with "detected dubious ownership", run
+`git config --global --add safe.directory /mnt/c/Users/<you>/OneDrive/Documents/Claude/S2AFramework`
+and clone again.
 
 From now on **`~/abb` is the working tree**; the OneDrive folder is the original import. Do not
 push into it (a push to a non-bare checked-out branch is refused, and OneDrive syncing a live

@@ -50,7 +50,7 @@ already works end to end.
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Foundations: repo layout, CLI skeleton, base image, repo selection experiment | not started |
+| 0 | Foundations: repo layout, CLI skeleton, base image, repo selection experiment | blocked at step 1: Day-0 bootstrap incomplete (2026-10-17, see `reference/verified.md`) |
 | 1 | Per-repo environments: warm images, offline builds, history-free workspaces | not started |
 | 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | not started |
 | 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | not started |
