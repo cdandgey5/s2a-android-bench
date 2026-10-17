@@ -7,10 +7,14 @@ Each entry: date, command run, exact output excerpt, verdict.
 
 | Item | Value | Date |
 |---|---|---|
-| PowerShell 7 version | not installed (only Windows PowerShell 5.1.26100.9711) | 2026-10-17 |
-| `ABB_HOME` drive and free space | `ABB_HOME` unset. C: NTFS, 928.7 GiB, 90.2 GiB free. G: is Google Drive for desktop (`Win32_LogicalDisk`: FAT32, label "Google Drive", `GoogleDriveFS` running), mirrors C:'s size; unusable for `ABB_HOME` | 2026-10-17 |
+| PowerShell 7 version | 7.6.7 (`winget install --id Microsoft.PowerShell -e`); Windows PowerShell 5.1.26100.9711 also present | 2026-10-17 |
+| `ABB_HOME` drive and free space | `ABB_HOME=C:\abb`, `ABB_RESULTS_DIR=C:\abb\results` (user scope), `C:\abb` created, `C:\abb\tools\bin` on user `Path`. C: NTFS, 928.7 GiB, 89.9 GiB free. G: is Google Drive for desktop (`Win32_LogicalDisk`: FAT32, label "Google Drive", `GoogleDriveFS` running), mirrors C:'s size; unusable for `ABB_HOME` | 2026-10-17 |
 | Git for Windows version; `core.autocrlf`/`core.eol` | 2.44.0.windows.1; `core.autocrlf=true` (system), `core.eol`/`core.longpaths`/`core.filemode` unset (global); `LongPathsEnabled=1` (HKLM) | 2026-10-17 |
 | Defender exclusion / Dev Drive (yes/no) | exclusions not readable without admin; Dev Drive: no (C: is NTFS) | 2026-10-17 |
+| `gh` version | 2.102.0 (2026-09-30) (`winget install --id GitHub.cli -e`) | 2026-10-17 |
+| `uv` version | 0.13.1 (2026-10-13) (`winget install --id astral-sh.uv -e`). winget did not create its `uv`/`uvx` aliases (`%LOCALAPPDATA%\Microsoft\WinGet\Links` is empty — symlinks need Developer Mode), so its package folder `%LOCALAPPDATA%\Microsoft\WinGet\Packages\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe` was added to the user `Path` | 2026-10-17 |
+| Claude Code (the pin) | `claude.exe update`: "Successfully updated from 2.1.197 to version 2.1.302"; `claude.exe --version` → `2.1.302 (Claude Code)`; written to `benchmark/config/toolchain.yaml` | 2026-10-17 |
+| Pinned-model cutoffs | platform.claude.com/docs/en/about-claude/models/overview, comparison table: `claude-opus-5-5` and `claude-sonnet-5-5` both "Reliable knowledge cutoff: Jun 2026", "Training data cutoff: Jun 2026"; month only, no day → D-001 uses 2026-07-01 as the first post-cutoff day | 2026-10-17 |
 
 ### Phase 0 step 1 — bootstrap check, run 3 (2026-10-17, subscription-auth plan, D-025)
 
