@@ -1,0 +1,95 @@
+# Spec: Results layout
+
+Root: `$ABB_RESULTS_DIR` (default `~/abb-results`, resolved in `abb/paths.py`). Everywhere this
+plan writes `benchmark/results/` it means that root. Keep it on the WSL filesystem — never under
+`/mnt/c` or OneDrive. **The results root is never mounted into an agent container**; the
+harness pulls files out with `Workspace.get` (docker cp). Phase 1's invariants test checks that
+`/results` does not exist inside an agent workspace.
+
+```
+<results root>/<run_id>/
+  manifest.json                       # what this run is (below)
+  events.jsonl                        # scheduler log: start/end/skip/retry/resume per trial
+  audit.json                          # Phase 4+: `abb audit` recomputation from transcripts (pass/fail per trial)
+  setup/<setup_kind>/<repo>/          # one-time per-repo setup, reported separately
+    run.json  transcript/  prompts/  artifacts/        # setup_kind = speckit-constitution | s2a-map
+  <arm>/<task_id>/t<k>/               # k = 1..trials
+    run.json                          # RunResult (serialized) + limits used
+    transcript/<call_name>.jsonl      # raw stream-json from each headless call, verbatim
+    transcript/<call_name>.nudge<j>.jsonl   # nudge continuations
+    prompts/<call_name>.md            # exact prompt text sent (for audit)
+    diff.patch                        # scoped agent diff (input to grading)
+    diff.full.patch                   # unscoped, for forensics
+    artifacts/                        # arm artifacts (spec.md, plan.md, map.md, verify.md, state.json …)
+    grade.json                        # GradeResult
+    junit/                            # TEST-*.xml copied from the grading container
+    gradle.log                        # grading build output
+    metrics.json                      # flattened row used by report.py (below)
+    labels.json                       # Phase 9: failure labels (manual and/or llm)
+  report/                             # Phase 9 output
+    summary.md  tables/*.csv  charts/*.{png,svg}  bootstrap.json
+```
+
+## `manifest.json`
+
+```json
+{
+  "run_id": "20261203-0900-heldout-final",
+  "created_at": "2026-12-03T09:00:00Z",
+  "label": "heldout-final",
+  "prereg_sha256": "...",                     # docs/PREREG.md at freeze time
+  "arms": ["plain", "plain-guided", "speckit", "s2a", "s2a-nomap", "s2a-noverify"],
+  "task_set": "test",                         # dev | test | all | dev5 | explicit list
+  "task_ids": ["antennapod-0001", "..."],
+  "task_set_sha256": "...",                   # proves which task contents ran
+  "trials": 3,
+  "limits": {"timeout_minutes": 45, "max_turns_total": 200, "max_usd": 15.0,
+             "max_interventions": 2, "max_interventions_per_trial": 4, "model": "claude-opus-5-5"},
+  "agent_version": "2.1.x",
+  "speckit_version": "0.x.y",
+  "s2a_git_sha": "def456",                    # commit of s2a/ installed in the s2a layer (Phase 6)
+  "images": {"antennapod": "sha256:...", "wikipedia": "sha256:..."},
+  "s2a_images": {"antennapod": "abb-antennapod-s2a:def4567"},
+  "base_digests": {"jdk17": "sha256:...", "jdk21": "sha256:..."},
+  "network_mode": "api-only",
+  "strip_agent_instructions": false,
+  "allow_image_drift": false,
+  "harness_git_sha": "abc123",
+  "split_file_sha256": "...",                 # proves the frozen split was used
+  "resumes": [{"at": "2026-12-04T02:10:00Z", "reason": "host reboot"}],
+  "aborted_reason": null,                     # budget | sigint | null
+  "host": {"os": "linux", "cpus": 16, "mem_gb": 64}
+}
+```
+
+## `metrics.json` (one flat row per trial; the report's unit of analysis)
+
+| field | type | source |
+|---|---|---|
+| run_id, arm, task_id, trial | str/int | runner |
+| repo, category, source, tags.*, split, post_cutoff | from task.yaml | runner |
+| resolved, build_ok, reason (`null`, `patch_apply_failed`, `test_compile_failed`, `grade_timeout`, …), interface_table (bool), regressions_n, flaky_p2p_n | grade.json | grader |
+| agent_touched_tests, build_config_changed, build_config_reverted, test_config_suspect | grade.json.flags | grader |
+| diff_files, diff_insertions, diff_deletions, scope_creep_files | grade.json | grader |
+| exit_reason, duration_ms, cost_usd (nullable), cost_usd_imputed, num_turns, tool_calls, tool_errors, interventions, asked_question, rate_limit_retries, other_retries, model_drift | run.json | arm |
+| gate_gradle_runs, gate_seconds | run.json | arm (S2A gates, plain-gate hook) |
+| input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cache_hit_rate | run.json (summed over calls) | arm |
+| calls_n, calls (json list of {name, cost_usd, num_turns}) | run.json | arm |
+| retried (bool), retry_reason | events.jsonl | runner |
+| model, agent_version, image_digest, workspace_base | run.json / manifest | runner |
+| audit_ok | audit.json | `abb audit` |
+| failure_label, failure_label_source (manual/llm), label_confidence | labels.json | Phase 9 |
+| convention_score | labels.json | Phase 9 (optional) |
+
+`cache_hit_rate = cache_read_tokens / (input_tokens + cache_read_tokens + cache_write_tokens)`.
+
+## Invariants
+
+- A trial directory is complete iff `run.json`, `diff.patch` and `grade.json` all exist. The
+  runner's resume logic uses exactly this rule.
+- Files are written atomically (write to `*.tmp`, then rename).
+- Nothing under the results root is ever edited by hand except `labels.json` (manual labelling).
+- The results root lives outside the repo and is never committed. Published runs are copied by
+  Phase 10 to `benchmark/published/<run_id>/{manifest.json, audit.json, report/, labels/}` (plus
+  a tarball of the full trial directories attached to the release), and that folder **is**
+  committed.

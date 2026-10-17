@@ -1,0 +1,100 @@
+# Default S2A pipeline. Stage order, sessions, turn budgets and gates.
+# Loaded via importlib.resources (override with S2A_PIPELINE=/path/to/pipeline.yaml).
+version: 1
+total_turns_default: 200          # per run; `map` counts against it only when it actually runs (not when cached or --map)
+fix_loops: 2                      # max verify -> fix -> verify cycles; the second is opportunistic (runs only if turns remain)
+implement_task_retries: 2         # retries per plan task on gate failure; each retry is a fresh session
+implement_task_turn_cap: 35
+on_task_exhausted: stop_implement_then_verify   # fail fast: remaining tasks skipped, verify will REJECT, report names the task
+small_change_skips: []            # deployments may list stages to skip when intake says size: S (e.g. [reproduce]);
+                                  # keep empty wherever every run must exercise the full pipeline
+lint_gate: if_fast                # per-task lint gate only when map.json.lint_seconds is a number < 120 (see map stage)
+gate_timeout_s: 900               # wall clock per orchestrator-run Gradle command (compile/test); exceeding it fails the gate
+read_only_post: [clean_tree]      # after every read-only stage: `git status --porcelain` must be empty, else revert + record stray_edits
+test_gates_relative_to_baseline: true   # test gates fail only on tests that pass at base_commit and fail now (brownfield repos may
+                                        # have failing tests already); baseline results are cached per module in .s2a/baseline/
+gates_render_commands: true       # gates NEVER execute agent-written command strings; they render profile templates from
+                                  # plan.json {module, task, tests}
+
+# Turn caps below sum to 170 without map (5+15+15+15+15+75+15+15); one full fix loop (+30) fits in 200.
+stages:
+  - name: intake
+    session: fresh
+    turns: 5
+    tools: read_only              # artifact returned as final message; orchestrator writes ticket.md
+    gate: [artifact_exists, ticket_type_parses, ticket_size_parses]
+
+  - name: map
+    session: fresh
+    turns: 25
+    tools: full
+    cache: {key: [commit, profile, prompt_hash], stale_after_days: 30}   # bypassed entirely by `--map PATH`
+    gate: [artifact_exists, map_json_valid, map_test_command_runs]
+    post: [map_lint_timed]        # SOFT: times profile.commands.lint once on the smoke module; non-zero exit or > 300 s
+                                  # -> lint_seconds: null + reason in map.json, lint gate disabled. Never fails the stage.
+    retry: 1
+    skippable: true               # --skip map  (then plan.json module/task are validated with one `gradlew <module>:tasks --all`
+                                  # run per module, compile_task comes from profile defaults, and every gate stays ON)
+
+  - name: locate
+    session: fresh
+    turns: 15
+    tools: read_only
+    gate: [artifact_exists, listed_paths_exist, min_candidates:1]
+
+  - name: reproduce                # bug: failing tests; refactor: characterization tests; feature: acceptance skeleton
+    session: fresh
+    turns: 15
+    tools: full
+    gate: [repro_tests_behave]     # bug -> must FAIL with assertions; refactor -> must PASS; feature -> must COMPILE
+    retry: 1
+    on_gate_failure: record_and_continue   # repro: unavailable (never silent)
+    commit_after: true            # orchestrator: git add <repro/manifest.json paths> && git commit -m "s2a: reproduction tests"
+                                  # (otherwise clean_tree and implement retries would delete them)
+    skippable: true               # --skip reproduce
+
+  - name: spec
+    session: fresh
+    turns: 15
+    tools: read_only
+    gate: [artifact_exists, min_criteria:1, every_criterion_has_verification, unchanged_behaviour_present_for_bugs, criteria_ids_unique]
+    pause_in_interactive: true
+
+  - name: plan
+    session: fresh
+    turns: 15
+    tools: read_only
+    gate: [artifact_exists, plan_json_valid, every_criterion_covered, modules_and_tasks_known, paths_exist_or_new, one_fixes_repro_task_for_bugs]
+    pause_in_interactive: true
+
+  - name: implement
+    session: per_task             # one fresh session per plan task; progress.md carries context
+    turns: 75
+    tools: full
+    gate_per_task: [compiles, task_tests_pass, repro_tests_pass_from_fixing_task, characterization_tests_pass_if_refactor, no_weakened_tests, lint_if_enabled]
+    gate_after_all: [affected_modules_tests_pass, skeletons_enabled_and_pass_if_feature]
+    commit_per_task: true         # orchestrator commits "s2a: <id> - <title>" (same string everywhere); agents never commit
+
+  - name: verify
+    session: fresh
+    turns: 15
+    tools: read_only
+    gate: [verdict_parses, verdict_consistent]   # verdict_consistent: any "FAIL" line on an AC/UB => orchestrator records REJECT regardless of the agent's VERDICT line
+    isolate: {commit_before: true, reset_after: true, keep: [".s2a"]}
+    skippable: true               # --skip verify (also skips fix); exit code is then 0 when implement finished with all gates green, verdict: null
+
+  - name: fix
+    session: fresh
+    turns: 15
+    tools: full
+    runs_when: verdict_is_reject
+    gate: [compiles, no_weakened_tests, repro_tests_pass, affected_modules_tests_pass]
+    commit_after: true            # orchestrator commits "s2a: fix <k>"
+    then: verify                  # bounded by fix_loops
+
+  - name: report
+    session: fresh
+    turns: 5
+    tools: read_only
+    optional: true                # the orchestrator always writes a draft from artifacts; the polish call runs only if turns remain
+    gate: [artifact_exists]

@@ -1,0 +1,19 @@
+# Trial limits. Every arm gets the SAME totals (fairness-protocol.md). Arms split turns across
+# their calls as they see fit; the split is recorded in run.json.
+default:
+  timeout_minutes: 45
+  max_turns_total: 200
+  max_usd: 15.0
+  max_interventions: 2          # nudges per headless call
+  max_interventions_per_trial: 4   # nudges per trial, all calls together (comparable across arms)
+  # NOTE: there is deliberately no global per-call turn cap. Each arm splits max_turns_total
+  # across its calls in abb/arms/<arm>/config.yaml; the single-call plain arm gets the whole
+  # total in its one call (specs/fairness-protocol.md, "Turn budget").
+  grade_timeout_minutes: 30
+
+profiles:
+  dev:
+    model: claude-sonnet-5-5    # cheaper while building/tuning the harness
+    max_usd: 5.0                # dev spending ceiling per trial
+  final:
+    model: claude-opus-5-5      # pinned for dev-set confirmation and the single held-out run

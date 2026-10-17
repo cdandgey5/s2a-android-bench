@@ -1,0 +1,12 @@
+# Root ignore for the ~/abb working clone (benchmark/.gitignore adds its own rules).
+.venv/
+**/.venv/
+__pycache__/
+*.pyc
+*.tmp
+.env
+results/
+.pytest_cache/
+.ruff_cache/
+s2a/dist/
+benchmark/dist/

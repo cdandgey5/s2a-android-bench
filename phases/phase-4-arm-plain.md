@@ -1,0 +1,133 @@
+# Phase 4 — Arm A (plain agent), the controls, and the first results table
+
+**Goal.** The headless driver with the nudge protocol, the plain-agent adapter, a minimal
+sequential runner, and a report that prints **real numbers** for dev5. This is the milestone
+that proves the whole pipeline.
+
+**Prerequisites.** Phase 3 gate. `ANTHROPIC_API_KEY` available. Dev model `claude-sonnet-5-5`.
+
+**Effort.** ~1 week part-time.
+
+## Deliverables
+
+```
+benchmark/abb/harness/agent_driver.py     # run_headless() per specs/headless-agent-driving.md
+benchmark/abb/harness/transcript.py       # stream-json parser: tool calls, last text, result fields, model_usage
+benchmark/abb/arms/__init__.py
+benchmark/abb/arms/base.py                # seed provided (Limits, PhaseCall, RunResult, Arm)
+benchmark/abb/arms/registry.py            # {"plain": PlainArm}
+benchmark/abb/arms/common/environment.md  # shared environment preamble, byte-identical for every arm (below)
+benchmark/abb/arms/plain/arm.py
+benchmark/abb/arms/plain/config.yaml      # turn_cap: null  (single call gets the whole total)
+benchmark/abb/arms/plain/prompts/system.md   # plain-specific lines appended after environment.md
+benchmark/abb/arms/plain/prompts/task.md     # prompt template with {{ticket}}
+benchmark/abb/harness/setup.py            # one_time_setup support + results/_setup_cache (no-op for plain; used by Phases 5, 6, 8)
+benchmark/abb/harness/audit.py            # `abb audit <run_id>`: recompute totals from transcripts, fail on mismatch
+benchmark/abb/harness/run.py              # minimal: one arm, sequential, writes results layout
+benchmark/abb/harness/report.py           # minimal table + setup section (grows in Phase 9)
+benchmark/abb/arms/plain/prompts/guided.md   # plain-guided control: the S2A workflow described in prose
+# plain-gate control lives in arms/plain/arm.py (gate=True): a harness-side test run + one resume, no Claude Code hook
+benchmark/tests/test_transcript.py        # fixtures: recorded stream-json files
+benchmark/tests/fixtures/transcripts/*.jsonl
+CLI: abb run --arm plain --tasks dev5|<ids> --trials 1 [--model …] [--label …]     abb report <run_id>
+```
+
+## Steps
+
+1. **Transcript parser** (`transcript.py`). Phase 0 saved the two smoke-test `stream-json`
+   outputs as fixtures (`smoke-success`, `smoke-maxturns1`); add one with an `api_retry` event
+   and one without a `result` line (killed). Parse: per `assistant`
+   message count `tool_use` blocks and names; last text block; `result` fields
+   (`subtype`, `session_id`, `num_turns`, `duration_ms`, `duration_api_ms`, `total_cost_usd`,
+   `usage.*`, **`modelUsage`** (camelCase), `permission_denials`, `stop_reason`); `system`
+   events: the `init` model name, `claude_code_version`, `slash_commands`, and `api_retry`
+   split by `error` (`rate_limit` vs other). Handle a transcript with no `result` line (cost
+   `null`, `cost_usd_imputed` from per-message usage). Tolerate unknown event types.
+2. **Driver** (`agent_driver.py`): implement `run_headless` exactly as specified, including the
+   nudge protocol with both caps (2 per call, 4 per trial), prompt saving/hashing, verbatim
+   transcript streaming, timeout via the workspace exec timeout (124/137 → timeout; 143 →
+   agent_error), model/version assertions (`init`, `modelUsage`), and budget bookkeeping
+   (`limits_left` mutated). Redact the API key from any logged argv/env.
+3. **Confirm question handling in `-p` mode.** The docs (2026-10) say an `AskUserQuestion`
+   call is denied with no permission host, the model is told nobody can approve, the run
+   continues, and the denial appears in `result.permission_denials`. Confirm once on the pinned
+   CLI version: run a prompt designed to make the model ask ("Before doing anything, ask me
+   which of two options I prefer using your question tool, then stop."), check the transcript
+   for the `tool_use`, the denial, and whether `--resume` continues the session. Write the
+   findings into `reference/verified.md`; the nudge detection in the spec covers the documented
+   outcome and the "session ended" outcome.
+4. **Shared preamble + plain arm.** `abb/arms/common/environment.md` (every arm, every call):
+   > You are working in an existing Android repository checked out at /work. There is no
+   > network access except the model API; Gradle must be run with `--offline`. No human is
+   > available: make reasonable assumptions and state them briefly. Keep changes consistent
+   > with the surrounding code and the repository's own conventions. Do not disable, delete or
+   > weaken existing tests. Do not modify build configuration to skip tests.
+
+   `abb/arms/plain/arm.py`: one call, `call_name="plain"`, `turn_cap=None` (whole budget),
+   prompt = `task.md` rendered with the ticket; `append_system_prompt` = environment.md +
+   `system.md`:
+   > Implement the change described in the ticket, keep the change minimal, add or extend
+   > unit tests where the repo has them, and make sure the affected module's unit tests pass.
+   > Do not modify unrelated code.
+
+   `task.md`:
+   > ## Ticket
+   >
+   > {{ticket}}
+   >
+   > Resolve this ticket in the repository at /work. When finished, summarise what you changed
+   > and which tests you ran.
+
+   After the call: `diff.patch` (scoped) and `diff.full.patch`; `RunResult` with
+   `exit_reason` mapped from subtype (`success`→completed, `error_max_turns`→max_turns,
+   `error_max_budget_usd`→budget, timeout→timeout, else agent_error).
+5. **Minimal runner** (`run.py`): resolve task set (`dev5` = the 5 validated tasks of repo #1
+   plus the seed, or explicit ids, or `split: dev|test` later); for each task × trial:
+   `Workspace(network="api-only")`, `snapshot`, `put` only `problem.md`'s text via the prompt,
+   `arm.run`, pull `run.json`, prompts, transcripts, diffs with `Workspace.get`. Run
+   `one_time_setup` once per (setup kind, repo) through `setup.py` (a no-op for plain). Then
+   call the grader (`abb grade <run_id>` or inline `--grade`) and `abb audit`. Write
+   `manifest.json` first (so a crash still leaves a manifest). Sequential only in this phase.
+6. **Minimal report**: `abb report <run_id>` prints a table: task · trial · resolved ·
+   reason · exit_reason · turns · tool_calls · interventions · cost_usd · duration · f2p summary;
+   a setup section (per setup kind × repo); and a footer with totals: resolved n/N, mean cost,
+   total cost, mean duration, audit pass/fail. Writes `report/summary.md`.
+6b. **Controls.** `plain-guided`: the same adapter with `prompts/guided.md` appended after
+   `system.md` (describes map → locate → reproduce → spec → plan → small steps → self-review in
+   prose; no file paths, no task hints). `plain-gate`: after the single call, the harness runs
+   the modules touched by the diff through their unit tests once; on failure it resumes the
+   session once with the failing test output (recorded in `gate_gradle_runs`/`gate_seconds`,
+   not as an intervention; S2A allows ≤ 2 retries per task, plain-gate exactly 1 — say so in the
+   report), then stops. Both register in `registry.py`; `plain-gate` is optional in the final
+   matrix.
+7. **Pin versions.** Set `CLAUDE_CODE_VERSION` to the exact version used; rebuild base and
+   repo images if the arg changed; record in `images.lock.json`.
+8. **Run dev5 × 1 trial on Sonnet 5.5.** Then run it again (trial 2) to see variance. Keep both
+   run ids in `docs/RUNS.md` with a one-line note each (this file is the lab notebook from now on).
+9. Commit `phase 4: plain arm + first results`.
+
+## Acceptance gate
+
+```
+uv run pytest -q tests/test_transcript.py
+uv run abb run --arm plain --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-plain-1 --grade
+uv run abb report <run_id>                      # table with 6 rows of real numbers (dev5 = 5 validated tasks + the seed)
+uv run abb audit <run_id>                       # all trials: run.json == transcripts
+uv run abb run --arm plain-guided --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-guided-1 --grade
+ls results/<run_id>/plain/*/t1/                 # run.json transcript/ prompts/ diff.patch grade.json metrics.json
+cat reference/verified.md                       # has the AskUserQuestion-in-print-mode finding
+```
+
+Passes when the table exists with real grades and costs, every trial dir is complete per the
+results spec, and the cost per run for the plain arm is recorded in `docs/RUNS.md` (this number
+drives the budget in PLAN.md §6).
+
+## Pitfalls
+
+- `docker exec` output buffering: use `exec_run(stream=True)` and write each chunk immediately;
+  stream-json lines are newline-delimited.
+- If `-p` ever defaults to `--bare` in a newer version, repo `CLAUDE.md` would be ignored for
+  the plain arm but not for others — the version pin protects you; re-check on every upgrade.
+- The nudge heuristic will have false positives (a summary ending in "?"). Cap is 2; the cost
+  is one extra short turn. Accept it; it is identical across arms.
+- Keep `--max-budget-usd` ≥ 3× the observed mean so it only catches runaways.

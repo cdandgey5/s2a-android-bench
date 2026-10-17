@@ -1,0 +1,57 @@
+# S2A profile: Android (Gradle, JVM unit tests). The only profile in v1; other stacks add a file here.
+name: android
+detect:
+  any_of_files: ["settings.gradle", "settings.gradle.kts"]
+  and_any_of_globs: ["**/src/main/AndroidManifest.xml"]
+
+commands:
+  # {module} is a Gradle project path like :app or :playback. {task} and {compile_task} come from
+  # map.json per module: the map stage discovers them (`./gradlew {module}:tasks --all`), because
+  # flavors change the names (testDebugUnitTest vs testFreeDebugUnitTest; the AGP anchor task
+  # compile<Variant>UnitTestSources vs plain-JVM `testClasses`). The orchestrator renders these
+  # templates with map.json values; `offline_flag` is always appended.
+  offline_flag: "--offline"
+  common_flags: "--console=plain --continue"
+  build: "./gradlew {flags} {module}:{compile_task}"
+  test_module: "./gradlew {flags} {module}:{task}"
+  test_class: "./gradlew {flags} {module}:{task} --tests '{class}'"
+  test_method: "./gradlew {flags} {module}:{task} --tests '{class}.{method}'"
+  lint: "./gradlew {flags} {module}:{lint_task}"        # lint_task from map.json (e.g. lintFreeDebug); gate times it once
+  test_smoke: "./gradlew {flags} {module}:{task}"       # the map gate runs this on map.json.smoke
+  junit_results: "{module_dir}/build/test-results/{task}/TEST-*.xml"
+  defaults:                                             # used only when map.json lacks a value
+    task: "testDebugUnitTest"
+    compile_task: "compileDebugUnitTestSources"
+    lint_task: "lintDebug"
+
+test_dirs:                      # used by the no_weakened_tests gate and the verify stage
+  - "**/src/test/**"
+  - "**/src/test*/**"
+  - "**/src/androidTest/**"
+  - "**/src/sharedTest/**"
+
+weakened_test_patterns:         # any ADDED line matching these, or REMOVED @Test/assert lines, fails the task
+  - "@Ignore"
+  - "@Disabled"
+  - "enabled = false"
+  - "ignoreFailures"
+  - "exclude\\("
+
+conventions_checklist:          # the verify stage grades each (evidence required)
+  - "Package layout and naming follow neighbouring code"
+  - "Dependency injection style matches the module (constructor injection / Hilt / manual)"
+  - "Threading and async style matches (coroutines/Rx/executors) — no new mechanism introduced"
+  - "Persistence goes through the existing layer (Room/DAO/SharedPreferences wrapper), no ad-hoc storage"
+  - "User-visible strings are in resources, not hard-coded"
+  - "Existing public APIs and persisted formats unchanged unless the spec says so"
+  - "New code has unit tests in the module's existing test framework"
+
+notes_for_prompts: |
+  - Gradle runs offline; the dependency cache is warm. If a build fails on resolution, the fix is
+    never to change repositories or add dependencies.
+  - Product flavors change unit-test task names (testFreeDebugUnitTest vs testDebugUnitTest).
+  - Test at the lowest layer that gives real feedback: plain JVM unit tests first; Robolectric
+    only when the code depends on Android classes; prefer extracting logic into a plain class
+    with a plain unit test when the surrounding code already does that. Device/instrumented
+    tests are out of scope.
+  - Never edit build files to skip, exclude or ignore tests.

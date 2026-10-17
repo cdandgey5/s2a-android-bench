@@ -1,0 +1,87 @@
+# NewPipe - repo #4 candidate (Java + Kotlin, GPL-3.0). Risk: new KMP folders (shared/, desktopApp/, iosApp/).
+key: newpipe
+display_name: NewPipe
+url: https://github.com/TeamNewPipe/NewPipe
+license: GPL-3.0
+default_branch: dev
+language: mixed
+ui: xml
+structure: multi_module
+
+toolchain:
+  jdk: 17                                    # TODO verify
+  android:
+    cmdline_tools_zip: commandlinetools-linux-15859902_latest.zip
+    cmdline_tools_sha256: 4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583
+    packages:
+      - "platform-tools"
+      - "platforms;android-35"
+      - "build-tools;35.0.0"
+  gradle_user_home_props: |
+    org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+    kotlin.daemon.jvmargs=-Xmx2g
+    kotlin.native.ignoreDisabledTargets=true
+    org.gradle.parallel=false
+    org.gradle.caching=false   # a build cache would carry compiled classes of later commits into workspaces
+    org.gradle.configuration-cache=false
+    org.gradle.warning.mode=none
+
+build:
+  cache_commit: TODO_40_CHAR_SHA
+  setup_commit: TODO_40_CHAR_SHA            # git merge-base --octopus of this repo's task base commits (specs/repo-config.md)
+  warm_commands:                             # TODO confirm flavor/task names
+    - cmd: "./gradlew --console=plain :app:assembleDebug"
+    - cmd: "./gradlew --console=plain :app:testDebugUnitTest"
+      allow_failure: true
+  stubs: []
+  env:
+    JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
+
+tests:
+  test_task_for_module:
+    default: "testDebugUnitTest"
+  junit_dir: "build/test-results"
+  verify_modules: [":TODO_LIB_MODULE", ":app"]   # used by `abb images verify`; one library module + the app module
+  test_dirs:
+    - "**/src/test/**"
+    - "**/src/androidTest/**"
+    - "**/src/sharedTest/**"
+    - "**/src/testFixtures/**"
+  protected_build_paths:              # restored from base at grading unless gold.patch touches the file (specs/grading-protocol.md)
+    - "gradlew"
+    - "gradlew.bat"
+    - "gradle/**"
+    - "buildSrc/**"
+    - "build-logic/**"
+    - "**/*.init.gradle*"
+  build_config_files:                 # ALSO protected; listed separately because the test_config_suspect scan applies to them
+    - "**/build.gradle"
+    - "**/build.gradle.kts"
+    - "settings.gradle.kts"
+    - "gradle.properties"
+    - "gradle/libs.versions.toml"
+    - "buildSrc/**"
+
+workspace:
+  exclude_from_snapshot:
+    - ".git"
+    - ".github"
+    - ".idea"
+    - "iosApp"
+    - "desktopApp"
+  strip_agent_instructions: false
+  diff_exclude:
+    - ".claude/**"
+    - ".specify/**"
+    - "specs/**"
+    - ".s2a/**"
+    - "CLAUDE.md"
+    - "AGENTS.md"
+    - "**/build/**"
+    - ".gradle/**"
+    - ".idea/**"
+    - "*.log"
+
+lint:
+  command: null
+  report_glob: null

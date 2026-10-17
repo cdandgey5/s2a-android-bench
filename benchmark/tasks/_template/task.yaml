@@ -1,0 +1,36 @@
+# Copy with: abb tasks new <repo>-<NNNN> --repo <repo> --base-commit <sha>
+id: REPO-0000
+repo: REPO
+base_commit: "0000000000000000000000000000000000000000"
+source: authored                 # mined | reverted | authored
+category: bugfix                 # bugfix | feature | refactor | cross_module
+upstream:                        # delete the block for authored tasks
+  issue_url: null
+  pr_url: null
+  fix_commit: null
+  fix_date: null
+tags:                            # filled by `abb tasks tag`
+  files_touched: 0
+  files_bucket: "1"
+  modules: 1
+  lang: kotlin
+  ui: none
+  test_kind: junit
+  needs_test_hook: false
+  ticket_mentions_code: false
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+  - module: ":app"
+    test: "com.example.SomeTest"
+    method: "someBehaviour"
+pass_to_pass:
+  - module: ":app"
+    test: "com.example.SomeTest"
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: null                      # set by `abb split`
+status: draft                    # draft | validated | flaky | dropped
+validation: null                 # written by `abb tasks validate`
