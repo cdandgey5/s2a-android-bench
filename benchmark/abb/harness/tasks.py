@@ -306,6 +306,9 @@ def lint(task_id: str, *, offline_only: bool = False) -> list[Finding]:
     # constants / enum values on project types: `Format.FLAC`, `SortOrder.RANDOM`
     used |= {c for q, c in re.findall(r"\b([A-Z]\w*)\.([A-Z][A-Z0-9_]+)\b", test_added)
              if q not in lib_ids} - declared - lib_ids  # `XmlPullParser.END_TAG` is a library constant
+    # Kotlin named arguments on their own line: `hasActiveStreak = true,` (a constructor/parameter name)
+    local_vars = set(re.findall(r"\b(?:val|var)\s+([a-z]\w*)", test_added))
+    used |= set(re.findall(r"^\s*([a-z]\w*[A-Z]\w*)\s*=\s*(?!=)[^\n]*[,(]?\s*$", test_added, flags=re.M)) - declared - local_vars
     not_at_base = used - base_ids
     new_surface = sorted(not_at_base & problem_ids)
     unknown = sorted(not_at_base - problem_ids)

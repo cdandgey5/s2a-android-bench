@@ -65,3 +65,11 @@ Designs
 - State: Challenge concluded: No streak https://www.figma.com/design/nnXvcESYGNFiMmxYA41vVG/WP25--Apps-Reading-Challenge?node-id=380-2417&t=33Zrff8kZOyR1KaO-4
 
 - Prize collection https://www.figma.com/design/nnXvcESYGNFiMmxYA41vVG/WP25--Apps-Reading-Challenge?node-id=405-6626&t=SNhsUDod59JFR2Vw-4
+
+---
+
+**Developer comment (implementation note):** the widget state is resolved from
+`ReadingChallengeUserData`. After the end date the state depends on whether the user's streak is
+still alive, so please add `hasActiveStreak: Boolean` to `ReadingChallengeUserData` — true when the
+last read day is today or yesterday — fill it from the stored last-read date, and use it when
+resolving the state.

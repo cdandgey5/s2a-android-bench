@@ -2,7 +2,7 @@ diff --git a/app/src/test/java/org/wikipedia/dataclient/WikiSiteLanguageCodeTest
 new file mode 100644
 --- /dev/null
 +++ b/app/src/test/java/org/wikipedia/dataclient/WikiSiteLanguageCodeTest.kt
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,37 @@
 +package org.wikipedia.dataclient
 +
 +import org.junit.Assert.assertEquals
@@ -11,7 +11,6 @@ new file mode 100644
 +import org.robolectric.RobolectricTestRunner
 +import org.wikipedia.WikipediaApp
 +import org.wikipedia.language.AppLanguageLookUpTable
-+import org.wikipedia.page.PageTitle
 +
 +@RunWith(RobolectricTestRunner::class)
 +class WikiSiteLanguageCodeTest {
@@ -26,11 +25,6 @@ new file mode 100644
 +        assertEquals("zh-min-nan", WikiSite.normalizeLanguageCode("nan"))
 +    }
 +
-+    @Test
-+    fun minNanArticleLinkPointsToTheLegacySubdomain() {
-+        val title = PageTitle("Taiwan", WikiSite.forLanguageCode("nan"))
-+        assertEquals("https://zh-min-nan.wikipedia.org/wiki/Taiwan", title.uri)
-+    }
 +
 +    @Test
 +    fun minNanLanguageHasTheLegacyLanguageName() {

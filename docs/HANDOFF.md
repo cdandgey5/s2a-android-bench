@@ -12,9 +12,9 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `7` (MVP cut, D-045) — step: `1 skipped (no repos 3/4); start at step 2 (mining sweep)`. Phase 4 gate passed 2026-10-18
-- Last commit: `phase 4: plain arm + first results …` on `main` (`git log -1`)
-- Working tree: `clean after that commit`
+- Phase: `7` (MVP cut, D-045) — steps 2–7 done: 25 tasks (13 AntennaPod / 12 Wikipedia, 10 authored; D-046, D-047), both repos re-warmed at every base commit, coverage written, **all 19 new tasks pass a single validation run**; **waiting at S2** (owner review of `benchmark/tasks/TRIAGE.md`, Phase 7 section)
+- Last commit: `phase 7: wip — 25 drafted tasks …` on `main` (`git log -1`)
+- Working tree: clean after the S2-ready commit
 - Date: `2026-10-18`
 
 ## What exists and is verified
@@ -37,11 +37,13 @@ and folds its open items into this one.
 
 ## Decisions waiting on the human
 
-- None now. Next hard stop: **S2** — review of the drafted Phase 7 tasks (`tasks/TRIAGE.md`). Overturnable autopilot decisions: D-031…D-045.
+- None now. Next hard stop: **S2** — review of the drafted Phase 7 tasks (`tasks/TRIAGE.md`). Overturnable autopilot decisions: D-031…D-047.
 
 ## Exact next action
 
-Phase 7 step 2 (`phases/phase-7-scale-tasks.md`): in `benchmark/`, `uv run abb tasks mine antennapod --since 2026-07-01 --limit 80`
-and the same for `wikipedia` (plus a pre-cutoff sweep), triage into `tasks/TRIAGE.md`; then reverted (step 3) and 4 more
-authored tasks (step 4, `drafted_by: agent`); lint/tag/coverage (step 5) toward 24–30 tasks with ≤ 50 % per repo;
-then stop at S2 for the owner's review.
+**S2 (hard stop):** the owner reviews the 19 new tasks in `benchmark/tasks/TRIAGE.md` (Phase 7 section) and replies
+`approved` / `approved, dropped: <ids>` / change requests. After approval: in `benchmark/`,
+`abb tasks validate --all --runs 3 --keep-going` (**S3**, long: all 25 incl. dev5 — the environment fingerprint
+changed; run per repo in two streams with `.venv\Scripts\abb.exe`, not two parallel `uv run`), `abb env verify wikipedia`
+and `abb env verify antennapod`, then `abb split --seed 20261101 --dev-frac 0.30`, `abb tasks hash`,
+`abb tasks lint --setup-leak`, the Phase 7 gate, commit + push; then Phase 5 (`phases/phase-5-arm-speckit.md`).

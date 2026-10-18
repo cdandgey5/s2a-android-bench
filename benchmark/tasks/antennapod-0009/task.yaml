@@ -32,4 +32,45 @@ status: draft
 created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
-validation: null
+validation:
+  runs: 1
+  last_validated: '2026-10-18T15:19:28Z'
+  env_fingerprint: sha256:45f0558c1b74e41545f421d51f6eaf597afc361fb34c0de5a3a8f3ff88e45256
+  p2p_stable:
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicEmpty_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicId3_detectsId3
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicM4a_detectsM4a
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicOgg_detectsOgg
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicShort_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicZeroed_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testRawMp3FrameMagic_detectsUnknown
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadChapterWithTitle
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadChapterWithoutSubframes
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadFullTagWithChapter
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadFullTagWithMultipleChapters
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadTitleWithGarbage
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileAuphonic
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileFfmpeg
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileHindenburgJournalistPro
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileMp3chapsPy
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileUltraschall
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadFrameHeader
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadMultipleStrings
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadString
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadTagHeader
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadUtf16NullPrefix
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadUtf16RespectsBom
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadingLimit
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadingLimitUtf16
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileAuphonic
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileFfmpeg
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileFfmpegComment
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileHindenburgJournalistPro
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileMp3chapsPy
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileUltraschall
+  - de.danoeh.antennapod.parser.media.m4a.M4AChapterReaderTest.testFiles
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFileFfmpegOgg
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFileFfmpegOpus
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFilesAuphonic
+  v1_test_compile: ok
+  flaky_tests: []

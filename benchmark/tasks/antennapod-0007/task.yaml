@@ -34,4 +34,39 @@ status: draft
 created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
-validation: null
+validation:
+  runs: 1
+  last_validated: '2026-10-18T15:13:51Z'
+  env_fingerprint: sha256:45f0558c1b74e41545f421d51f6eaf597afc361fb34c0de5a3a8f3ff88e45256
+  p2p_stable:
+  - de.danoeh.antennapod.net.common.UriUtilTest.testGetURIFromRequestUrlShouldEncode
+  - de.danoeh.antennapod.net.common.UriUtilTest.testGetURIFromRequestUrlShouldNotEncode
+  - de.danoeh.antennapod.ui.cleaner.PlainTextLinksConverterTest.testBrokenLinksAreNotCreated
+  - de.danoeh.antennapod.ui.cleaner.PlainTextLinksConverterTest.testConvertPlainTextLinksToHtml
+  - de.danoeh.antennapod.ui.cleaner.PlainTextLinksConverterTest.testConvertToHtmlWhenNoLinksAreDetected
+  - de.danoeh.antennapod.ui.cleaner.PlainTextLinksConverterTest.testExistingLinksArePreserved
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testCleanupColors
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testGetTimecodeLinkTime
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testIsTimecodeLink
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddNoTimecodeDuration
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeAngleBrackets
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeBrackets
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeHhmmNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeHhmmssMoreThen24HoursNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeHhmmssNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeHmmssNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeMmssNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeMssNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeMultipleFormatsNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeMultipleShortFormatNoChapters
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAddTimecodeParentheses
+  - de.danoeh.antennapod.ui.cleaner.ShownotesCleanerTest.testProcessShownotesAndInvalidTimecode
+  - de.danoeh.antennapod.ui.screen.onlinefeedview.FeedDiscovererTest.testAlternateAtomWithTitleAbsolute
+  - de.danoeh.antennapod.ui.screen.onlinefeedview.FeedDiscovererTest.testAlternateRSSNoTitleAbsolute
+  - de.danoeh.antennapod.ui.screen.onlinefeedview.FeedDiscovererTest.testAlternateRSSNoTitleRelative
+  - de.danoeh.antennapod.ui.screen.onlinefeedview.FeedDiscovererTest.testAlternateRSSWithTitleAbsolute
+  - de.danoeh.antennapod.ui.screen.onlinefeedview.FeedDiscovererTest.testAlternateRSSWithTitleAbsoluteFromFile
+  - de.danoeh.antennapod.ui.screen.onlinefeedview.FeedDiscovererTest.testAlternateRSSWithTitleRelative
+  - de.danoeh.antennapod.ui.screen.onlinefeedview.FeedDiscovererTest.testFeedAtomWithTitleAbsolute
+  v1_test_compile: failed_as_expected
+  flaky_tests: []

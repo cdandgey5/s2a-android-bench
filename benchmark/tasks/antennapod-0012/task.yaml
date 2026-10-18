@@ -34,4 +34,20 @@ created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
 hidden_tests: authored
-validation: null
+validation:
+  runs: 1
+  last_validated: '2026-10-18T15:28:24Z'
+  env_fingerprint: sha256:45f0558c1b74e41545f421d51f6eaf597afc361fb34c0de5a3a8f3ff88e45256
+  p2p_stable:
+  - de.danoeh.antennapod.storage.importexport.OpmlReaderTest.testHtmlUrlAndTypeAreOptional
+  - de.danoeh.antennapod.storage.importexport.OpmlReaderTest.testNestedCategoryFeeds
+  - de.danoeh.antennapod.storage.importexport.OpmlReaderTest.testReadSimple
+  - de.danoeh.antennapod.storage.importexport.OpmlReaderTest.testSkipsFeedWithoutXmlUrl
+  - de.danoeh.antennapod.storage.importexport.OpmlReaderTest.testTextUsedWhenNoTitle
+  - de.danoeh.antennapod.storage.importexport.OpmlReaderTest.testTitlePreferredOverText
+  - de.danoeh.antennapod.storage.importexport.OpmlReaderTest.testXmlUrlUsedAsTextWhenNeitherPresent
+  - de.danoeh.antennapod.storage.importexport.OpmlWriterTest.testEmptyFeedList
+  - de.danoeh.antennapod.storage.importexport.OpmlWriterTest.testOnlySubscribedFeedsExported
+  - de.danoeh.antennapod.storage.importexport.OpmlWriterTest.testWriteSimple
+  v1_test_compile: failed_as_expected
+  flaky_tests: []

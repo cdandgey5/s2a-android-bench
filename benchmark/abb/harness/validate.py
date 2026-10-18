@@ -214,5 +214,6 @@ def validate_cli(ids: list[str], runs: int = 3, keep_going: bool = False) -> int
     print(f"\n{'task':<18} {'status':<10} runs_ok")
     for s in rows:
         print(f"{s['task']:<18} {s['status']:<10} {s.get('runs_ok')}")
-    shutil.rmtree(paths.work_dir() / "validate", ignore_errors=True)
+    for tid in ids:  # only this invocation's tasks: another validation may be running next to it
+        shutil.rmtree(paths.work_dir() / "validate" / tid, ignore_errors=True)
     return code

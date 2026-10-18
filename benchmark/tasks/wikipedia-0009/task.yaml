@@ -34,4 +34,448 @@ created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
 hidden_tests: authored
-validation: null
+validation:
+  runs: 1
+  last_validated: '2026-10-18T16:18:21Z'
+  env_fingerprint: sha256:55e53532a0e1ab546f08217d4e544c94def16fcb3ace3f7e7cace95fc3320ba4
+  p2p_stable:
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testAlwaysInSample
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testAlwaysInSampleIfStreamConfiguredButNoSamplingConfig
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testAssociationControllerGetPageViewId
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testAssociationControllerGetSessionId
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testEventSerialization
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testGenerateRandomId
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testGetEventService
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testGetEventServiceDefaultDestination
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testGetStream
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testNeverInSample
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testNeverInSampleIfNoStreamConfig
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testSamplingControllerGetSamplingId
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testSamplingControllerGetSamplingValue
+  - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testStreamConfigMapSerializationDeserialization
+  - org.wikipedia.analytics.eventplatform.SamplingConfigTest.testSamplingConfigDeserializationDefaultIdentifierOnly
+  - org.wikipedia.analytics.eventplatform.SamplingConfigTest.testSamplingConfigDeserializationDefaultRateOnly
+  - org.wikipedia.analytics.eventplatform.SamplingConfigTest.testSamplingConfigDeserializationDefaults
+  - org.wikipedia.analytics.eventplatform.SamplingConfigTest.testSamplingConfigDeserializationNoDefaults
+  - org.wikipedia.analytics.eventplatform.SerializationTest.testAnalyticsEventDeserialization
+  - org.wikipedia.analytics.eventplatform.SerializationTest.testLoggingEventDeserialization
+  - org.wikipedia.analytics.eventplatform.StreamConfigTest.testStreamConfigResponseDeserialization
+  - org.wikipedia.captcha.CaptchaClientTest.testRequestResponseApiError
+  - org.wikipedia.captcha.CaptchaClientTest.testRequestResponseFailure
+  - org.wikipedia.captcha.CaptchaClientTest.testRequestResponseMalformed
+  - org.wikipedia.captcha.CaptchaClientTest.testRequestSuccess
+  - org.wikipedia.createaccount.CreateAccountActivityTest.testValidateInputInvalidEmail
+  - org.wikipedia.createaccount.CreateAccountActivityTest.testValidateInputInvalidPassword
+  - org.wikipedia.createaccount.CreateAccountActivityTest.testValidateInputInvalidUser
+  - org.wikipedia.createaccount.CreateAccountActivityTest.testValidateInputPasswordIsUsername
+  - org.wikipedia.createaccount.CreateAccountActivityTest.testValidateInputPasswordMismatch
+  - org.wikipedia.createaccount.CreateAccountActivityTest.testValidateInputSuccessWithEmail
+  - org.wikipedia.createaccount.CreateAccountActivityTest.testValidateInvalidEmail
+  - org.wikipedia.createaccount.CreateAccountClientTest.testRequestFailure
+  - org.wikipedia.createaccount.CreateAccountClientTest.testRequestResponse404
+  - org.wikipedia.createaccount.CreateAccountClientTest.testRequestResponseMalformed
+  - org.wikipedia.createaccount.CreateAccountClientTest.testRequestSuccess
+  - org.wikipedia.createaccount.CreateAccountInfoClientTest.testRequestResponse404
+  - org.wikipedia.createaccount.CreateAccountInfoClientTest.testRequestResponseMalformed
+  - org.wikipedia.createaccount.CreateAccountInfoClientTest.testRequestSuccess
+  - org.wikipedia.csrf.CsrfTokenClientTest.testRequestResponseApiError
+  - org.wikipedia.csrf.CsrfTokenClientTest.testRequestResponseFailure
+  - org.wikipedia.csrf.CsrfTokenClientTest.testRequestSuccess
+  - org.wikipedia.dataclient.SharedPreferenceCookieManagerTest.all cookies are returned
+    for the authority they are stored under
+  - org.wikipedia.dataclient.SharedPreferenceCookieManagerTest.centralAuth cookies
+    are not transferred to unapproved authorities
+  - org.wikipedia.dataclient.SharedPreferenceCookieManagerTest.centralAuth cookies
+    are transferred to another Wikimedia authority
+  - org.wikipedia.dataclient.SharedPreferenceCookieManagerTest.centralAuth cookies
+    are transferred to every approved authority
+  - org.wikipedia.dataclient.SharedPreferenceCookieManagerTest.cookies stored under
+    an unapproved authority are not transferred to a Wikimedia authority
+  - org.wikipedia.dataclient.SharedPreferenceCookieManagerTest.expired centralAuth
+    cookies are neither transferred nor kept in the jar
+  - org.wikipedia.dataclient.SharedPreferenceCookieManagerTest.non-centralAuth cookies
+    are not transferred to another Wikimedia authority
+  - org.wikipedia.dataclient.WikiSiteTest.testAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorAuthorityLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorAuthorityNoLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorDefaultScheme
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorMobileUriLangVariant
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorParcel
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorScheme
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorUriGeneralLangVariant
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorUriLangVariant
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorUriLangVariantInSubdomain
+  - org.wikipedia.dataclient.WikiSiteTest.testCtorUriNoLangVariant
+  - org.wikipedia.dataclient.WikiSiteTest.testCtordesktopAuthorityLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testCtordesktopAuthorityNoLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testDbNameLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testDbNameSpecialLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testDbNameWithOneUnderscore
+  - org.wikipedia.dataclient.WikiSiteTest.testDbNameWithTwoUnderscore
+  - org.wikipedia.dataclient.WikiSiteTest.testDesktopAuthorityLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testDesktopAuthorityLanguageAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testDesktopAuthorityNoLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testDesktopAuthoritydesktopAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testEquals
+  - org.wikipedia.dataclient.WikiSiteTest.testForLanguageCodeAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testForLanguageCodeLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testForLanguageCodeLanguageAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testForLanguageCodeNoLanguage
+  - org.wikipedia.dataclient.WikiSiteTest.testForLanguageCodeNoLanguageAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testForLanguageCodeScheme
+  - org.wikipedia.dataclient.WikiSiteTest.testLanguageCode
+  - org.wikipedia.dataclient.WikiSiteTest.testNormalization
+  - org.wikipedia.dataclient.WikiSiteTest.testPath
+  - org.wikipedia.dataclient.WikiSiteTest.testPathEmpty
+  - org.wikipedia.dataclient.WikiSiteTest.testSupportedAuthority
+  - org.wikipedia.dataclient.WikiSiteTest.testTitleForInternalLink
+  - org.wikipedia.dataclient.WikiSiteTest.testUnmarshal
+  - org.wikipedia.dataclient.WikiSiteTest.testUnmarshalScheme
+  - org.wikipedia.dataclient.WikiSiteTest.testUrl
+  - org.wikipedia.dataclient.WikiSiteTest.testUrlPath
+  - org.wikipedia.dataclient.donate.CampaignCollectionTest.testReplaceAssetsNoParams
+  - org.wikipedia.dataclient.donate.CampaignCollectionTest.testReplaceAssetsWithParams
+  - org.wikipedia.dataclient.okhttp.OfflineCacheInterceptorTest.testIsCacheableFalse
+  - org.wikipedia.dataclient.okhttp.OfflineCacheInterceptorTest.testIsCacheableTrue
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testEditLocalDescriptionWithRegex
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testIsEditAllowedNoWikiBaseItem
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testIsEditAllowedSuccess
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRegexWithNoLocalDescription
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRequestAbusefilterDisallowed
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRequestAbusefilterWarning
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRequestPostDescriptionSuccess
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRequestPostLabelSuccess
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRequestResponseApiError
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRequestResponseFailure
+  - org.wikipedia.descriptions.DescriptionEditClientTest.testRequestResponseMalformed
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithBrokenSyntax
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithHatnotes
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithImageButNotCaption
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithInfoboxEmptyImageParam
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithInfoboxSettlement
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithInfoboxWithExistingImage
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithInfoboxWithName
+  - org.wikipedia.edit.insertmedia.InsertMediaTest.testInsertImageIntoArticleWithoutInfobox
+  - org.wikipedia.edit.wikitext.WikitextClientTest.testRequestResponseApiError
+  - org.wikipedia.edit.wikitext.WikitextClientTest.testRequestResponseMalformed
+  - org.wikipedia.edit.wikitext.WikitextClientTest.testRequestSuccessHasResults
+  - org.wikipedia.feed.announcement.GeoIPCookieUnmarshallerTest.testGeoIPEmpty
+  - org.wikipedia.feed.announcement.GeoIPCookieUnmarshallerTest.testGeoIPMalformed
+  - org.wikipedia.feed.announcement.GeoIPCookieUnmarshallerTest.testGeoIPWithBadLocation
+  - org.wikipedia.feed.announcement.GeoIPCookieUnmarshallerTest.testGeoIPWithLocation
+  - org.wikipedia.feed.announcement.GeoIPCookieUnmarshallerTest.testGeoIPWithoutLocation
+  - org.wikipedia.feed.announcement.GeoIPCookieUnmarshallerTest.testGeoIPWrongParamCount
+  - org.wikipedia.feed.announcement.GeoIPCookieUnmarshallerTest.testGeoIPWrongVersion
+  - org.wikipedia.feed.featured.FeaturedArticleCardTest.testTitleNormalization
+  - org.wikipedia.feed.personalization.HomePreferenceRepositoryTest.return nothing
+    when a selected topic has no articles even when articles are selected
+  - org.wikipedia.feed.personalization.HomePreferenceRepositoryTest.returns nothing
+    when fewer than three articles have been read recently
+  - org.wikipedia.feed.personalization.HomePreferenceRepositoryTest.when more topics
+    are selected than there are slots, the oldest ones are left out
+  - org.wikipedia.feed.personalization.HomePreferenceRepositoryTest.when one topic
+    is selected, returns all three articles from it
+  - org.wikipedia.feed.personalization.HomePreferenceRepositoryTest.when the most
+    recent topic has fewer articles than its share, returns fewer than three
+  - org.wikipedia.feed.personalization.HomePreferenceRepositoryTest.when two topics
+    are selected, returns two items from the most recent and one from the other
+  - org.wikipedia.feed.personalization.InterestSelectionRepositoryTest.a duplicate
+    article does not count towards the six
+  - org.wikipedia.feed.personalization.InterestSelectionRepositoryTest.an article
+    that is both recently read and saved appears once
+  - org.wikipedia.feed.personalization.InterestSelectionRepositoryTest.does not reach
+    for random articles once there are six to show
+  - org.wikipedia.feed.personalization.InterestSelectionRepositoryTest.drops the main
+    page and anything outside the article namespace
+  - org.wikipedia.feed.personalization.InterestSelectionRepositoryTest.interleaves
+    recently read articles with recently saved ones
+  - org.wikipedia.feed.personalization.InterestSelectionRepositoryTest.pads with random
+    articles when there are fewer than six to show
+  - org.wikipedia.feed.personalization.PersonalizationViewModelTest.loads initial
+    articles when nothing has been saved before
+  - org.wikipedia.feed.personalization.PersonalizationViewModelTest.selecting a topic
+    saves it and replaces the article list
+  - org.wikipedia.feed.personalization.PersonalizationViewModelTest.starts from previously
+    saved topics and articles instead of the initial list
+  - org.wikipedia.feed.personalization.PersonalizationViewModelTest.the community
+    preview content shows whatever the repository previews
+  - org.wikipedia.feed.personalization.PersonalizationViewModelTest.the personalized
+    preview content is empty when the repository has nothing to preview
+  - org.wikipedia.feed.personalization.PersonalizationViewModelTest.the personalized
+    preview content reports an error when the repository fails
+  - org.wikipedia.feed.personalization.PersonalizationViewModelTest.the personalized
+    preview content shows whatever the repository previews
+  - org.wikipedia.feed.readaloud.ReadAloudCaptionsTest.testParseEmptyInput
+  - org.wikipedia.feed.readaloud.ReadAloudCaptionsTest.testParseJoinsMultiLinePayloadAndSkipsMalformedCues
+  - org.wikipedia.feed.readaloud.ReadAloudCaptionsTest.testParseSkipsNonCueBlocks
+  - org.wikipedia.feed.readaloud.ReadAloudCaptionsTest.testParseWordCues
+  - org.wikipedia.feed.topread.TopReadTest.testUnmarshalManyArticles
+  - org.wikipedia.gallery.GalleryClientTest.testRequestAllSuccess
+  - org.wikipedia.gallery.GalleryClientTest.testRequestImageSuccess
+  - org.wikipedia.gallery.GalleryClientTest.testRequestResponseFailure
+  - org.wikipedia.gallery.GalleryClientTest.testRequestResponseMalformed
+  - org.wikipedia.gallery.GalleryClientTest.testRequestVideoSuccess
+  - org.wikipedia.gallery.ImageLicenseFetchClientTest.testRequestResponseApiError
+  - org.wikipedia.gallery.ImageLicenseFetchClientTest.testRequestResponseFailure
+  - org.wikipedia.gallery.ImageLicenseFetchClientTest.testRequestResponseMalformed
+  - org.wikipedia.gallery.ImageLicenseFetchClientTest.testRequestSuccess
+  - org.wikipedia.history.HistoryEntryTest.testPageTitlePropertiesAreStored
+  - org.wikipedia.language.AppLanguageStateTests.testAddAppLanguage
+  - org.wikipedia.language.AppLanguageStateTests.testAddMultipleAppLanguages
+  - org.wikipedia.language.AppLanguageStateTests.testInitAppLanguages
+  - org.wikipedia.language.AppLanguageStateTests.testRemoveAppLanguages
+  - org.wikipedia.language.LangLinksActivityTest.testAddChineseEntriesForSimplifiedChinese
+  - org.wikipedia.language.LangLinksActivityTest.testAddChineseEntriesForTraditionalChinese
+  - org.wikipedia.language.LangLinksActivityTest.testSkipAddChineseEntries
+  - org.wikipedia.language.LanguageUtilTest.testLanguageCodeToWikiLanguageCode
+  - org.wikipedia.language.LanguageUtilTest.testLanguageCodeToWikiLanguageCodeForChineseLanguageTags
+  - org.wikipedia.language.LanguageUtilTest.testLanguageCodeToWikiLanguageCodeForChineseLocales
+  - org.wikipedia.language.LanguageVariantTest.testDefaultLocaleAndAcceptLanguageAgree
+  - org.wikipedia.language.TranslationTests.testAllTranslations
+  - org.wikipedia.language.TranslationTests.testPluralsDeclaration
+  - org.wikipedia.language.TranslationTests.testPluralsHaveItems
+  - org.wikipedia.language.TranslationTests.testTranslateWikiQQ
+  - org.wikipedia.language.TranslationTests.testUnsupportedTexts
+  - org.wikipedia.login.UserExtendedInfoClientTest.testRequestSuccess
+  - org.wikipedia.notifications.NotificationClientTest.testNotificationMention
+  - org.wikipedia.notifications.NotificationClientTest.testNotificationReverted
+  - org.wikipedia.notifications.NotificationClientTest.testRequestMalformed
+  - org.wikipedia.notifications.NotificationClientTest.testRequestSuccess
+  - org.wikipedia.page.NamespaceTest.testCode
+  - org.wikipedia.page.NamespaceTest.testFile
+  - org.wikipedia.page.NamespaceTest.testFromLegacyStringFile
+  - org.wikipedia.page.NamespaceTest.testFromLegacyStringMain
+  - org.wikipedia.page.NamespaceTest.testFromLegacyStringSpecial
+  - org.wikipedia.page.NamespaceTest.testFromLegacyStringTalk
+  - org.wikipedia.page.NamespaceTest.testFromLegacyStringUser
+  - org.wikipedia.page.NamespaceTest.testFromLegacyStringUserTalk
+  - org.wikipedia.page.NamespaceTest.testMain
+  - org.wikipedia.page.NamespaceTest.testOf
+  - org.wikipedia.page.NamespaceTest.testSpecial
+  - org.wikipedia.page.NamespaceTest.testTalkNegative
+  - org.wikipedia.page.NamespaceTest.testTalkOdd
+  - org.wikipedia.page.NamespaceTest.testTalkZero
+  - org.wikipedia.page.PageTitleTest.testCanonicalURL
+  - org.wikipedia.page.PageTitleTest.testColonChar
+  - org.wikipedia.page.PageTitleTest.testEquality
+  - org.wikipedia.page.PageTitleTest.testFile
+  - org.wikipedia.page.PageTitleTest.testFromInternalLink
+  - org.wikipedia.page.PageTitleTest.testHashChar
+  - org.wikipedia.page.PageTitleTest.testIsMainPageNoTitleNoProps
+  - org.wikipedia.page.PageTitleTest.testIsMainPageTitleNoProps
+  - org.wikipedia.page.PageTitleTest.testLangAsNamespace
+  - org.wikipedia.page.PageTitleTest.testMainPage
+  - org.wikipedia.page.PageTitleTest.testParsing
+  - org.wikipedia.page.PageTitleTest.testPrefixedText
+  - org.wikipedia.page.PageTitleTest.testSpecial
+  - org.wikipedia.page.PageTitleTest.testVariants
+  - org.wikipedia.page.PageTitleTest.testWikiSite
+  - org.wikipedia.page.SectionTest.testSectionLead
+  - org.wikipedia.page.linkpreview.LinkPreviewContentsTest.testExtractHasSuperscripts
+  - org.wikipedia.richtext.CustomHtmlParserTest.testCiteTemplateAuthorRendering
+  - org.wikipedia.richtext.CustomHtmlParserTest.testDeeplyNestedHiddenSpan
+  - org.wikipedia.richtext.CustomHtmlParserTest.testDisplayNoneWithSpaces
+  - org.wikipedia.richtext.CustomHtmlParserTest.testEmptyHiddenSpan
+  - org.wikipedia.richtext.CustomHtmlParserTest.testMultipleAuthorsWithCiteTemplate
+  - org.wikipedia.richtext.CustomHtmlParserTest.testMultipleSequentialHiddenSpans
+  - org.wikipedia.richtext.CustomHtmlParserTest.testNestedHiddenSpan
+  - org.wikipedia.richtext.CustomHtmlParserTest.testNonHiddenSpansPreserved
+  - org.wikipedia.richtext.CustomHtmlParserTest.testSearchMatchComposeFromHtml
+  - org.wikipedia.richtext.CustomHtmlParserTest.testSearchMatchSpanAnnotation
+  - org.wikipedia.richtext.CustomHtmlParserTest.testSimpleHiddenSpan
+  - org.wikipedia.search.FullTextSearchClientTest.testRequestResponseApiError
+  - org.wikipedia.search.FullTextSearchClientTest.testRequestResponseFailure
+  - org.wikipedia.search.FullTextSearchClientTest.testRequestResponseMalformed
+  - org.wikipedia.search.FullTextSearchClientTest.testRequestSuccessNoContinuation
+  - org.wikipedia.search.FullTextSearchClientTest.testRequestSuccessNoResults
+  - org.wikipedia.search.FullTextSearchClientTest.testRequestSuccessWithContinuation
+  - org.wikipedia.search.PrefixSearchClientTest.testRequestResponseApiError
+  - org.wikipedia.search.PrefixSearchClientTest.testRequestResponseFailure
+  - org.wikipedia.search.PrefixSearchClientTest.testRequestResponseMalformed
+  - org.wikipedia.search.PrefixSearchClientTest.testRequestSuccess
+  - org.wikipedia.search.PrefixSearchClientTest.testRequestSuccessNoResults
+  - org.wikipedia.search.SearchResultsRedirectProcessingTest.testConvertTitleHandling
+  - org.wikipedia.search.SearchResultsRedirectProcessingTest.testRedirectHandling
+  - org.wikipedia.test.ParcelableTest.testPageImage
+  - org.wikipedia.test.ParcelableTest.testPageTitle
+  - org.wikipedia.test.ParcelableTest.testPageTitleTalk
+  - org.wikipedia.util.AccountUtilTest.testTempAccountName
+  - org.wikipedia.util.DateUtilTest.testIso8601Identity
+  - org.wikipedia.util.ImageUriUtilTest.testUrlForPagedSizeStringWithLargeSize
+  - org.wikipedia.util.ImageUriUtilTest.testUrlForPagedSizeStringWithPxInName
+  - org.wikipedia.util.ImageUriUtilTest.testUrlForPreferredSizeWithNumericName
+  - org.wikipedia.util.ImageUriUtilTest.testUrlForSizeStringWithLargeSize
+  - org.wikipedia.util.ImageUriUtilTest.testUrlForSizeStringWithSmallSize
+  - org.wikipedia.util.ImageUriUtilTest.testUrlForSizeStringWithSmallerSize
+  - org.wikipedia.util.ImageUriUtilTest.testUrlForSizeStringWithUrlParameters
+  - org.wikipedia.util.ImageUrlUtilTest.isGif returns false for non-gif URLS
+  - org.wikipedia.util.ImageUrlUtilTest.isGif returns true for URLS ending with gif
+    extension
+  - org.wikipedia.util.StringUtilTest.testAddUnderscores
+  - org.wikipedia.util.StringUtilTest.testCsvToList
+  - org.wikipedia.util.StringUtilTest.testDbNameToLangCode
+  - org.wikipedia.util.StringUtilTest.testDelimiterStringToList
+  - org.wikipedia.util.StringUtilTest.testGeoHackToLocation
+  - org.wikipedia.util.StringUtilTest.testGetBase26String
+  - org.wikipedia.util.StringUtilTest.testIntToHexStr
+  - org.wikipedia.util.StringUtilTest.testListToCsv
+  - org.wikipedia.util.StringUtilTest.testMd5string
+  - org.wikipedia.util.StringUtilTest.testRemoveBoldTags
+  - org.wikipedia.util.StringUtilTest.testRemoveCiteMarkup
+  - org.wikipedia.util.StringUtilTest.testRemoveHTMLTags
+  - org.wikipedia.util.StringUtilTest.testRemoveNamespace
+  - org.wikipedia.util.StringUtilTest.testRemoveSectionAnchor
+  - org.wikipedia.util.StringUtilTest.testRemoveStyleTags
+  - org.wikipedia.util.StringUtilTest.testRemoveUnderscores
+  - org.wikipedia.util.StringUtilTest.testSanitizeAbuseFilterCode
+  - org.wikipedia.util.UriUtilTest.testDecodeURIComponent
+  - org.wikipedia.util.UriUtilTest.testDiffUrl
+  - org.wikipedia.util.UriUtilTest.testEncodeURIComponent
+  - org.wikipedia.util.UriUtilTest.testFilenameFromUploadUrl
+  - org.wikipedia.util.UriUtilTest.testIsAppSupportedLink
+  - org.wikipedia.util.UriUtilTest.testRemoveEmptyFragment
+  - org.wikipedia.util.UriUtilTest.testRemoveFragment
+  - org.wikipedia.util.UriUtilTest.testRemoveFragmentWithHash
+  - org.wikipedia.util.UriUtilTest.testRemoveInternalLinkPrefix
+  - org.wikipedia.util.UriUtilTest.testRemoveLinkPrefix
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.ChallengeCompleted is
+    terminal even past end date with broken streak
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.StreakOngoingNeedsReading
+    carries correct streak count
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.StreakOngoingReadToday
+    carries correct streak count
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.active streak transitions
+    to RandomArticle after remove date
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.broken streak on REMOVE_DATE
+    itself is concluded incomplete
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.completed user stays
+    ChallengeCompleted on REMOVE_DATE itself
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.completed user transitions
+    to RandomArticle after remove date
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.does NOT return ChallengeCompleted
+    when streak is one below the goal
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.does NOT return Concluded
+    states on last day of challenge
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.does NOT return EnrolledNotStarted
+    after end date with zero streak
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.existing not-enrolled
+    user is NOT treated as a new user during the challenge
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.hasReadToday returns
+    false when lastReadDate is empty
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.hasReadToday returns
+    false when lastReadDate is yesterday
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.hasReadToday returns
+    true when lastReadDate matches currentDate
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.new user installed after
+    the challenge sees RandomArticle
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.return ChallengeConcludedIncomplete
+    on day after END_DATE when streak is broken
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns ChallengeCompleted
+    when streak reaches goal in mid challenge
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns ChallengeCompleted
+    when streak reaches goal near end of challenge
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns ChallengeConcludedNoStreak
+    when not enrolled past end date
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns EnrolledNotStarted
+    on END_DATE when streak is broken (allows fresh start)
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns EnrolledNotStarted
+    on start date with zero streak
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns NotEnrolled
+    on END_DATE itself when not enrolled (last chance to enroll)
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns NotEnrolled
+    on start date since challenge is Live
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns NotLiveYet before
+    start date
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns StreakOngoingNeedsReading
+    after end date when streak is active and not read today
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns StreakOngoingNeedsReading
+    well past end date when streak is still active
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns StreakOngoingNeedsReading
+    when streak is active and not read today
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns StreakOngoingReadToday
+    after end date when streak is active and ready today
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.returns StreakOngoingReadToday
+    when streak is active and read today
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.streak does not reset
+    after completion even if user stops reading
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.streak does not reset
+    after completion when streak exceeds goal
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.streak does not reset
+    when lastReadDate is empty
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.streak does not reset
+    when lastReadDate is exactly yesterday
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.streak resets on exactly
+    last day of challenge when lastReadDate is more than 1 day ago
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.streak resets when lastReadDate
+    is more than 1 day ago during challenge
+  - org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest.streak should not reset
+    after end date of when lastReadDate is more than 1 day ago
+  - org.wikipedia.yearinreview.data.YearInReviewDonationEligibilityTest.donation inside
+    contribution period is eligible
+  - org.wikipedia.yearinreview.data.YearInReviewDonationEligibilityTest.donation outside
+    contribution period is not eligible
+  - org.wikipedia.yearinreview.data.YearInReviewDonationEligibilityTest.invalid donation
+    date is not eligible
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.articles read slide
+    gets no percentile below the lowest bucket
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.articles read slide
+    gets the percentile bucket of the article count
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.articles read slide
+    gets the top bucket when it has no max
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.contributor with collective
+    slides gets you matter slide
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.contributor with personalized
+    slides gets thank you slide
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.logged-in user with
+    1 personalized page gets collective slides
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.logged-in user with
+    2 personalized pages gets personalized slides in order
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.logged-out user with
+    2 personalized pages gets collective slides with a login prompt
+  - org.wikipedia.yearinreview.data.YearInReviewFlowDeciderTest.visits slide has no
+    peak month when no month had 2 visited days
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.a cycle of links doesn't
+    continue a chain forever
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.a link to an entry
+    outside of the given links starts a new chain
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.a tie goes to the more
+    recent rabbit hole
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.links are followed
+    regardless of their order
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.no rabbit hole when
+    no entry was reached from another
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.no rabbit hole without
+    any links
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.the longest branch
+    of a chain wins
+  - org.wikipedia.yearinreview.data.YearInReviewRabbitHoleTest.the longest chain wins
+  - org.wikipedia.yearinreview.data.YearInReviewReadingStreakTest.a single day is
+    a one day streak
+  - org.wikipedia.yearinreview.data.YearInReviewReadingStreakTest.a streak continues
+    across months and years
+  - org.wikipedia.yearinreview.data.YearInReviewReadingStreakTest.a tie goes to the
+    more recent streak
+  - org.wikipedia.yearinreview.data.YearInReviewReadingStreakTest.no streak without
+    any days
+  - org.wikipedia.yearinreview.data.YearInReviewReadingStreakTest.the longest run
+    of consecutive days wins
+  - org.wikipedia.yearinreview.data.YearInReviewRewardDataTest.custom icon is locked
+    without a donation or edit
+  - org.wikipedia.yearinreview.data.YearInReviewRewardDataTest.custom icon is unlocked
+    for a donor
+  - org.wikipedia.yearinreview.data.YearInReviewRewardDataTest.custom icon is unlocked
+    for an editor
+  - org.wikipedia.yearinreview.data.YearInReviewTimeOfDayTest.every hour belongs to
+    exactly one time of day
+  - org.wikipedia.yearinreview.data.YearInReviewTimeOfDayTest.hours are summed into
+    their time of day
+  - org.wikipedia.yearinreview.data.YearInReviewTimeOfDayTest.hours at the edges of
+    each time of day
+  - org.wikipedia.yearinreview.data.YearInReviewTimeOfDayTest.no favorite when no
+    time of day has enough visits
+  - org.wikipedia.yearinreview.data.YearInReviewTimeOfDayTest.no favorite without
+    any visits
+  - org.wikipedia.yearinreview.data.YearInReviewTimeOfDayTest.percentage is rounded
+  v1_test_compile: failed_as_expected
+  flaky_tests: []
