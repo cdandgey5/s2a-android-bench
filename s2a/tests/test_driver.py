@@ -135,3 +135,9 @@ def test_an_interrupted_call_is_recorded_before_the_interrupt_propagates(tmp_pat
     assert recs[1]["subtype"] == "timeout" and recs[1]["cost_usd"] is None and recs[1]["output_tokens"] == 20
     assert (tmp_path / "run" / "transcripts" / "implement-T1.jsonl").exists()
     assert d.budget.turns_used == 1   # the partial stream has no result line: no turns counted for it
+
+
+def test_slash_command_names_are_not_questions() -> None:
+    assert not drv.asks_question("Done. Next you could run `/review` or `/clarify-scope`.")
+    assert drv.asks_question("Should I run /review")
+    assert drv.asks_question("Please clarify the scope")

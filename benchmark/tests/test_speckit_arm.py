@@ -104,8 +104,9 @@ def _run(monkeypatch, tmp_path: Path, category: str, outcomes: dict[str, str], *
     seen: list[tuple[str, str | None, int | None]] = []
 
     def fake(ctx, prompt, *, call_name, append_system_prompt=None, turn_cap=None, session_id=None,
-             is_implementing_call=False, **_):
+             is_implementing_call=False, structured=False, **_):
         seen.append((call_name, session_id, turn_cap))
+        assert structured is (not is_implementing_call), call_name  # D-050: artifact calls get no (b) nudge
         if call_name == "speckit-converge" and open_after_converge:
             p = ws.dirs.work / "specs" / "001" / "tasks.md"
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -146,3 +147,14 @@ def test_max_turns_continues_but_usage_limit_stops(monkeypatch, tmp_path) -> Non
 def test_bug_path_for_bugfix(monkeypatch, tmp_path) -> None:
     rr, seen = _run(monkeypatch, tmp_path, "bugfix", {})
     assert [s[0] for s in seen] == BUG and rr.artifacts["path"] == "bug"
+
+
+def test_slash_command_names_are_not_questions() -> None:
+    from abb.harness.agent_driver import asks_question
+
+    # the ending that triggered the D-050 nudge (run 20261018-2151, speckit-specify)
+    assert not asks_question("- **Saved state:** I saved the feature path.\n\nThe spec is ready for `/speckit-clarify` "
+                             "or `/speckit-plan`.")
+    assert asks_question("Should I run /speckit-plan now")
+    assert asks_question("Could you clarify which feeds are affected")
+    assert asks_question("Ready for /speckit-plan. Want me to continue?")

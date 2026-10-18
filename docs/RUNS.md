@@ -133,3 +133,18 @@ Valid runs (after D-043; agent Gradle works):
 
 Lower bound note: dev5 is easy for plain on Sonnet (12/12 resolved, 6/6 guided), so the Phase 7 tasks
 (more files, cross-module) will cost more per trial; re-measure on the first Phase 7 dev runs.
+
+## 2026-10-18 — Phase 5 (Spec Kit arm, dev5)
+
+Rows from `<results>/<run_id>/` (`scripts/runs_rows.py`). **Run `20261018-2151-dev5-speckit-1` is invalid (D-050):** on the three sdd-path tasks trigger (b) nudged `speckit-specify` ("/speckit-clarify" matched "clarify") and the agent implemented the change there. It is kept for the cost log; the whole run is repeated with the fixed arm. The bug-path trials (0000-0002) had no nudge.
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 21:52 | `20261018-2151-dev5-speckit-1` setup speckit-constitution/antennapod | claude-sonnet-5-5 | success, 6 turns | 10 | 4,198 | 134,387 | 39,728 | 0.2144 | 0 | one-time setup (reported separately); five-hour 0.63 → 0.64, seven-day 0.08; **invalid (D-050)** for the sdd path |
+| 21:52 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 17 turns, 253 s | 24 | 5,952 | 444,162 | 36,602 | 0.2504 | 0 | resolved=True; nudges 0; five-hour 0.64 → 0.66, seven-day 0.09; **invalid (D-050)** for the sdd path |
+| 21:58 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 20 turns, 270 s | 28 | 6,866 | 603,344 | 42,063 | 0.2973 | 0 | resolved=True; nudges 0; five-hour 0.66 → 0.68, seven-day 0.09; **invalid (D-050)** for the sdd path |
+| 22:03 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 16 turns, 245 s | 28 | 6,710 | 536,991 | 35,157 | 0.2615 | 0 | resolved=True; nudges 0; five-hour 0.68 → 0.7, seven-day 0.09; **invalid (D-050)** for the sdd path |
+| 22:09 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 43 turns, 822 s | 66 | 29,773 | 2,684,496 | 110,509 | 1.0083 | 0 | resolved=True; nudges 1; five-hour 0.7 → 0.77, seven-day 0.09; **invalid (D-050)** for the sdd path |
+| 22:24 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 47 turns, 826 s | 94 | 25,328 | 3,415,501 | 105,578 | 1.0173 | 0 | resolved=True; nudges 1; five-hour 0.77 → 0.84, seven-day 0.1; **invalid (D-050)** for the sdd path |
+| 22:40 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 52 turns, 759 s | 72 | 26,002 | 2,440,081 | 94,193 | 0.8809 | 0 | resolved=True; nudges 1; five-hour 0.84 → 0.9, seven-day 0.11; **invalid (D-050)** for the sdd path |
+| | **`20261018-2151-dev5-speckit-1` total (6 trials, 6 resolved)** | | mean 529 s | **322** | **104,829** | **10,258,962** | **463,830** | **3.9301** | 0 | incl. one-time setup; **invalid (D-050)** for the sdd path |

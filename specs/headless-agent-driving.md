@@ -140,7 +140,9 @@ Behaviour:
         "would you like", "clarify", and since Phase 4 (D-040) "please tell me", "tell me which",
         "I'll wait", "I will wait", "waiting for your", "before I proceed/continue") —
         **disabled for calls that return a structured artifact**
-        (S2A read-only stages, whose formats legitimately contain "Unknowns"), or
+        (S2A read-only stages, whose formats legitimately contain "Unknowns"; every Spec Kit call
+        that is not implementing, incl. the constitution setup — D-050). Slash-command names
+        (`/speckit-clarify`) are removed from the text before matching (D-050), or
      c. `is_implementing_call` and the workspace diff is empty.
      Which calls are "implementing" is an arm property: plain → its one call; Spec Kit →
      `speckit-implement`/`speckit-bug-fix`; S2A → `implement` tasks and `fix`.

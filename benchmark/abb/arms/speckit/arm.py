@@ -139,7 +139,7 @@ class SpecKitArm:
         prompt = build_prompt({"command": "speckit-constitution", "args_file": s["constitution_prompt_file"]}, "",
                               work=ws.dirs.work, invocation=self.cfg["invocation"])
         call = run_headless(ctx, prompt, call_name="speckit-constitution", append_system_prompt=environment_prompt(),
-                            turn_cap=s["turn_cap"])
+                            turn_cap=s["turn_cap"], structured=True)   # an artifact call (D-050)
         return [call]
 
     def install_setup(self, ws: Workspace, artifacts: Path) -> None:
@@ -169,9 +169,12 @@ class SpecKitArm:
                     continue
                 notes.append(f"{n} open task(s) after converge: second implement")
             prompt = build_prompt(step, ticket, work=ws.dirs.work, invocation=self.cfg["invocation"])
+            implementing = bool(step.get("implementing"))
+            # D-050: a call that produces an artifact (spec, plan, tasks, converge report, bug assessment / test
+            # report) gets no question-heuristic nudge; "proceed end to end" there makes the agent implement early
             call = run_headless(ctx, prompt, call_name=step["name"], append_system_prompt=system,
                                 turn_cap=step.get("turn_cap"), session_id=session,
-                                is_implementing_call=bool(step.get("implementing")))
+                                is_implementing_call=implementing, structured=not implementing)
             calls.append(call)
             session = call.session_id or session
             if call.subtype == "error_max_turns":

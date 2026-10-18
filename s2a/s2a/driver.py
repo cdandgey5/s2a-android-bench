@@ -34,6 +34,14 @@ NUDGE_TEXT = ("No human is available. Make reasonable assumptions, state them br
 QUESTION_HEURISTIC = re.compile(r"(\?\s*$)|should I|do you want|which option|let me know|please confirm|"
                                 r"would you like|clarify|please tell me|tell me which|I'll wait|I will wait|"
                                 r"waiting for your|before I (?:proceed|continue)", re.I)
+SLASH_COMMAND = re.compile(r"(?<![\w/])/[A-Za-z][\w.:-]*")  # "/some-command" names a command, it asks nothing
+
+
+def asks_question(text: str | None) -> bool:
+    """Nudge trigger (b): the question heuristic on the end of the last text, slash-command names removed."""
+    return bool(QUESTION_HEURISTIC.search(SLASH_COMMAND.sub("", (text or "").strip()[-400:]).strip()))
+
+
 AUTH_TEXT = re.compile(r"\b401\b|\b403\b|authentication_error|invalid (?:api key|oauth)|oauth token (?:has )?(?:expired|"
                        r"revoked)|not authorized|please run /login|Invalid bearer", re.I)
 MODEL_TEXT = re.compile(r"model[^\n]{0,60}(?:not found|invalid|does not exist|not available|not supported)|"
@@ -259,7 +267,7 @@ class Driver:
             return None
         if t.asked_question:
             return "a"
-        if not structured and QUESTION_HEURISTIC.search((t.last_text or "").strip()[-400:]):
+        if not structured and asks_question(t.last_text):
             return "b"
         if implementing and diff_empty is not None and diff_empty():
             return "c"
