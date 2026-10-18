@@ -26,6 +26,9 @@ fail_to_pass:
 - module: :net:common
   test: de.danoeh.antennapod.net.common.UrlCheckerTest
   method: testSubscribeOnAndroidUrlWithMixedCaseHost
+- module: :net:common
+  test: de.danoeh.antennapod.net.common.UrlCheckerTest
+  method: testSubscribeOnAndroidUrlWithoutScheme
 pass_to_pass:
 - module: :net:common
   test: de.danoeh.antennapod.net.common.UrlCheckerTest
@@ -34,8 +37,35 @@ limits:
   timeout_minutes: 45
 needs_emulator: false
 split: dev
-status: draft
+status: validated
 created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
-validation: null
+validation:
+  runs: 3
+  last_validated: '2026-10-18T02:32:28Z'
+  env_fingerprint: sha256:c18a14fcfb8c70b023a81be74286cb7ef2772e6ad1895cc54a3d3834844686de
+  p2p_stable:
+  - de.danoeh.antennapod.net.common.UriUtilTest.testGetURIFromRequestUrlShouldEncode
+  - de.danoeh.antennapod.net.common.UriUtilTest.testGetURIFromRequestUrlShouldNotEncode
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testAntennaPodSubscribeDeeplink
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testAntennaPodSubscribeProtocolNoScheme
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testAntennaPodSubscribeProtocolWithScheme
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testCorrectURLHttp
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testCorrectURLHttps
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testFeedProtocol
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testItpcProtocol
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testItpcProtocolWithScheme
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testMissingProtocol
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testPcastProtocolNoScheme
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testPcastProtocolWithScheme
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testProtocolRelativeUrlBaseUrlNull
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testProtocolRelativeUrlIsAbsolute
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testProtocolRelativeUrlIsHttpsWithApSubscribeProtocol
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testProtocolRelativeUrlIsRelativeHttps
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testUrlEqualsDifferent
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testUrlEqualsSame
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testWhiteSpaceShouldAppend
+  - de.danoeh.antennapod.net.common.UrlCheckerTest.testWhiteSpaceUrlShouldNotAppend
+  v1_test_compile: ok
+  flaky_tests: []

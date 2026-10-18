@@ -16,6 +16,8 @@ tags:
   lang: java
   ui: none
   test_kind: junit
+  new_surface: true
+  ticket_mentions_code: true
 problem_statement: problem.md
 test_patch: test.patch
 gold_patch: gold.patch
@@ -48,8 +50,81 @@ limits:
   timeout_minutes: 45
 needs_emulator: false
 split: dev
-status: draft
+status: validated
 created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
-validation: null
+validation:
+  runs: 3
+  last_validated: '2026-10-18T02:41:47Z'
+  env_fingerprint: sha256:c18a14fcfb8c70b023a81be74286cb7ef2772e6ad1895cc54a3d3834844686de
+  p2p_stable:
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicEmpty_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicId3_detectsId3
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicM4a_detectsM4a
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicOgg_detectsOgg
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicShort_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicZeroed_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testRawMp3FrameMagic_detectsUnknown
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadChapterWithTitle
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadChapterWithoutSubframes
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadFullTagWithChapter
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadFullTagWithMultipleChapters
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadTitleWithGarbage
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileAuphonic
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileFfmpeg
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileHindenburgJournalistPro
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileMp3chapsPy
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileUltraschall
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadFrameHeader
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadMultipleStrings
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadString
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadTagHeader
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadUtf16NullPrefix
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadUtf16RespectsBom
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadingLimit
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadingLimitUtf16
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileAuphonic
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileFfmpeg
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileFfmpegComment
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileHindenburgJournalistPro
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileMp3chapsPy
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileUltraschall
+  - de.danoeh.antennapod.parser.media.m4a.M4AChapterReaderTest.testFiles
+  - de.danoeh.antennapod.parser.media.m4a.M4AMetadataReaderTest.testRealFileFfmpeg
+  - de.danoeh.antennapod.parser.media.m4a.M4AMetadataReaderTest.testRealFileWithoutDescription
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFileFfmpegOgg
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFileFfmpegOpus
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFilesAuphonic
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFileFfmpegOgg
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFileFfmpegOpus
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFileFfmpegSynopsis
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFilesAuphonic
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testExtensionM4a_selectsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testExtensionM4b_selectsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testExtensionMp3_selectsId3
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testExtensionMp4_selectsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testExtensionOgg_selectsOgg
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testExtensionOpus_selectsOgg
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testFallbackOrderM4aHint_skipsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testFallbackOrderOggHint_skipsOgg
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testFallbackOrderUnknownHint_skipsId3BecauseAlreadyTried
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testLoadChaptersFromMediaFile_magicBytesOverrideMetadataHint
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testLoadChaptersFromMediaFile_stitchedM4a_readsChapters
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testLoadChaptersFromMediaFile_stitchedMp3_readsChapters
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testLoadChaptersFromMediaFile_stitchedOgg_readsChapters
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeApplicationOgg_selectsOgg
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeApplicationOpus_selectsOgg
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeM4a_selectsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeM4b_selectsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeMp3_selectsId3
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeMpeg_selectsId3
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeOgg_selectsOgg
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeOpus_selectsOgg
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimePreferredOverExtension
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeVideoMp4_selectsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeXM4b_selectsM4a
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testMimeXMp3_selectsId3
+  - de.danoeh.antennapod.ui.chapters.ChapterUtilsTest.testUnknownMetadata_detectsUnknown
+  v1_test_compile: failed_as_expected
+  flaky_tests: []

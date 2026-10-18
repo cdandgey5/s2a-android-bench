@@ -28,3 +28,16 @@ Candidates mined but not used (in `C:\abb\state\candidates\antennapod\`, ranked 
 #8835 IPv6 proxy host and #8771 single-label hosts (hidden tests call a method the fix adds and
 the ticket does not name — interface rule), #8702 (instrumented test only), #8656, #8743, #8433,
 #8398, #8389, #8380.
+
+## Edits after S2 (from validation, 2026-10-18)
+
+Validation found two task bugs (not flakiness); both fixed and re-validated. Review the diffs with
+`git log -p -- benchmark/tasks/antennapod-0002 benchmark/tasks/antennapod-0003`.
+
+- `antennapod-0002`: the hidden test for a scheme-less uppercase link
+  (`SUBSCRIBEONANDROID.COM/...`) also fails at base. It is now F2P, and step 1 of the ticket
+  mentions that some sites print links without `https://`.
+- `antennapod-0003`: the hidden tests use `MediaFormatDetector.Format.FLAC`, which the fix adds.
+  The maintainer comment now names it (D-020), so the task is `new_surface`. Lint now also checks
+  ALL-CAPS constants, and it indexes identifiers from code only (not from comments or strings).
+

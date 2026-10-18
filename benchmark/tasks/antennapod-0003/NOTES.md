@@ -7,3 +7,4 @@
 - Ticket: issue title + body, templates stripped; rewrite before S2 (no file/class names unless the reporter wrote them).
 - Review edits (agent, 2026-10-18): the issue asks for M4A and FLAC; PR #8747 and its tests cover FLAC (and Ogg FLAC) only. Kept the reporter's text, removed the "Suggested implementation" list and the ffprobe dump, and added a maintainer comment scoping the ticket to FLAC (M4A tracked separately). F2P: the new FLAC test methods; V1 decides which of them fail at base.
 - S2 review: approved by the owner on 2026-10-18 (unchanged).
+- Validation (2026-10-18): V1 showed the hidden tests do not compile at base: they use `MediaFormatDetector.Format.FLAC`, which the fix adds. The maintainer comment now names that value (D-020) -> `new_surface: true`, `ticket_mentions_code: true`. Lint now checks ALL-CAPS constants too.

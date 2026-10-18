@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `2` — step: `6 — hard stop S2: human review of dev5 (benchmark/tasks/TRIAGE.md); meanwhile step 7 (warm the dev5 base commits) runs`
-- Last commit: `phase 1: environments + sandbox …` (`fe3fb66`) + this handoff commit, on `main` (`git log -2`)
+- Phase: `3` — step: `1 (grader, phases/phase-3-grading.md)`; Phase 2 gate passed 2026-10-18
+- Last commit: `phase 2: tasks + validation (dev5) …` on `main` (`git log -1`)
 - Working tree: `clean after that commit`
 - Date: `2026-10-18`
 
@@ -26,22 +26,21 @@ and folds its open items into this one.
 | Sandbox | `abb-agent` (S1 done 2026-10-17 23:03Z), firewall `abb-agent-block-out`, ACLs; D-036 list grants on ancestors; D-037 revoke finished trials + OWNER RIGHTS | `uv run abb sandbox check` |
 | Caches | warm at the cache commits (fingerprints in `benchmark/env.lock.json`); `seed_transforms: false` (no net gain) | `uv run abb env fingerprint antennapod` |
 | Plan / usage | owner on **Pro** since 21:00 EDT 2026-10-17 (was Max 5x); weekly reset Sundays 15:00; this building session runs on Opus 5.5 extra usage; probe: ~3 % session per trial (lower bound); D-038 stay on Pro, MVP decision at the first results table | `docs/RUNS.md` "S1b throughput estimate" |
-| Phase 2 tooling | `abb tasks new|lint|tag|mine|validate|list`; `mine.reverted_from_pr` | `uv run pytest -q tests/test_tasks.py` (14 passed) |
-| dev5 drafts | 0000 seed, 0001 legacy iTunes ns, 0002 uppercase SubscribeOnAndroid, 0003 FLAC description (feature), 0004 M4A description (reverted, new surface), 0005 comparators refactor (authored, new surface); lint 0 errors; 0005 passed V0/V1/V2 once | `benchmark/tasks/TRIAGE.md`, `uv run abb tasks lint --all` |
+| Phase 2 | gate passed 2026-10-18: `abb tasks lint --all` 0 errors; dev5 + seed `validated` 3× (env fingerprint `c18a14fc…`); S2 approved (post-S2 fixes to 0002/0003 listed in `tasks/TRIAGE.md`) | `uv run abb tasks list`; task.yaml `validation:` blocks |
+| Caches | antennapod warm at the 5 dev5 base commits + `setup_commit d05a58b4` (27 min); wikipedia at its cache commit | `benchmark/env.lock.json` |
 
 ## Open issues / blockers
 
-- **Stop S2:** the human reviews every task in `benchmark/tasks/TRIAGE.md` and replies `approved` (or `approved, dropped: <ids>`); validation only after that.
 - Phase 8 needs one more UAC step: `abb sandbox setup --slots 2` (D-037).
 - Carry-overs: Phase 4 — `AskUserQuestion` absent from `-p` tools (D-005 note); trials per window on realistic tasks; Phase 5 — Spec Kit installs skills by default; Phase 6 — s2a's driver needs its own launcher console for Ctrl+C (D-032).
 
 ## Decisions waiting on the human
 
-- S2 approval of dev5. Overturnable autopilot decisions: D-031…D-038.
+- None. Overturnable autopilot decisions: D-031…D-038.
 
 ## Exact next action
 
-Warm the dev5 base commits (`uv run abb env warm antennapod` picks them up from the tasks), compute
-`setup_commit = git merge-base --octopus <dev5 bases>` into `repos/antennapod.yaml` and warm it,
-then after S2 `approved`: `uv run abb tasks validate --all --runs 3 --keep-going`, fix flaky ones,
-Phase 2 gate (`abb tasks lint --all`, `validate`, `list`, `pytest tests/test_tasks.py`), commit `phase 2: …`.
+Phase 3 step 1 (`phases/phase-3-grading.md`, `specs/grading-protocol.md`): `abb grade` / `abb grade-patch`
+(fresh workspace as the harness user, offline, pristine Gradle home; test-dir + protected-path
+resets; F2P/P2P with the P2P flakiness re-run; `test_compile_failed`), then the 7-row sanity matrix
+on >= 2 dev5 tasks. No hard stop in Phase 3.

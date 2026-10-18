@@ -8,7 +8,7 @@
 
 1. Open a SubscribeOnAndroid link whose host is written in capitals with AntennaPod, e.g.
    `https://SUBSCRIBEONANDROID.COM/example.com/feed` (some podcast websites print their
-   subscribe links that way).
+   subscribe links that way; some also leave out the `https://`, e.g. `SUBSCRIBEONANDROID.COM/example.com/feed`).
 2. AntennaPod opens to show the podcast.
 
 ### Expected behaviour

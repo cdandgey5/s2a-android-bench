@@ -98,12 +98,14 @@ def tree(repo: RepoConfig, commit: str) -> list[str]:
 def identifiers(repo: RepoConfig, commit: str) -> set[str]:
     """Every identifier (>= 3 chars) in the .java/.kt sources at `commit` (cached under ABB_HOME/state):
     classes for the CamelCase check, methods/fields for the member-call check (D-020)."""
-    cache = paths.state_dir() / "ident" / f"{repo.key}-{commit}-all.txt"
+    cache = paths.state_dir() / "ident" / f"{repo.key}-{commit}-code.txt"
     if cache.exists():
         return set(cache.read_text(encoding="utf-8").split())
-    out = _git(repo, ["grep", "-h", "-o", "-I", "-E", r"\b[A-Za-z_][A-Za-z0-9_]{2,}\b", commit, "--",
-                      "*.java", "*.kt"], timeout_s=1800)
-    ids = set(out.split())
+    # every source line, then strings / comments / URLs stripped: a name that only appears in a
+    # comment or a string literal is not an interface that exists at base
+    out = _git(repo, ["grep", "-h", "-I", "-E", ".", commit, "--", "*.java", "*.kt"], timeout_s=1800)
+    lines = [ln for ln in out.splitlines() if not ln.lstrip().startswith(("*", "/*"))]
+    ids = set(re.findall(r"\b[A-Za-z_][A-Za-z0-9_]{1,}\b", code_only("\n".join(lines))))
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text("\n".join(sorted(ids)), encoding="utf-8")
     return ids
@@ -288,11 +290,15 @@ def lint(task_id: str, *, offline_only: bool = False) -> list[Finding]:
         if not any(imp.startswith(p) for p in pk):
             lib_ids |= {s for s in imp.split(".") if CAMEL.fullmatch(s)}
     problem_ids = set(CAMEL.findall(_URL.sub("", problem))) | set(re.findall(r"\b[a-z]\w*[A-Z]\w*\b", problem))
+    for span in re.findall(r"`([^`\n]+)`", problem):  # names written as code in the ticket, any case
+        problem_ids |= set(re.findall(r"\b[A-Za-z_]\w*\b", span))
     declared |= set(re.findall(r"\b(?:fun|void|boolean|int|long|String|private|public|static)\s+([a-z]\w*)\s*\(",
                                test_added))
     used = set(CAMEL.findall(test_added)) - declared - lib_ids
     # member calls on project types: `Foo.bar(` / `foo.bar(` -> bar must exist at base too
     used |= {m for m in re.findall(r"\.\s*([a-z]\w{2,})\s*\(", test_added)} - declared
+    # constants / enum values on project types: `Format.FLAC`, `SortOrder.RANDOM`
+    used |= {m for m in re.findall(r"\b[A-Z]\w*\.([A-Z][A-Z0-9_]+)\b", test_added)} - declared - lib_ids
     not_at_base = used - base_ids
     new_surface = sorted(not_at_base & problem_ids)
     unknown = sorted(not_at_base - problem_ids)

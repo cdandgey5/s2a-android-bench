@@ -61,6 +61,7 @@ Supporting the existing description metadata would make Local Folder podcasts mu
 ---
 
 **Maintainer comment:** Thanks! Let's start with FLAC: local FLAC files (including FLAC in an Ogg
-container) should be recognised and their Vorbis comments read, so that the DESCRIPTION comment
-becomes the episode's shownotes the way ID3 descriptions already do for MP3. M4A/MP4 will be
-tracked separately.
+container) should be recognised as their own media format (`MediaFormatDetector.Format.FLAC`,
+picked for chapter and metadata parsing by file content, MIME type `audio/flac` or the `.flac`
+extension) and their Vorbis comments read, so that the DESCRIPTION comment becomes the episode's
+shownotes the way ID3 descriptions already do for MP3. M4A/MP4 will be tracked separately.

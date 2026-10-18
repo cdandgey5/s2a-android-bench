@@ -31,8 +31,143 @@ limits:
   timeout_minutes: 45
 needs_emulator: false
 split: dev
-status: draft
+status: validated
 created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
-validation: null
+validation:
+  runs: 3
+  last_validated: '2026-10-18T02:19:17Z'
+  env_fingerprint: sha256:c18a14fcfb8c70b023a81be74286cb7ef2772e6ad1895cc54a3d3834844686de
+  p2p_stable:
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.APCleanupAlgorithmTest.testCalcMostRecentDateForDeletion
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbCleanupTests.testPerformAutoCleanupHandleUnplayed
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbCleanupTests.testPerformAutoCleanupShouldDelete
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbCleanupTests.testPerformAutoCleanupShouldNotDeleteBecauseFavorite
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbCleanupTests.testPerformAutoCleanupShouldNotDeleteBecauseInQueue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbCleanupTests.testPerformAutoCleanupShouldNotDeleteBecauseInQueue_withFeedsWithNoMedia
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbNullCleanupAlgorithmTest.testPerformAutoCleanupShouldNotDelete
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbQueueCleanupAlgorithmTest.testPerformAutoCleanupHandleUnplayed
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbQueueCleanupAlgorithmTest.testPerformAutoCleanupShouldDelete
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbQueueCleanupAlgorithmTest.testPerformAutoCleanupShouldNotDeleteBecauseFavorite
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbQueueCleanupAlgorithmTest.testPerformAutoCleanupShouldNotDeleteBecauseInQueue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbQueueCleanupAlgorithmTest.testPerformAutoCleanupShouldNotDeleteBecauseInQueue_withFeedsWithNoMedia
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=0
+    limit=100]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=0
+    limit=1]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=0
+    limit=20]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=10
+    limit=100]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=10
+    limit=1]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=10
+    limit=20]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=20
+    limit=100]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=20
+    limit=1]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$PlaybackHistoryTest.testGetPlaybackHistory[offset=20
+    limit=20]
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testFeedListDownloadUrls
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetAutoDownloadCandidates
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetDownloadedItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetFeedItemList
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetFeedItemlistCheckChaptersFalse
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetFeedItemlistCheckChaptersTrue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetFeedList
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetFeedListSortOrder
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetItemByEpisodeUrl
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetItemByGuid
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetItemWithChapters
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetNavDrawerDataQueueEmptyNoUnreadItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetNavDrawerDataQueueNotEmptyWithUnreadItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetNewItemIds
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetPlaybackHistoryLength
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetQueue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testGetQueueIdList
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testLoadChaptersOfFeedItemNoChapters
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testLoadChaptersOfFeedItemWithChapters
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest$SingleTests.testLoadFeedDataOfFeedItemlist
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest.classMethod
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testAddItemToPlaybackHistoryAlreadyPlayed
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testAddItemToPlaybackHistoryNotPlayedYet
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testAddQueueItemMultipleItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testAddQueueItemSingleItem
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testAddQueueItemSingleItemAlreadyInQueue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testClearQueue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeed
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeedItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeedMediaOfItemFileExists
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeedMediaOfItemRemoveFromQueue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeedNoDownloadedFiles
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeedNoFeedMedia
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeedNoItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testDeleteFeedWithQueueItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testMoveQueueItem
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testRemoveAllNewFlags
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testRemoveQueueItem
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testRemoveQueueItemMultipleItems
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.DbWriterTest.testSetFeedMediaPlaybackInformation
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.ExceptFavoriteCleanupAlgorithmTest.testPerformAutoCleanupDeletesQueued
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.ExceptFavoriteCleanupAlgorithmTest.testPerformAutoCleanupHandleUnplayed
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.ExceptFavoriteCleanupAlgorithmTest.testPerformAutoCleanupSavesFavorited
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.ExceptFavoriteCleanupAlgorithmTest.testPerformAutoCleanupShouldDelete
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.ExceptFavoriteCleanupAlgorithmTest.testPerformAutoCleanupShouldNotDeleteBecauseFavorite
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.ExceptFavoriteCleanupAlgorithmTest.testPerformAutoCleanupShouldNotDeleteBecauseInQueue
+  - de.danoeh.antennapod.net.download.service.episode.autodownload.ExceptFavoriteCleanupAlgorithmTest.testPerformAutoCleanupShouldNotDeleteBecauseInQueue_withFeedsWithNoMedia
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testGetImageUrl_EmptyFolder
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testGetImageUrl_NoImageButAudioFiles
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testGetImageUrl_OtherImageFilenameJpeg
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testGetImageUrl_OtherImageFilenameJpg
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testGetImageUrl_OtherImageFilenamePng
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testGetImageUrl_OtherImageFilenameUnsupportedMimeType
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testGetImageUrl_PreferredImagesFilenames
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testUpdateFeed_AddMoreItems
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testUpdateFeed_AddNewFeed
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testUpdateFeed_FeedIconDefault
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testUpdateFeed_FeedIconFromFolder
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testUpdateFeed_FeedMetadata
+  - de.danoeh.antennapod.net.download.service.feed.local.LocalFeedUpdaterTest.testUpdateFeed_RemoveItems
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicEmpty_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicId3_detectsId3
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicM4a_detectsM4a
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicOgg_detectsOgg
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicShort_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicZeroed_detectsUnknown
+  - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testRawMp3FrameMagic_detectsUnknown
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadChapterWithTitle
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadChapterWithoutSubframes
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadFullTagWithChapter
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadFullTagWithMultipleChapters
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testReadTitleWithGarbage
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileAuphonic
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileFfmpeg
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileHindenburgJournalistPro
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileMp3chapsPy
+  - de.danoeh.antennapod.parser.media.id3.ChapterReaderTest.testRealFileUltraschall
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadFrameHeader
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadMultipleStrings
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadString
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadTagHeader
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadUtf16NullPrefix
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadUtf16RespectsBom
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadingLimit
+  - de.danoeh.antennapod.parser.media.id3.Id3ReaderTest.testReadingLimitUtf16
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileAuphonic
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileFfmpeg
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileFfmpegComment
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileHindenburgJournalistPro
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileMp3chapsPy
+  - de.danoeh.antennapod.parser.media.id3.MetadataReaderTest.testRealFileUltraschall
+  - de.danoeh.antennapod.parser.media.m4a.M4AChapterReaderTest.testFiles
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFileFfmpegOgg
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFileFfmpegOpus
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentChapterReaderTest.testRealFilesAuphonic
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFileFfmpegOgg
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFileFfmpegOpus
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFileFfmpegSynopsis
+  - de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReaderTest.testRealFilesAuphonic
+  v1_test_compile: failed_as_expected
+  flaky_tests: []
