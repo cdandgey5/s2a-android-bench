@@ -188,7 +188,7 @@ def validate(task_id: str, runs: int = 3) -> dict:
     update_task_yaml(task_id, {"validation": block, "status": status})
     summary = {"task": task_id, "status": status, "runs_ok": all_ok, "agree": agree, "flaky": sorted(flaky),
                "p2p_stable": len(p2p_stable), "logs": str(logs_root)}
-    if status == "draft":
+    if not all(all_ok):
         summary["why"] = [{s: {"f2p": (r.get(s) or {}).get("f2p"), "p2p_failed": (r.get(s) or {}).get("p2p_failed", [])[:5],
                                "problems": (r.get(s) or {}).get("problems")} for s in ("v0", "v1", "v2")} | (
             {"error": r["error"]} if "error" in r else {}) for r in results[:1]]

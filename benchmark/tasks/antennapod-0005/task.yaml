@@ -1,0 +1,120 @@
+id: antennapod-0005
+repo: antennapod
+base_commit: 3d105d598dfa582c6cb22ba40b56d11780366890
+source: authored
+category: refactor
+tags:
+  new_surface: true
+  ticket_mentions_code: true
+  files_touched: 1
+  files_bucket: '1'
+  modules: 1
+  lang: java
+  ui: none
+  test_kind: robolectric
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :storage:database
+  test: de.danoeh.antennapod.storage.database.FeedItemPermutorsTest
+  method: testComparatorsAgreeWithPermutors
+- module: :storage:database
+  test: de.danoeh.antennapod.storage.database.FeedItemPermutorsTest
+  method: testComparatorForRule_DURATION_LONG_SHORT
+- module: :storage:database
+  test: de.danoeh.antennapod.storage.database.FeedItemPermutorsTest
+  method: testNoComparatorForShuffles
+pass_to_pass:
+- module: :storage:database
+  test: de.danoeh.antennapod.storage.database.FeedItemPermutorsTest
+- module: :storage:database
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation:
+  runs: 1
+  last_validated: '2026-10-18T00:47:49Z'
+  env_fingerprint: sha256:2448e286f221e76310f49406f8a36eba8d6abbf84121a7de691406ce78d05827
+  p2p_stable:
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testAddItemsToExistingFeed
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testAddOrUpdateItems
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testDuplicateItemsInFeed
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testGuidUpdated
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testStoreNewFeed
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testUpdateFeedMediaUrlResetState
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testUpdateFeedNewFeed
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testUpdateFeedRemoveUnlistedItems
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testUpdateFeedSameTitle
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testUpdateFeedSetDuplicate
+  - de.danoeh.antennapod.storage.database.FeedDatabaseWriterTest.testUpdateFeedUpdatedFeed
+  - de.danoeh.antennapod.storage.database.FeedItemDuplicateGuesserPoolTest.testDuplicateIsConsistent
+  - de.danoeh.antennapod.storage.database.FeedItemDuplicateGuesserTest.testDuplicateDownloadUrl
+  - de.danoeh.antennapod.storage.database.FeedItemDuplicateGuesserTest.testNoMediaType
+  - de.danoeh.antennapod.storage.database.FeedItemDuplicateGuesserTest.testOtherAttributes
+  - de.danoeh.antennapod.storage.database.FeedItemDuplicateGuesserTest.testSameId
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testEnsureNonNullPermutors
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_DATE_ASC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_DATE_ASC_NulPubDatel
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_DATE_DESC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_DURATION_ASC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_DURATION_DESC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_DURATION_DESC_NullMedia
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_EPISODE_TITLE_ASC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_EPISODE_TITLE_ASC_NullTitle
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_EPISODE_TITLE_DESC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_FEED_TITLE_ASC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_FEED_TITLE_DESC
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_FEED_TITLE_DESC_NullTitle
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_size_asc
+  - de.danoeh.antennapod.storage.database.FeedItemPermutorsTest.testPermutorForRule_size_desc
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$AfterCurrentlyPlayingTest.test[0:
+    case<case option after currently playing>, expected:[11, 101, 12, 13, 14]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$AfterCurrentlyPlayingTest.test[1:
+    case<case option after currently playing, currently playing in the middle of the
+    queue>, expected:[11, 12, 13, 101, 14]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$AfterCurrentlyPlayingTest.test[2:
+    case<case option after currently playing, currently playing is not in queue>,
+    expected:[101, 11, 12, 13, 14]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$AfterCurrentlyPlayingTest.test[3:
+    case<case option after currently playing, no currentlyPlaying is null>, expected:[101,
+    11, 12, 13, 14]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$AfterCurrentlyPlayingTest.test[4:
+    case<case option after currently playing, currentlyPlaying is not a feedMedia>,
+    expected:[101, 11, 12, 13, 14]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$AfterCurrentlyPlayingTest.test[5:
+    case<case empty queue, option after currently playing>, expected:[101]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$BasicTest.test[0:
+    case<case default, i.e., add to the end>, expected:[11, 12, 13, 14, 101]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$BasicTest.test[1:
+    case<case option enqueue at front>, expected:[101, 11, 12, 13, 14]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$BasicTest.test[2:
+    case<case empty queue, option default>, expected:[101]]'
+  - 'de.danoeh.antennapod.storage.database.ItemEnqueuePositionCalculatorTest$BasicTest.test[3:
+    case<case empty queue, option enqueue at front>, expected:[101]]'
+  - de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleanerTest.integrationTest
+  - de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleanerTest.testDownloadedItem
+  - de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleanerTest.testFavoriteItem
+  - de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleanerTest.testOldDate
+  - de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleanerTest.testPlayedItem
+  - de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleanerTest.testQueuedItem
+  - de.danoeh.antennapod.storage.database.NonSubscribedFeedsCleanerTest.testSubscribed
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserRealWorldTest.testRealWorld
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testDaily
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testEdgeCases
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testFourweekly
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testMonthly
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testMultipleTimesPerDayEveryDay
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testMultipleTimesPerDaySpecificDays
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testMultipleTimesPerDayWeekdays
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testUnknown
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testWeekdays
+  - de.danoeh.antennapod.storage.database.ReleaseScheduleGuesserTest.testWeekly
+  - de.danoeh.antennapod.storage.database.mapper.FeedCursorMapperTest.testFromCursor
+  v1_test_compile: failed_as_expected
+  flaky_tests: []

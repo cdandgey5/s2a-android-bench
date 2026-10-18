@@ -1,0 +1,66 @@
+diff --git a/storage/database/src/test/java/de/danoeh/antennapod/storage/database/FeedItemPermutorsTest.java b/storage/database/src/test/java/de/danoeh/antennapod/storage/database/FeedItemPermutorsTest.java
+index f75e4e189..4463429ce 100644
+--- a/storage/database/src/test/java/de/danoeh/antennapod/storage/database/FeedItemPermutorsTest.java
++++ b/storage/database/src/test/java/de/danoeh/antennapod/storage/database/FeedItemPermutorsTest.java
+@@ -9,6 +9,8 @@ import org.robolectric.RobolectricTestRunner;
+ 
+ import java.util.ArrayList;
+ import java.util.Calendar;
++import java.util.Collections;
++import java.util.Comparator;
+ import java.util.List;
+ 
+ import de.danoeh.antennapod.model.feed.Feed;
+@@ -17,6 +19,7 @@ import de.danoeh.antennapod.model.feed.FeedMedia;
+ import de.danoeh.antennapod.storage.preferences.UserPreferences;
+ 
+ import static org.junit.Assert.assertNotNull;
++import static org.junit.Assert.assertNull;
+ import static org.junit.Assert.assertTrue;
+ 
+ /**
+@@ -187,6 +190,44 @@ public class FeedItemPermutorsTest {
+     /**
+      * Generates a list with test data.
+      */
++    @Test
++    public void testComparatorsAgreeWithPermutors() {
++        final Context context = InstrumentationRegistry.getInstrumentation().getContext();
++        UserPreferences.init(context);
++        for (SortOrder sortOrder : SortOrder.values()) {
++            if (sortOrder == SortOrder.RANDOM || sortOrder == SortOrder.SMART_SHUFFLE_OLD_NEW
++                    || sortOrder == SortOrder.SMART_SHUFFLE_NEW_OLD || sortOrder == SortOrder.GLOBAL_DEFAULT
++                    || sortOrder == SortOrder.COMPLETION_DATE_NEW_OLD) {
++                continue;
++            }
++            Comparator<FeedItem> comparator = FeedItemPermutors.getComparator(sortOrder);
++            assertNotNull("No comparator for SortOrder " + sortOrder, comparator);
++            List<FeedItem> sortedByComparator = getTestList();
++            Collections.sort(sortedByComparator, comparator);
++            List<FeedItem> sortedByPermutor = getTestList();
++            FeedItemPermutors.getPermutor(sortOrder).reorder(sortedByPermutor);
++            for (int i = 0; i < sortedByPermutor.size(); i++) {
++                assertTrue("Order differs for SortOrder " + sortOrder,
++                        sortedByPermutor.get(i).getId() == sortedByComparator.get(i).getId());
++            }
++        }
++        assertNotNull(FeedItemPermutors.getComparator(SortOrder.COMPLETION_DATE_NEW_OLD));
++    }
++
++    @Test
++    public void testComparatorForRule_DURATION_LONG_SHORT() {
++        List<FeedItem> itemList = getTestList();
++        Collections.sort(itemList, FeedItemPermutors.getComparator(SortOrder.DURATION_LONG_SHORT));
++        assertTrue(checkIdOrder(itemList, 3, 2, 1));
++    }
++
++    @Test
++    public void testNoComparatorForShuffles() {
++        assertNull(FeedItemPermutors.getComparator(SortOrder.RANDOM));
++        assertNull(FeedItemPermutors.getComparator(SortOrder.SMART_SHUFFLE_OLD_NEW));
++        assertNull(FeedItemPermutors.getComparator(SortOrder.SMART_SHUFFLE_NEW_OLD));
++    }
++
+     private List<FeedItem> getTestList() {
+         List<FeedItem> itemList = new ArrayList<>();
+ 
