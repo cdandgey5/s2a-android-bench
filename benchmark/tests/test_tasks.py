@@ -149,3 +149,16 @@ def test_post_cutoff() -> None:
     assert not tasks.is_post_cutoff(TaskConfig.model_validate(base))
     base["upstream"]["issue_created"] = "2026-07-01"
     assert tasks.is_post_cutoff(TaskConfig.model_validate(base))
+
+
+def test_tuning_sessions_refuse_held_out_tasks(monkeypatch) -> None:
+    import pytest
+
+    from abb.harness.tasks import refuse_held_out_while_tuning
+
+    monkeypatch.delenv("ABB_TUNING", raising=False)
+    refuse_held_out_while_tuning(["antennapod-0000", "antennapod-0006"])      # not tuning: no effect
+    monkeypatch.setenv("ABB_TUNING", "1")
+    refuse_held_out_while_tuning(["antennapod-0000"])                          # dev (pinned dev5)
+    with pytest.raises(SystemExit, match="antennapod-0006"):
+        refuse_held_out_while_tuning(["antennapod-0000", "antennapod-0006"])  # split: test

@@ -61,9 +61,9 @@ already works end to end.
 | 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | **passed 2026-10-18** — dev5 + seed validated 3× (3 mined, 1 reverted, 2 authored; 3 bugfix, 2 feature, 1 refactor), lint clean, S2 approved |
 | 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | **passed 2026-10-18** — 7-row sanity matrix green on 2 tasks (14/14), `abb grade-patch` / `abb grade`, metrics.json; no lint delta (D-039) |
 | 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | **passed 2026-10-18** — first results table: plain 12/12 (2 trials) and plain-guided 6/6 on dev5 (Sonnet 5.5), est. $0.20–0.22 and ~3.4 min per trial, ~1.3–1.8 % of the Pro five-hour window per trial; audit PASS; usage-limit canary captured; three earlier runs invalid (D-043); MVP cut taken (D-045); D-040…D-045 |
-| 5 | Arm B: GitHub Spec Kit adapter | not started |
-| 6 | S2A orchestrator (`s2a/`) + Arm C wrapper + ablations | not started |
-| 7 | Scale to 40 tasks across 3–5 repos; freeze dev/test split (**MVP cut, D-045: 24–30 tasks, 2 repos, 6 authored**) | in progress (autopilot) — 25 tasks drafted (13 AntennaPod / 12 Wikipedia, 10 authored), all pass a single validation run; **S2 review pending**; D-046, D-047 |
+| 5 | Arm B: GitHub Spec Kit adapter | in progress (autopilot) — arm built (skills invoked natively, D-048), one-time setup cache, 15 unit tests; dev5 gate run next |
+| 6 | S2A orchestrator (`s2a/`) + Arm C wrapper + ablations | in progress (autopilot) — `s2a/` package (45 tests), Arm C + nomap/noverify/norepro (19 tests, D-049), installed for the sandbox user; end-to-end and dev5 runs next |
+| 7 | Scale to 40 tasks across 3–5 repos; freeze dev/test split (**MVP cut, D-045: 24–30 tasks, 2 repos, 6 authored**) | **passed 2026-10-18** — 25 tasks validated 3× (13 AntennaPod / 12 Wikipedia; 11 bugfix, 7 feature, 5 refactor, 2 cross-module; 10 authored), lint 0 errors, 0 setup leaks, `env verify` offline OK for both repos (60/60 + 13 seed tasks, 367/367 + 12); split frozen (seed 20261101: dev 10 incl. pinned dev5, test 15), `TASKSET.sha256` 2eeddcff…; coverage short on UI (1/5) and Compose (0/1), explained in `tasks/COVERAGE-NOTES.md`; D-046, D-047 |
 | 8 | Runner: full matrix, parallelism, resumability, budget guard | not started |
 | 9 | Analysis: pass@1 / pass^3, paired bootstrap, cost, failure labelling, charts | not started |
 | 10 | Release: final held-out run, write-up, reproducibility package | not started |

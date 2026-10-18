@@ -12,9 +12,9 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `7` gate pending (S2 approved, S3 passed: all 25 tasks validated 3x, 16:52-20:11 UTC); `abb env verify antennapod` + `wikipedia` (`--transforms off`) running in the background since 20:13 UTC, logs `C:\abb\logs\verify-phase7-<repo>.log`. Phases 5 and 6 built in the overlap window (RUN-ALL): Phase 5 code done (gate run pending), Phase 6 code done through step 16 (end-to-end and runs pending).
-- Last commit: `phase 6: wip — s2a orchestrator package …` (`fa49cca`) + this handoff
-- Working tree: clean after the handoff commit
+- Phase: `7` **passed 2026-10-18** (gate below in README); next in RUN-ALL order: Phase 5 gate run, then Phase 6 bring-up (both already built in the overlap window).
+- Last commit: `phase 7: 25 tasks validated, split frozen …` (`git log -1`)
+- Working tree: clean after the gate commit
 - Date: `2026-10-18`
 
 ## What exists and is verified
@@ -22,7 +22,7 @@ and folds its open items into this one.
 | Item | State | Proof |
 |---|---|---|
 | Phases 0-4 | gates passed 2026-10-17/18 | README status, `docs/RUNS.md` |
-| Phase 7 | 25 tasks (13 AntennaPod / 12 Wikipedia, 10 authored; D-045-D-047); S2 approved (TRIAGE.md); S3: 3x validation of all 25 passed (commit `0f75f40`) | `uv run abb tasks list` |
+| Phase 7 | **gate passed**: 25 tasks validated 3x, lint 0 errors, setup-leak 0, env verify OK (AntennaPod 60/60 + 13 seed tasks, Wikipedia 367/367 + 12); split frozen seed 20261101 (dev 10 incl. pinned dev5, test 15); `tasks/TASKSET.sha256` = `split.yaml: taskset_sha256` = 2eeddcff...; coverage short on UI and Compose (COVERAGE-NOTES.md) | `uv run abb tasks list`, `tasks/split.yaml` |
 | Phase 5 | Spec Kit arm (`abb/arms/speckit`, D-048), one-time setup cache (`abb/harness/setup.py`), 15 unit tests; no dev5 run yet | `uv run pytest -q tests/test_speckit_arm.py` |
 | Phase 6 | `s2a/` package: 45 tests (fake Claude + Gradle), `s2a --help`; Arm C wrapper `abb/arms/s2a` (+ nomap/noverify/norepro, D-049), 19 tests; `abb sandbox install-s2a` done (sha `fa49cca`), `abb sandbox check --no-smoke` all OK incl. `s2a.exe` as the sandbox user | `cd s2a; uv run pytest -q`; `cd benchmark; uv run pytest -q` (136 pass) |
 | Sandbox / caches | as before (D-036, D-037, D-043, D-044); fingerprints changed at the Phase 7 re-warm | `uv run abb sandbox check`, `benchmark/env.lock.json` |
@@ -41,6 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. When verify ends: check both logs (main run OK + every seed task `v2_f2p` passing). Then in `benchmark/`: `abb split --seed 20261101 --dev-frac 0.30`, `abb tasks hash`, `abb tasks lint --setup-leak`, `abb tasks coverage`; paste the Phase 7 gate; HANDOFF, README, commit `phase 7: …` + push.
-2. Phase 5 gate: `abb run --arm speckit --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-speckit-1 --grade`, `abb audit`, `abb report`, RUNS.md, commit.
-3. Phase 6 step 13: one dev task end-to-end with `s2a run` as the sandbox user (inspect `.s2a/runs/<id>/`), kill during implement + `s2a resume`; then step 17: `abb run --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-s2a-1 --grade`; gate, commit.
+1. Phase 5 gate: in `benchmark/`, `abb run --arm speckit --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-speckit-1 --grade`, then `abb audit <run_id>`, `abb report <run_id>`, RUNS.md row, README, commit `phase 5: …`.
+2. Phase 6 step 13 + gate: `.venv\Scripts\python.exe scripts\s2a_e2e.py --task antennapod-0001 --grade` (one dev task end-to-end as the sandbox user, interrupted during implement, then `s2a resume`); then `abb run --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-s2a-1 --grade`; audit, report, RUNS.md, commit `phase 6: …`.
+3. Then Phase 8 (`phases/phase-8-runner.md`; needs `abb sandbox setup --slots 2`, one UAC).
+- From now on: test-split tickets and results are not read by whoever tunes S2A; tuning (Phase 6 step 18) runs with `ABB_TUNING=1` (`abb run` / `abb tasks show` refuse `split: test` ids).

@@ -381,6 +381,19 @@ def tasks_list() -> None:
                    f"{t.tags.lang:<7} {t.tags.test_kind:<11} {str(t.split):<5} {t.status}")
 
 
+@tasks_app.command("show")
+def tasks_show(task_id: str) -> None:
+    """task.yaml and problem.md of one task (refused for held-out tasks under ABB_TUNING=1)."""
+    from abb.config import load_task
+    from abb.harness import tasks
+
+    tasks.refuse_held_out_while_tuning([task_id])
+    d = tasks.task_dir(task_id)
+    typer.echo((d / "task.yaml").read_text(encoding="utf-8"))
+    typer.echo("---- " + load_task(task_id).problem_statement)
+    typer.echo((d / load_task(task_id).problem_statement).read_text(encoding="utf-8"))
+
+
 # ---------------------------------------------------------------------------- run, grading, analysis
 @run_app.callback()
 def run_main(ctx: typer.Context,

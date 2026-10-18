@@ -6,6 +6,7 @@ the repository read the bare mirror at `base_commit` (tree listing, `git grep` i
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import tempfile
@@ -152,6 +153,16 @@ def task_ids(repo: str | None = None) -> list[str]:
             continue
         ids.append(p.parent.name)
     return ids
+
+
+def refuse_held_out_while_tuning(ids: list[str]) -> None:
+    """fairness-protocol.md: a session with ABB_TUNING=1 (S2A tuning, Phase 6 step 18) may not run or show
+    a `split: test` task. Hygiene, not a boundary: it stops accidents, not a determined reader."""
+    if os.environ.get("ABB_TUNING") != "1":
+        return
+    held = [i for i in ids if load_task(i).split == "test"]
+    if held:
+        raise SystemExit(f"ABB_TUNING=1: refusing {len(held)} held-out (split: test) task(s): {', '.join(held)}")
 
 
 def save_task_yaml(task_id: str, data: dict) -> None:

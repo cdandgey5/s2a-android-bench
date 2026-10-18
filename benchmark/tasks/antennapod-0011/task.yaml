@@ -28,7 +28,7 @@ pass_to_pass:
 limits:
   timeout_minutes: 45
 needs_emulator: false
-split: dev
+split: test
 status: validated
 created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent

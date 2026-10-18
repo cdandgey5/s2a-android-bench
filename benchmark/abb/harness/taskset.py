@@ -185,13 +185,13 @@ def make_split(seed: int, dev_frac: float, pin_dev: list[str] | None = None) -> 
     total, _ = taskset_hash()
     doc = {"seed": seed, "dev_frac": dev_frac, "created_at": utcnow_iso(), "stratified_on": "repo x category",
            "pinned_dev": pins, "dev": dev, "test": test, "counts": counts, "task_ids_sha256": ids_sha,
-           "taskset_sha256": total}
+           "taskset_sha256_before_split_fields": total}
     for i in dev:
         update_task_yaml(i, {"split": "dev"})
     for i in test:
         update_task_yaml(i, {"split": "test"})
+    doc["taskset_sha256"] = taskset_hash()[0]   # = tasks/TASKSET.sha256 (`abb tasks hash`) while no task changes
     (paths.tasks_dir() / "split.yaml").write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8", newline="\n")
-    doc["taskset_sha256_after_split_fields"] = taskset_hash()[0]
     return doc
 
 

@@ -124,6 +124,9 @@ class Runner:
 
     # ---------------------------------------------------------------- checks
     def preflight(self) -> None:
+        from abb.harness.tasks import refuse_held_out_while_tuning
+
+        refuse_held_out_while_tuning(self.tasks)
         self.token = preflight()
         rec = auth.check()
         if not rec.get("ok"):
