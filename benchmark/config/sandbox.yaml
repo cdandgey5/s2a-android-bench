@@ -13,6 +13,7 @@ modes:
     acl:                      # $TRIAL = the trial directory; $REPO = repo key; $REPO_CLONE = the harness source checkout
       reset_inheritance: ["$ABB_HOME", "$REPO_CLONE"]   # icacls /inheritance:r; full control: harness user, SYSTEM, Administrators
       deny:   ["caches/repos", "caches/gradle-pristine", "results", "env.lock.json", "$REPO_CLONE", "$TRIAL/transcript", "$TRIAL/prompts", "$TRIAL/artifacts"]
+      list:   ["$ABB_HOME", "caches", "work"]   # D-036: RX on this folder only (no inheritance); Java's toRealPath() needs it on every ancestor (trial ancestors are granted per snapshot)
       rx:     ["tools", "caches/gradle-ro/$REPO", "caches/robolectric/$REPO", "sandbox/claude-config.template", "$TRIAL"]   # read AND execute
       modify: ["$TRIAL/work", "$TRIAL/home", "$TRIAL/gradle-home", "$TRIAL/claude-config", "$TRIAL/agent-out"]
       deny_write_files: ["$TRIAL/claude-config/settings.json"]

@@ -192,6 +192,7 @@ class ProxyCfg(_M):
 
 class AclCfg(_M):
     reset_inheritance: list[str] = Field(default_factory=list)
+    list_dirs: list[str] = Field(default_factory=list, alias="list")  # sandbox.yaml key `list` (D-036)
     deny: list[str] = Field(default_factory=list)
     rx: list[str] = Field(default_factory=list)
     modify: list[str] = Field(default_factory=list)

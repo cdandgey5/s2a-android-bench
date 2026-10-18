@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `1` — step: `6 — hard stop S1: waiting for the human to run "uv run abb sandbox setup" (in benchmark/) and accept the UAC prompt`
-- Last commit: `phase 1: wip — warm caches, workspace, proxy, sandbox code (before S1)` on `main` (`git log -1`)
+- Phase: `1` — step: `10b — hard stop S1b: throughput probe; waiting for the owner's usage-meter reading #1 (session %, weekly %)`
+- Last commit: `phase 1: wip — sandbox user works; verify, check and invariants green (before S1b)` on `main` (`git log -1`)
 - Working tree: `clean after that commit`
 - Date: `2026-10-17`
 
@@ -26,13 +26,14 @@ and folds its open items into this one.
 | Workspace (workspace.py) | snapshot (git archive → strip automation → 1 commit tagged `base`), per-trial gradle-home seeded with `wrapper/dists`, symlinks checked out as files like Git for Windows | `abb env verify <repo> --sandbox none` |
 | `abb env verify --sandbox none` (dev mode, harness user, proxy stopped) | AntennaPod 60/60 tests offline in 109 s + seed fail→pass; Wikipedia 367/367 in 308 s | `C:\abb\state\env-verify-*.json` |
 | gradle.py, junit.py, proxy.py | done; proxy tested incl. a real TLS request to api.anthropic.com | `uv run pytest -q` → 46 passed, 10 skipped (integration/sandbox) |
-| As-user launch (`CreateProcessWithLogonW`, no profile) + `check_paths` probe | written, **untested** (no sandbox user yet) | after S1 |
-| `abb sandbox setup` | non-elevated part ran (`--prepare-only`): password in Credential Manager (service `abb`), params `C:\abb\state\sandbox-setup-params.json`; elevated script `benchmark/scripts/sandbox-setup.ps1` parses cleanly | — |
-| `abb sandbox check`, `tests/test_workspace.py` | written, run after S1 | — |
+| Sandbox (S1 done 2026-10-17 23:03Z) | `abb-agent` (SID ...-1006), firewall rule, ACLs; D-036 list grants on ancestors, D-037 revoke + OWNER RIGHTS | `uv run abb sandbox check` all OK (fs denies, github blocked, API via proxy 401, tools without profile, Claude smoke as abb-agent via proxy) |
+| `abb env verify <repo> --sandbox user` | AntennaPod 60/60 offline 126 s (113 s + 29 s copy with transforms), seed fail→pass; Wikipedia 367/367 327 s (312 s + 34 s); `seed_transforms` stays false | `C:bb\state\env-verify-*.json` |
+| Integration tests | 27 passed, 2 skipped (slot-2 concurrency → Phase 8; no gold class yet) | `$env:ABB_INTEGRATION=1; uv run pytest -q tests	est_workspace.py tests	est_junit.py tests	est_proxy.py tests\platform` |
 
 ## Open issues / blockers
 
-- **Blocker S1:** the elevated step needs the human at the keyboard (UAC).
+- **Stop S1b:** the throughput probe needs the owner's usage-meter readings before and after.
+- Phase 8 needs one more UAC step: `abb sandbox setup --slots 2` creates `abb-agent2` for parallel trials (D-037).
 - Carry-overs: Phase 4 — `AskUserQuestion` absent from the `-p` tool list (D-005 note); Phase 5 — Spec Kit installs skills by default; Phase 6 — s2a's driver needs its own launcher console for Ctrl+C (D-032).
 
 ## Decisions waiting on the human
@@ -41,7 +42,8 @@ and folds its open items into this one.
 
 ## Exact next action
 
-After the human replies `done`: `uv run abb sandbox check` (in `benchmark/`), fix what fails, then
-`uv run abb env verify antennapod --sandbox user` and `wikipedia`, `$env:ABB_INTEGRATION=1; uv run
-pytest -q tests\test_workspace.py tests\test_junit.py tests\test_proxy.py tests\platform`, then
-step 10b (S1b throughput probe: ask for the usage-meter readings before and after).
+S1b (Phase 1 step 10b): owner reads claude.ai → Settings → Usage (session %, weekly %) and stops
+chatting; then run (in `benchmark/`) `uv run abb ws smoke --sandbox user --proxy --repo antennapod
+--prompt-file tasks/antennapod-0000/problem.md --max-turns 200 --max-usd 5 --deadline 2700 --model
+claude-sonnet-5-5`; owner reads the meter again; record in `docs/RUNS.md` + `reference/verified.md`
+with the weeks estimate; then the Phase 1 gate commands, handoff, commit `phase 1: …`.

@@ -30,7 +30,7 @@ def _run_modules(ws: Workspace, modules: list[str], *, as_agent: bool, label: st
         args.append(f"{m}:{ws.repo.tests.task_for(m)}")
     for t in tests or []:
         args += ["--tests", t]
-    out = ws.dirs.root / "verify-logs" / label
+    out = ws.dirs.agent_out / f"verify-{label}"  # agent-writable: the launcher runs as the sandbox user
     t0 = time.monotonic()
     r = ws.exec(gradle.expand_cmd("{gradlew}", ws.dirs.work) + args, env=env, timeout_s=3600, out_dir=out,
                 as_agent=as_agent)

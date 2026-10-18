@@ -121,6 +121,8 @@ def run_smoke(
             r = plat.wait(plat.run(spec))
     else:
         r = plat.wait(plat.run(spec))
+    if rc and as_user:
+        ws.revoke()  # D-037: a finished trial is closed to the sandbox user before it runs anything else
     stdout = r.stdout()
     summary = {
         "started_at": started,

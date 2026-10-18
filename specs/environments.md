@@ -21,7 +21,7 @@ the sandbox user could write anywhere not explicitly denied. Then it applies the
 (`RX` = read and execute; plain `R` has no execute bit and could not even start `python.exe`).
 
 ```
-ABB_HOME/                        # root: harness user F; sandbox user: nothing inherited
+ABB_HOME/                        # root: harness user F; sandbox user: LIST + traverse on this folder only (D-036), nothing inherited
   tools/                         # installed ONCE by the harness user with `abb tools install`; sandbox user: RX
     jdk17/  jdk21/               # Eclipse Temurin JDK zips, pinned by release name + sha256
     android-sdk/                 # cmdline-tools (commandlinetools-win-15859902_latest.zip) + sdkmanager packages
@@ -29,13 +29,14 @@ ABB_HOME/                        # root: harness user F; sandbox user: nothing i
     uvtools/  bin/               # UV_TOOL_DIR / UV_TOOL_BIN_DIR: `specify.exe`, `s2a.exe` (installed by the harness user)
     claude/<version>/claude.exe  # copy of the pinned native install (the launcher calls it by absolute path)
     abb_launch.py                # the launcher (stdlib + ctypes only)
-  caches/
+  caches/                        # sandbox user: LIST + traverse on this folder only (D-036)
     repos/<repo>.git             # bare mirror of the upstream repo                       [sandbox user: DENIED]
     gradle-ro/<repo>/            # read-only dependency cache (GRADLE_RO_DEP_CACHE), lock files stripped [RX]
     robolectric/<repo>/          # flat dir of android-all-instrumented jars (robolectric.dependency.dir) [RX]
     gradle-pristine/<repo>/      # harness-only GRADLE_USER_HOME for validation and grading [sandbox user: DENIED]
   sandbox/
     claude-config.template/      # settings.json template; copied per trial               [sandbox user: RX]
+  work/                          # sandbox user: LIST + traverse on this folder and on every ancestor of a trial dir (D-036)
   work/<run_id>/<arm>/<task>/t<k>/   # the trial dir itself: sandbox user RX (so it cannot create siblings)
     work/                        # the repo snapshot                                      [sandbox user: MODIFY]
     home/                        # per-trial user.home / USERPROFILE / TEMP / APPDATA     [sandbox user: MODIFY]
@@ -65,6 +66,15 @@ would silently break that on Windows and are handled explicitly:
   `C:\Users\abb-agent` (`icacls … /deny abb-agent:(OI)(CI)(W,WA,WD,AD,DC)`) so no `.android`,
   `.m2`, PowerShell profile or `Command Processor\AutoRun` can persist between trials. Phase 1
   measures that `claude.exe`, git, pwsh and `gradlew.bat` work without a loaded profile.
+- **Trials of the same sandbox user cannot be told apart by ACLs** (Phase 1 finding, D-037): a
+  user that has MODIFY on its own trial has it on every other trial granted to the same user. So
+  (a) when a trial ends, the harness **revokes** the sandbox user's grants on that trial directory
+  (`Workspace.revoke()`, before the same user runs anything else) and then deletes it; every trial
+  directory carries an inheritable `OWNER RIGHTS` (`S-1-3-4`) entry with no rights, so files the
+  agent created give it no implicit owner access (`WRITE_DAC`) once revoked; (b) **concurrent
+  trials run as different users**: one sandbox user per parallel slot (`abb-agent`, `abb-agent2`,
+  …), created by `abb sandbox setup --slots N` (elevated, needed from Phase 8 on; until then every
+  run is sequential).
 - **Residual channel, stated in the README**: two concurrent trials run as the *same* user and
   could in principle talk over loopback or named pipes. Nothing on disk is shared; the channel
   is noted, not closed.
@@ -135,8 +145,7 @@ template; `settings.json` with a deny-write ACE), `agent-out/` → grant the san
 exactly those directories and RX on the trial directory itself. Guarantees (checked by the
 invariants test, run **as the sandbox user through the launcher** with real `open()`/create
 attempts, never `Test-Path`): one commit, no remotes; mirror / results / code checkout / pristine
-cache / a sibling trial directory / `ABB_HOME` itself / `C:\Users\abb-agent` → access denied on
-read or create; `gradle-ro`, `robolectric`, `tools` readable but not writable; no daemon dirs, no
+cache / a sibling trial directory's contents / `C:\Users\abb-agent` → access denied on read or create; `ABB_HOME`, `caches`, `work` and a trial's ancestor folders → names listable, create denied (D-036: Java's `Path.toRealPath()` walks every parent with `FindFirstFile`, so Gradle's compiler and zip file system fail without list rights on the ancestors); `gradle-ro`, `robolectric`, `tools` readable but not writable; no daemon dirs, no
 build cache; `claude-config\settings.json` not writable; a hash of the `C:\Users\abb-agent` tree
 before and after a smoke trial is identical; `reg add HKCU\Software\abb /f` fails.
 

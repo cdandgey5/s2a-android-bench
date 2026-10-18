@@ -127,6 +127,31 @@ def test_gradlew_and_volume() -> None:
     assert PLAT.volume_filesystem(Path.home()).upper() in ("NTFS", "REFS")
 
 
-@pytest.mark.skip(reason="Phase 1: needs the sandbox user abb-agent (deny/grant round trip, profile hash)")
-def test_sandbox_user_access_round_trip() -> None:  # pragma: no cover
-    pass
+def test_sandbox_user_access_round_trip() -> None:
+    """grant -> real read/create as abb-agent succeeds; deny -> both fail (PermissionError, not Test-Path)."""
+    if not PLAT.as_user_available("abb-agent"):
+        pytest.skip("sandbox user missing: abb sandbox setup")
+    from abb import paths
+    from abb.util import stamp
+
+    d = paths.work_dir() / "itest" / f"acl-{stamp()}"
+    d.mkdir(parents=True)
+    (d / "f.txt").write_text("x")
+    try:
+        PLAT.grant(d.parent, "abb-agent", "list")
+        PLAT.grant(d, "abb-agent", "modify")
+        assert PLAT.check_paths([(d / "f.txt", "read"), (d, "create")], as_user="abb-agent") == ["ok", "ok"]
+        PLAT.grant(d, "abb-agent", "deny")
+        assert PLAT.check_paths([(d / "f.txt", "read"), (d, "create")], as_user="abb-agent") == ["denied", "denied"]
+    finally:
+        PLAT.rmtree_robust(d)
+
+
+def test_sandbox_user_launch_has_no_profile_side_effects(tmp_path: Path) -> None:
+    if not PLAT.as_user_available("abb-agent"):
+        pytest.skip("sandbox user missing: abb sandbox setup")
+    from abb.harness.sandbox import _profile_hash
+
+    before = _profile_hash("abb-agent")
+    assert PLAT.check_paths([(Path("C:/Users/abb-agent"), "create")], as_user="abb-agent") == ["denied"]
+    assert _profile_hash("abb-agent") == before

@@ -33,3 +33,10 @@ pauses are counted per run. Raw records: `C:\abb\work\smoke\<dir>\summary.json` 
 
 Usage meter (from the `rate_limit_event` in the 20:15 transcript): five-hour window 74 % used,
 seven-day 54 % — almost all of it this building session, not the smoke tests.
+
+## 2026-10-17 — Phase 1 (sandbox user `abb-agent` through the launcher, egress proxy on 127.0.0.1:8888)
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 23:05 | `abb sandbox check` smoke `20261017-230526-sbcheck` | claude-sonnet-5-5 | success | 4 | 163 | 36,672 | 5,336 | 0.0266 | 0 | as `abb-agent`, no profile, via the proxy: token honoured, `bypassPermissions`, 0 retries; rate_limit_event: five-hour 11 %, seven-day 56 % |
+

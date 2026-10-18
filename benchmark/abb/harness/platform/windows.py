@@ -319,6 +319,11 @@ class WindowsPlatform:
             exit_code = int(launcher_rc)
         if status.get("error"):
             raise RuntimeError(f"launcher failed: {status['error']}")
+        if not status and not stopped:
+            who = f" as {proc.spec.as_user}" if proc.spec.as_user else ""
+            raise RuntimeError(
+                f"the launcher{who} exited {launcher_rc} without a status file: it could not read "
+                f"{Path(proc.spec.out_dir) / 'launch.json'} or write there (out_dir must be writable by that user)")
         out_dir = Path(proc.spec.out_dir)
         return ProcResult(
             exit_code=exit_code,
@@ -340,9 +345,11 @@ class WindowsPlatform:
         if r.exit_code != 0:
             raise OSError(f"icacls {' '.join(args)} failed ({r.exit_code}): {r.stdout()} {r.stderr()}")
 
-    def grant(self, path: Path, principal: str, rights: Literal["rx", "modify", "deny"], *, inherit: bool = True) -> None:
+    def grant(self, path: Path, principal: str, rights: Literal["rx", "modify", "deny", "list"], *, inherit: bool = True) -> None:
         inh = "(OI)(CI)" if inherit and Path(path).is_dir() else ""
-        if rights == "rx":
+        if rights == "list":  # RX on this folder only: list + traverse + SYNCHRONIZE, which FindFirstFileW needs (D-036)
+            self._icacls(str(path), "/grant", f"{principal}:RX")
+        elif rights == "rx":
             self._icacls(str(path), "/grant:r", f"{principal}:{inh}RX")
         elif rights == "modify":
             self._icacls(str(path), "/grant:r", f"{principal}:{inh}M")
@@ -356,6 +363,16 @@ class WindowsPlatform:
             self._icacls(str(path), "/deny", f"{principal}:(OI)(CI)(W,WA,WD,AD,DC)")
         else:
             self._icacls(str(path), "/deny", f"{principal}:(W,WA,WD,DC)")
+
+    def revoke(self, path: Path, principal: str) -> None:
+        """Remove every explicit grant/deny ACE of `principal` on `path` (children's inherited copies follow)."""
+        self._icacls(str(path), "/remove", principal)
+
+    def owner_rights_none(self, path: Path) -> None:
+        """Inheritable OWNER RIGHTS (S-1-3-4) entry granting only SYNCHRONIZE: a file's creator gets no implicit
+        READ_CONTROL/WRITE_DAC, so a revoked trial stays closed to the user that wrote it (D-037)."""
+        inh = "(OI)(CI)" if Path(path).is_dir() else ""
+        self._icacls(str(path), "/grant", f"*S-1-3-4:{inh}(S)")
 
     def reset_inheritance(self, root: Path, owners: list[str]) -> None:
         grants: list[str] = []

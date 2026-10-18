@@ -79,6 +79,27 @@ def setup_params(repos: list[str]) -> dict:
     }
 
 
+def apply_list_grants() -> list[str]:
+    """D-036: list + traverse (this folder only) on ABB_HOME, caches, work for the sandbox user."""
+    sb = load_sandbox()
+    m = sb.modes["user"]
+    plat = get_platform()
+    home = paths.abb_home().resolve()
+    targets: list[Path] = [_expand(d) for d in m.acl.list_dirs]
+    # ... plus every ancestor (below ABB_HOME) of each read+execute grant, e.g. caches/gradle-ro
+    for rx in setup_params(list(CHOSEN_REPOS))["rx"]:
+        a = Path(rx).resolve().parent
+        while a != home and home in a.parents:
+            targets.append(a)
+            a = a.parent
+    done = []
+    for p in dict.fromkeys(targets):
+        p.mkdir(parents=True, exist_ok=True)
+        plat.grant(p, m.run_as, "list")
+        done.append(str(p))
+    return done
+
+
 def prepare(repos: list[str]) -> dict:
     """Everything that needs no admin rights. Idempotent."""
     import keyring
@@ -97,6 +118,7 @@ def prepare(repos: list[str]) -> dict:
     shutil.copytree(src, dst)
     if not (paths.abb_home() / "env.lock.json").exists():
         (paths.abb_home() / "env.lock.json").write_text("{}\n", encoding="utf-8")
+    apply_list_grants()
     params = setup_params(repos)
     pf = paths.state_dir() / "sandbox-setup-params.json"
     pf.write_text(json.dumps(params, indent=2), encoding="utf-8")
@@ -177,7 +199,8 @@ def check(*, smoke: bool = True) -> list[tuple[str, bool, str]]:
         ("env.lock.json", paths.abb_home() / "env.lock.json", "read", "denied"),
         ("code checkout", paths.repo_clone(), "read", "denied"),
         ("tasks (hidden tests)", paths.tasks_dir(), "read", "denied"),
-        ("ABB_HOME list", paths.abb_home(), "read", "denied"),
+        ("ABB_HOME list (names only, D-036)", paths.abb_home(), "read", "ok"),
+        ("caches list (names only, D-036)", paths.caches_dir(), "read", "ok"),
         ("ABB_HOME create", paths.abb_home(), "create", "denied"),
         ("work create", paths.work_dir(), "create", "denied"),
         ("tools read", paths.tools_dir(), "read", "ok"),
@@ -208,8 +231,9 @@ def check(*, smoke: bool = True) -> list[tuple[str, bool, str]]:
         r3 = _as_user_run([str(curl), "-sS", "-o", "NUL", "-w", "%{http_code}", "--max-time", "20", "-x",
                            f"http://{sb.modes['user'].proxy.listen}", "https://api.anthropic.com/v1/models"],
                           user=user, cwd=work, env=base_env, out=work / "curl-api")
-        row("net: api.anthropic.com via proxy as sandbox user", r3.exit_code == 0 and r3.stdout().strip().isdigit(),
-            f"HTTP {r3.stdout().strip()} (401 is fine: no key)")
+        ok3 = r3.exit_code == 0 and r3.stdout().strip().isdigit() and r3.stdout().strip() != "000"
+        row("net: api.anthropic.com via proxy as sandbox user", ok3,
+            f"HTTP {r3.stdout().strip()} (401 is fine: no key)" + ("" if ok3 else f"; curl exit {r3.exit_code}: {r3.stderr().strip()[-200:]}"))
         r4 = _as_user_run([str(curl), "-sS", "-o", "NUL", "-w", "%{http_code}", "--max-time", "20", "-x",
                            f"http://{sb.modes['user'].proxy.listen}", "https://github.com"],
                           user=user, cwd=work, env=base_env, out=work / "curl-gh-proxy")

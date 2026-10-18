@@ -49,10 +49,19 @@ def gitconfig_text() -> str:
 
 
 def apply_trial_acls(dirs: TrialDirs, user: str) -> None:
-    """sandbox.yaml acl for $TRIAL: RX on the trial dir itself, MODIFY on its five writable dirs,
-    deny-write on claude-config/settings.json."""
+    """sandbox.yaml acl for $TRIAL: list+traverse on every ancestor below work/ (D-036), RX on the trial
+    dir itself, MODIFY on its five writable dirs, deny-write on claude-config/settings.json."""
     plat = get_platform()
+    work = paths.work_dir().resolve()
+    anc = dirs.root.resolve().parent
+    chain = []
+    while anc != work and work in anc.parents:
+        chain.append(anc)
+        anc = anc.parent
+    for a in reversed(chain):
+        plat.grant(a, user, "list")
     plat.grant(dirs.root, user, "rx", inherit=False)
+    plat.owner_rights_none(dirs.root)
     for d in (dirs.work, dirs.home, dirs.gradle_home, dirs.claude_config, dirs.agent_out):
         plat.grant(d, user, "modify")
     settings = dirs.claude_config / "settings.json"
@@ -134,6 +143,8 @@ class Workspace:
              as_agent: bool = False, stdin_text: str | None = None, memory_mb: int | None = None) -> ProcResult:
         sb = load_sandbox()
         user = sb.modes["user"].run_as if as_agent else None
+        if as_agent and not Path(out_dir).resolve().is_relative_to(self.dirs.agent_out.resolve()):
+            raise WorkspaceError(f"out_dir {out_dir} must be under {self.dirs.agent_out} (the only dir the sandbox user may write)")
         spec = ProcSpec(argv=argv, cwd=cwd or self.dirs.work, env=env, stdin_text=stdin_text, timeout_s=timeout_s,
                         memory_mb=memory_mb or sb.process.memory_mb, as_user=user, out_dir=out_dir,
                         interrupt=sb.process.interrupt, stop_file=self.dirs.stop_file, grace_s=sb.process.grace_s)
@@ -162,9 +173,20 @@ class Workspace:
         out = self.git("diff", "--name-only", "base").stdout()
         return [ln for ln in out.splitlines() if ln]
 
+    def revoke(self) -> None:
+        """End of trial (D-037): remove the sandbox user's grants on this trial before it runs anything else."""
+        if self.sandbox != "user":
+            return
+        user = load_sandbox().modes["user"].run_as
+        for d in (self.dirs.work, self.dirs.home, self.dirs.gradle_home, self.dirs.claude_config, self.dirs.agent_out,
+                  self.dirs.claude_config / "settings.json", self.dirs.root):
+            if d.exists():
+                self.plat.revoke(d, user)
+
     def cleanup(self) -> list[Path]:
         if (self.dirs.work / "gradlew.bat").exists() and self.dirs.gradle_home.exists():
             env = gradle.harness_gradle_env(self.repo, guh=self.dirs.gradle_home, home=self.dirs.home)
             gradle.run(gradle.expand_cmd("{gradlew} --stop", self.dirs.work), src=self.dirs.work, env=env,
                        out_dir=paths.work_dir() / "_cleanup" / self.dirs.root.name, timeout_s=300)
+        self.revoke()
         return self.plat.rmtree_robust(self.dirs.root)

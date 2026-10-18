@@ -14,9 +14,11 @@ class Platform(Protocol):
     def run(self, spec: ProcSpec) -> Proc              # start (optionally as the sandbox user), limit, redirect
     def wait(self, proc: Proc, timeout_s: int) -> ProcResult
     def stop_gracefully(self, proc: Proc, grace_s: int = 30) -> None   # STOP file -> the launcher sends `spec.interrupt` (SIGINT elsewhere), then kill the job/tree
-    def grant(self, path: Path, principal: str, rights: Literal["rx","modify","deny"], *, inherit=True) -> None
+    def grant(self, path: Path, principal: str, rights: Literal["rx","modify","deny","list"], *, inherit=True) -> None   # "list" = RX on this folder only, no inheritance (D-036)
     def deny_write(self, path: Path, principal: str) -> None          # file/dir-level deny-write ACE (settings.json, C:\Users\abb-agent)
     def reset_inheritance(self, root: Path, owners: list[str]) -> None  # icacls /inheritance:r + full control for the harness user/SYSTEM/Administrators
+    def revoke(self, path: Path, principal: str) -> None             # remove the principal's explicit ACEs (inherited copies go with them; D-037)
+    def owner_rights_none(self, path: Path) -> None                  # inheritable OWNER RIGHTS (S-1-3-4) entry with no rights (D-037)
     def check_access(self, path: Path, *, as_user: str, op: Literal["read","create"]) -> Literal["ok","denied"]   # REAL attempt as that user
     def as_user_available(self) -> bool
     def env_fingerprint_parts(self) -> dict            # os release, arch
