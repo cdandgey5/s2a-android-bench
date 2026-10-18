@@ -56,8 +56,8 @@ drafted_by: agent
 drafted_with_model: claude-opus-5-5
 validation:
   runs: 3
-  last_validated: '2026-10-18T02:41:47Z'
-  env_fingerprint: sha256:c18a14fcfb8c70b023a81be74286cb7ef2772e6ad1895cc54a3d3834844686de
+  last_validated: '2026-10-18T17:26:21Z'
+  env_fingerprint: sha256:45f0558c1b74e41545f421d51f6eaf597afc361fb34c0de5a3a8f3ff88e45256
   p2p_stable:
   - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicEmpty_detectsUnknown
   - de.danoeh.antennapod.parser.media.MediaFormatDetectorTest.testMagicId3_detectsId3

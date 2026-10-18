@@ -35,14 +35,14 @@ limits:
   timeout_minutes: 45
 needs_emulator: false
 split: dev
-status: draft
+status: validated
 created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
 drafted_by: agent
 drafted_with_model: claude-opus-5-5
 hidden_tests: authored
 validation:
-  runs: 1
-  last_validated: '2026-10-18T15:24:26Z'
+  runs: 3
+  last_validated: '2026-10-18T18:54:11Z'
   env_fingerprint: sha256:45f0558c1b74e41545f421d51f6eaf597afc361fb34c0de5a3a8f3ff88e45256
   p2p_stable:
   - de.danoeh.antennapod.model.VolumeAdaptionSettingTest.cannotMapNegativeValues
