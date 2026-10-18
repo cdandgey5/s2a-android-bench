@@ -1,0 +1,25 @@
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/SyndHandler.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/SyndHandler.java
+index 16bbecbb8..0944878e6 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/SyndHandler.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/SyndHandler.java
+@@ -93,7 +93,7 @@ public class SyndHandler extends DefaultHandler {
+                     && prefix.equals(Content.NSTAG)) {
+                 state.namespaces.put(uri, new Content());
+                 Log.d(TAG, "Recognized Content namespace");
+-            } else if (uri.equals(Itunes.NSURI)
++            } else if ((uri.equals(Itunes.NSURI) || uri.equals(Itunes.NSURI_LEGACY))
+                     && prefix.equals(Itunes.NSTAG)) {
+                 state.namespaces.put(uri, new Itunes());
+                 Log.d(TAG, "Recognized ITunes namespace");
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
+index e76b678f1..3dda57a70 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
+@@ -15,6 +15,7 @@ public class Itunes extends Namespace {
+ 
+     public static final String NSTAG = "itunes";
+     public static final String NSURI = "http://www.itunes.com/dtds/podcast-1.0.dtd";
++    public static final String NSURI_LEGACY = "http://www.itunes.com/DTDs/Podcast-1.0.dtd";
+ 
+     private static final String IMAGE = "image";
+     private static final String IMAGE_HREF = "href";

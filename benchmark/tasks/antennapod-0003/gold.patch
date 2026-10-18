@@ -1,0 +1,162 @@
+diff --git a/parser/media/src/main/java/de/danoeh/antennapod/parser/media/MediaFormatDetector.java b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/MediaFormatDetector.java
+index 5fcc4cc19..7abc642df 100644
+--- a/parser/media/src/main/java/de/danoeh/antennapod/parser/media/MediaFormatDetector.java
++++ b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/MediaFormatDetector.java
+@@ -11,7 +11,7 @@ public final class MediaFormatDetector {
+     }
+ 
+     public enum Format {
+-        ID3, OGG, M4A, UNKNOWN
++        ID3, OGG, M4A, FLAC, UNKNOWN
+     }
+ 
+     public static Result detect(InputStream input) throws IOException {
+@@ -33,6 +33,10 @@ public final class MediaFormatDetector {
+                 && prefix[0] == 0x4F && prefix[1] == 0x67
+                 && prefix[2] == 0x67 && prefix[3] == 0x53) {
+             return Format.OGG;
++        } else if (prefix.length >= 4
++                && prefix[0] == 0x66 && prefix[1] == 0x4C
++                && prefix[2] == 0x61 && prefix[3] == 0x43) {
++            return Format.FLAC;
+         } else if (prefix.length >= 8
+                 && prefix[4] == 0x66 && prefix[5] == 0x74
+                 && prefix[6] == 0x79 && prefix[7] == 0x70) {
+diff --git a/parser/media/src/main/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentReader.java b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentReader.java
+index 134a12eae..4134f1d3f 100644
+--- a/parser/media/src/main/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentReader.java
++++ b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentReader.java
+@@ -7,24 +7,30 @@ import android.util.Log;
+ 
+ import java.io.IOException;
+ import java.io.InputStream;
++import java.io.PushbackInputStream;
+ import java.io.UnsupportedEncodingException;
+ import java.nio.ByteBuffer;
+ import java.nio.charset.Charset;
++import java.util.Arrays;
+ import java.util.Locale;
+ 
+ public abstract class VorbisCommentReader {
+     private static final String TAG = "VorbisCommentReader";
+-    private static final int FIRST_OGG_PAGE_LENGTH = 58;
+-    private static final int FIRST_OPUS_PAGE_LENGTH = 47;
+     private static final int SECOND_PAGE_MAX_LENGTH = 64 * 1024 * 1024;
+-    private static final int PACKET_TYPE_IDENTIFICATION = 1;
+     private static final int PACKET_TYPE_COMMENT = 3;
++    private static final byte[] FLAC_MAGIC = {'f', 'L', 'a', 'C'};
++    private static final byte[] FLAC_IN_OGG_MAGIC = {0x7F, 'F', 'L', 'A', 'C'};
++    private static final int FLAC_IN_OGG_HEADER_LENGTH = 8;
++    private static final int FLAC_LAST_BLOCK_FLAG = 0x80;
++    private static final int FLAC_BLOCK_TYPE_MASK = 0x7F;
++    private static final int FLAC_BLOCK_TYPE_COMMENT = 4;
++    private static final int FLAC_METADATA_MAX_LENGTH = 16 * 1024 * 1024;
+ 
+-    private final VorbisInputStream input;
++    private InputStream input;
+     private long currentValueLength = 0;
+ 
+     VorbisCommentReader(InputStream input) {
+-        this.input = new VorbisInputStream(input);
++        this.input = input;
+     }
+ 
+     public void readInputStream() throws VorbisCommentReaderException {
+@@ -65,6 +71,18 @@ public abstract class VorbisCommentReader {
+     }
+ 
+     private void findCommentHeader() throws IOException {
++        PushbackInputStream sniffedInput = new PushbackInputStream(input, FLAC_MAGIC.length);
++        byte[] magic = new byte[FLAC_MAGIC.length];
++        IOUtils.readFully(sniffedInput, magic);
++        if (Arrays.equals(magic, FLAC_MAGIC)) {
++            // Native FLAC keeps the comments in a metadata block instead of an ogg page
++            input = sniffedInput;
++            findFlacCommentBlock();
++            return;
++        }
++        sniffedInput.unread(magic);
++        input = new VorbisInputStream(sniffedInput);
++
+         byte[] buffer = new byte[64]; // Enough space for some bytes. Used circularly.
+         final byte[] oggCommentHeader = new byte[]{ PACKET_TYPE_COMMENT, 'v', 'o', 'r', 'b', 'i', 's' };
+         for (int bytesRead = 0; bytesRead < SECOND_PAGE_MAX_LENGTH; bytesRead++) {
+@@ -73,11 +91,36 @@ public abstract class VorbisCommentReader {
+                 return;
+             } else if (bufferMatches(buffer, "OpusTags".getBytes(), bytesRead)) {
+                 return;
++            } else if (bufferMatches(buffer, FLAC_IN_OGG_MAGIC, bytesRead)) {
++                IOUtils.skipFully(input, FLAC_IN_OGG_HEADER_LENGTH);
++                findFlacCommentBlock();
++                return;
+             }
+         }
+         throw new IOException("No comment header found");
+     }
+ 
++    /**
++     * Skips the FLAC metadata blocks until the one holding the comments is reached.
++     */
++    private void findFlacCommentBlock() throws IOException {
++        byte[] header = new byte[4]; // Last-block flag and type, followed by the length
++        long bytesRead = 0;
++        while (true) {
++            IOUtils.readFully(input, header);
++            if ((header[0] & FLAC_BLOCK_TYPE_MASK) == FLAC_BLOCK_TYPE_COMMENT) {
++                return;
++            }
++            // 24 bit big endian
++            long blockLength = ((header[1] & 0xffL) << 16) | ((header[2] & 0xffL) << 8) | (header[3] & 0xffL);
++            bytesRead += header.length + blockLength;
++            if ((header[0] & FLAC_LAST_BLOCK_FLAG) != 0 || bytesRead > FLAC_METADATA_MAX_LENGTH) {
++                throw new IOException("No comment block found");
++            }
++            IOUtils.skipFully(input, blockLength);
++        }
++    }
++
+     /**
+      * Reads backwards in haystack, starting at position. Checks if the bytes match needle.
+      * Uses haystack circularly, so when reading at (-1), it reads at (length - 1).
+diff --git a/ui/chapters/src/main/java/de/danoeh/antennapod/ui/chapters/ChapterUtils.java b/ui/chapters/src/main/java/de/danoeh/antennapod/ui/chapters/ChapterUtils.java
+index a3869c487..6379883e9 100644
+--- a/ui/chapters/src/main/java/de/danoeh/antennapod/ui/chapters/ChapterUtils.java
++++ b/ui/chapters/src/main/java/de/danoeh/antennapod/ui/chapters/ChapterUtils.java
+@@ -116,7 +116,8 @@ public class ChapterUtils {
+                 if (hasLoadedChapters(chapters)) {
+                     return chapters;
+                 }
+-            } else if (hint == MediaFormatDetector.Format.OGG) {
++            } else if (hint == MediaFormatDetector.Format.OGG
++                    || hint == MediaFormatDetector.Format.FLAC) {
+                 List<Chapter> chapters = readOggChaptersFromInputStream(
+                         new CountingInputStream(reconstructed));
+                 if (hasLoadedChapters(chapters)) {
+@@ -154,6 +155,8 @@ public class ChapterUtils {
+                         -> MediaFormatDetector.Format.ID3;
+                 case "audio/ogg", "application/ogg", "audio/opus", "application/opus"
+                         -> MediaFormatDetector.Format.OGG;
++                case "audio/flac", "audio/x-flac"
++                        -> MediaFormatDetector.Format.FLAC;
+                 case "audio/mp4", "audio/x-m4a", "audio/m4a", "video/mp4", "audio/x-m4b", "audio/m4b"
+                         -> MediaFormatDetector.Format.M4A;
+                 default -> format;
+@@ -168,7 +171,8 @@ public class ChapterUtils {
+                     String ext = filename.substring(dot + 1).toLowerCase(Locale.US);
+                     format = switch (ext) {
+                         case "mp3" -> MediaFormatDetector.Format.ID3;
+-                        case "ogg", "opus" -> MediaFormatDetector.Format.OGG;
++                        case "ogg", "opus", "oga" -> MediaFormatDetector.Format.OGG;
++                        case "flac" -> MediaFormatDetector.Format.FLAC;
+                         case "m4a", "mp4", "m4b" -> MediaFormatDetector.Format.M4A;
+                         default -> format;
+                     };
+@@ -194,7 +198,7 @@ public class ChapterUtils {
+             throws IOException, ID3ReaderException, VorbisCommentReaderException {
+         return switch (format) {
+             case ID3 -> readId3ChaptersFrom(input);
+-            case OGG -> readOggChaptersFromInputStream(input);
++            case OGG, FLAC -> readOggChaptersFromInputStream(input);
+             case M4A -> readM4AChaptersFromInputStream(input);
+             default -> Collections.emptyList();
+         };

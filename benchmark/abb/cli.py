@@ -248,28 +248,88 @@ def sandbox_install_s2a() -> None:
 
 # ---------------------------------------------------------------------------- tasks
 @tasks_app.command("new")
-def tasks_new(task_id: str) -> None:
-    _stub(2)
+def tasks_new(task_id: str, repo: str = typer.Option(...), base_commit: str = typer.Option(...),
+              source: str = typer.Option("authored")) -> None:
+    """Create tasks/<id>/ from the template."""
+    from abb.harness import tasks
+
+    typer.echo(tasks.new_task(task_id, repo, base_commit, source=source))
 
 
 @tasks_app.command("lint")
-def tasks_lint(task_id: Optional[str] = typer.Argument(None), all_: bool = typer.Option(False, "--all")) -> None:
-    _stub(2)
+def tasks_lint(task_id: Optional[str] = typer.Argument(None), all_: bool = typer.Option(False, "--all"),
+               offline_only: bool = typer.Option(False, "--offline-only", help="skip checks that need the repo")) -> None:
+    """Named lint checks (specs/task-format.md rules 1-8, D-020); exit 1 on any error."""
+    from abb.harness import tasks
+
+    ids = tasks.task_ids() if all_ else [task_id] if task_id else []
+    if not ids:
+        typer.echo("give a task id or --all", err=True)
+        raise typer.Exit(2)
+    errors = 0
+    for tid in ids:
+        fs = tasks.lint(tid, offline_only=offline_only)
+        errors += sum(f.level == "error" for f in fs)
+        for f in fs:
+            typer.echo(str(f))
+        if not fs:
+            typer.echo(f"OK    {tid}")
+    typer.echo(f"{len(ids)} task(s), {errors} error(s)")
+    if errors:
+        raise typer.Exit(1)
+
+
+@tasks_app.command("tag")
+def tasks_tag(task_id: str) -> None:
+    """Compute tags (files, modules, lang, ui, test kind) and write them into task.yaml."""
+    import json
+
+    from abb.harness import tasks
+
+    typer.echo(json.dumps(tasks.tag(task_id), indent=2))
 
 
 @tasks_app.command("validate")
-def tasks_validate(task_id: Optional[str] = typer.Argument(None)) -> None:
-    _stub(2)
+def tasks_validate(task_id: Optional[str] = typer.Argument(None), all_: bool = typer.Option(False, "--all"),
+                   runs: int = typer.Option(3), keep_going: bool = typer.Option(False, "--keep-going")) -> None:
+    """V0/V1/V2 x runs in fresh offline workspaces; writes the validation block and status."""
+    from abb.harness import tasks, validate
+
+    ids = tasks.task_ids() if all_ else [task_id] if task_id else []
+    raise typer.Exit(validate.validate_cli(ids, runs=runs, keep_going=keep_going))
 
 
 @tasks_app.command("mine")
-def tasks_mine(repo: str) -> None:
-    _stub(2)
+def tasks_mine(repo: str, since: str = typer.Option("2026-07-01"), max_files: int = typer.Option(8),
+               limit: int = typer.Option(200), allow_pre_cutoff: bool = typer.Option(False),
+               promote: Optional[list[int]] = typer.Option(None, help="PR numbers to copy into tasks/<repo>-<NNNN>")) -> None:
+    """Mine merged PRs that close an issue and touch tests -> ABB_HOME/state/candidates/<repo>/ (ranked)."""
+    from abb.harness import mine
+
+    if promote:
+        for n in promote:
+            typer.echo(f"PR #{n} -> {mine.promote(repo, n)}")
+        return
+    rows = mine.mine(repo, since, max_files=max_files, limit=limit, allow_pre_cutoff=allow_pre_cutoff)
+    keep = sorted([r for r in rows if "dir" in r], key=lambda r: (r["non_test"], -min(r["issue_len"], 1500)))
+    for r in keep:
+        typer.echo(f"#{r['pr']:<6} non-test {r['non_test']:<2} tests {r['tests']:<2} issue #{r['issue']:<6} "
+                   f"{r['category']:<8} {r['title'][:70]}")
+    skipped = [r for r in rows if "skip" in r]
+    typer.echo(f"{len(keep)} candidate(s), {len(skipped)} skipped (reasons in TRIAGE.json)")
 
 
 @tasks_app.command("list")
 def tasks_list() -> None:
-    _stub(2)
+    """Table of tasks: id, repo, category, source, tags, status."""
+    from abb.config import load_task
+    from abb.harness import tasks
+
+    typer.echo(f"{'id':<17} {'category':<12} {'source':<9} {'files':<5} {'mods':<4} {'lang':<7} {'kind':<11} {'split':<5} status")
+    for tid in tasks.task_ids():
+        t = load_task(tid)
+        typer.echo(f"{tid:<17} {t.category:<12} {t.source:<9} {t.tags.files_touched:<5} {t.tags.modules:<4} "
+                   f"{t.tags.lang:<7} {t.tags.test_kind:<11} {str(t.split):<5} {t.status}")
 
 
 # ---------------------------------------------------------------------------- run, grading, analysis

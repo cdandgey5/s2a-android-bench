@@ -228,7 +228,9 @@ def check(*, smoke: bool = True) -> list[tuple[str, bool, str]]:
     row("net: github.com as harness user works", r2.exit_code == 0, f"HTTP {r2.stdout().strip()}")
     plog = paths.results_dir() / "_sandbox-check" / f"{stamp()}-proxy.log"
     with from_sandbox_config("user", plog) as _proxy:
-        r3 = _as_user_run([str(curl), "-sS", "-o", "NUL", "-w", "%{http_code}", "--max-time", "20", "-x",
+        # --ssl-no-revoke: schannel cannot reach CRL/OCSP servers as the sandbox user (by design); claude.exe
+        # uses its own TLS stack and is unaffected (verified.md, Phase 1)
+        r3 = _as_user_run([str(curl), "-sS", "--ssl-no-revoke", "-o", "NUL", "-w", "%{http_code}", "--max-time", "20", "-x",
                            f"http://{sb.modes['user'].proxy.listen}", "https://api.anthropic.com/v1/models"],
                           user=user, cwd=work, env=base_env, out=work / "curl-api")
         ok3 = r3.exit_code == 0 and r3.stdout().strip().isdigit() and r3.stdout().strip() != "000"

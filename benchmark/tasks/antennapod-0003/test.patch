@@ -1,0 +1,360 @@
+diff --git a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/MediaFormatDetectorTest.java b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/MediaFormatDetectorTest.java
+index 6d5be6abc..f08747ea3 100644
+--- a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/MediaFormatDetectorTest.java
++++ b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/MediaFormatDetectorTest.java
+@@ -20,6 +20,12 @@ public class MediaFormatDetectorTest {
+                 MediaFormatDetector.detect(new ByteArrayInputStream(new byte[] {0x4F, 0x67, 0x67, 0x53})).format);
+     }
+ 
++    @Test
++    public void testMagicFlac_detectsFlac() throws Exception {
++        assertEquals(MediaFormatDetector.Format.FLAC,
++                MediaFormatDetector.detect(new ByteArrayInputStream(new byte[] {0x66, 0x4C, 0x61, 0x43})).format);
++    }
++
+     @Test
+     public void testMagicM4a_detectsM4a() throws Exception {
+         assertEquals(MediaFormatDetector.Format.M4A,
+diff --git a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentChapterReaderTest.java b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentChapterReaderTest.java
+index d24e3dcf0..700da48f8 100644
+--- a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentChapterReaderTest.java
++++ b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentChapterReaderTest.java
+@@ -96,4 +96,56 @@ public class VorbisCommentChapterReaderTest {
+         assertEquals("https://example.com/kefalaio-3", chapters.get(2).getLink());
+         assertEquals("https://example.com/al-fasl-4", chapters.get(3).getLink());
+     }
++
++    @Test
++    public void testRealFileFfmpegFlac() throws IOException, VorbisCommentReaderException {
++        InputStream inputStream = getClass().getClassLoader()
++                .getResource("ffmpeg.flac").openStream();
++        VorbisCommentChapterReader reader = new VorbisCommentChapterReader(inputStream);
++        reader.readInputStream();
++        List<Chapter> chapters = reader.getChapters();
++
++        assertEquals(4, chapters.size());
++
++        assertEquals(0, chapters.get(0).getStart());
++        assertEquals(3000, chapters.get(1).getStart());
++        assertEquals(6000, chapters.get(2).getStart());
++        assertEquals(9000, chapters.get(3).getStart());
++
++        assertEquals("Chapter 1 – Ünïcödé ✨", chapters.get(0).getTitle());
++        assertEquals("第2章 – 日本語", chapters.get(1).getTitle());
++        assertEquals("Κεφάλαιο 3 – Ελληνικά", chapters.get(2).getTitle());
++        assertEquals("الفصل ٤ – العربية", chapters.get(3).getTitle());
++
++        assertEquals("https://example.com/chapter-1", chapters.get(0).getLink());
++        assertEquals("https://example.com/dai-2-sho", chapters.get(1).getLink());
++        assertEquals("https://example.com/kefalaio-3", chapters.get(2).getLink());
++        assertEquals("https://example.com/al-fasl-4", chapters.get(3).getLink());
++    }
++
++    @Test
++    public void testRealFileFfmpegOggFlac() throws IOException, VorbisCommentReaderException {
++        InputStream inputStream = getClass().getClassLoader()
++                .getResource("ffmpeg.oga").openStream();
++        VorbisCommentChapterReader reader = new VorbisCommentChapterReader(inputStream);
++        reader.readInputStream();
++        List<Chapter> chapters = reader.getChapters();
++
++        assertEquals(4, chapters.size());
++
++        assertEquals(0, chapters.get(0).getStart());
++        assertEquals(3000, chapters.get(1).getStart());
++        assertEquals(6000, chapters.get(2).getStart());
++        assertEquals(9000, chapters.get(3).getStart());
++
++        assertEquals("Chapter 1 – Ünïcödé ✨", chapters.get(0).getTitle());
++        assertEquals("第2章 – 日本語", chapters.get(1).getTitle());
++        assertEquals("Κεφάλαιο 3 – Ελληνικά", chapters.get(2).getTitle());
++        assertEquals("الفصل ٤ – العربية", chapters.get(3).getTitle());
++
++        assertEquals("https://example.com/chapter-1", chapters.get(0).getLink());
++        assertEquals("https://example.com/dai-2-sho", chapters.get(1).getLink());
++        assertEquals("https://example.com/kefalaio-3", chapters.get(2).getLink());
++        assertEquals("https://example.com/al-fasl-4", chapters.get(3).getLink());
++    }
+ }
+diff --git a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java
+index 2570111f8..c99d0b097 100644
+--- a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java
++++ b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java
+@@ -47,6 +47,26 @@ public class VorbisCommentMetadataReaderTest {
+                 reader.getDescription());
+     }
+ 
++    @Test
++    public void testRealFileFfmpegFlac() throws IOException, VorbisCommentReaderException {
++        InputStream inputStream = getClass().getClassLoader()
++                .getResource("ffmpeg.flac").openStream();
++        VorbisCommentMetadataReader reader = new VorbisCommentMetadataReader(inputStream);
++        reader.readInputStream();
++        assertEquals("Ünïcödé tëst — “smart quotes” ½ ≠ ⅓ · Ελληνικά · 日本語 · 한국어 · العربية 📝",
++                reader.getDescription());
++    }
++
++    @Test
++    public void testRealFileFfmpegOggFlac() throws IOException, VorbisCommentReaderException {
++        InputStream inputStream = getClass().getClassLoader()
++                .getResource("ffmpeg.oga").openStream();
++        VorbisCommentMetadataReader reader = new VorbisCommentMetadataReader(inputStream);
++        reader.readInputStream();
++        assertEquals("Ünïcödé tëst — “smart quotes” ½ ≠ ⅓ · Ελληνικά · 日本語 · 한국어 · العربية 📝",
++                reader.getDescription());
++    }
++
+     @Test
+     public void testRealFileFfmpegSynopsis() throws IOException, VorbisCommentReaderException {
+         InputStream inputStream = getClass().getClassLoader()
+diff --git a/parser/media/src/test/resources/ffmpeg.flac b/parser/media/src/test/resources/ffmpeg.flac
+new file mode 100644
+index 0000000000000000000000000000000000000000..395e5d1138736210068b12a4133478cb62c4f4f2
+GIT binary patch
+literal 18145
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/parser/media/src/test/resources/ffmpeg.oga b/parser/media/src/test/resources/ffmpeg.oga
+new file mode 100644
+index 0000000000000000000000000000000000000000..0990fdc2c4b7d901c0d0e57d7a7ccdd7a7be57f2
+GIT binary patch
+literal 11058
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/ui/chapters/src/test/java/de/danoeh/antennapod/ui/chapters/ChapterUtilsTest.java b/ui/chapters/src/test/java/de/danoeh/antennapod/ui/chapters/ChapterUtilsTest.java
+index 04e0d023d..e6f38a7cc 100644
+--- a/ui/chapters/src/test/java/de/danoeh/antennapod/ui/chapters/ChapterUtilsTest.java
++++ b/ui/chapters/src/test/java/de/danoeh/antennapod/ui/chapters/ChapterUtilsTest.java
+@@ -62,6 +62,18 @@ public class ChapterUtilsTest {
+                 ChapterUtils.detectHintFromMetadata("application/opus", "http://example.com/file?token=abc"));
+     }
+ 
++    @Test
++    public void testMimeFlac_selectsFlac() {
++        assertEquals(MediaFormatDetector.Format.FLAC,
++                ChapterUtils.detectHintFromMetadata("audio/flac", "http://example.com/file?token=abc"));
++    }
++
++    @Test
++    public void testExtensionFlac_selectsFlac() {
++        assertEquals(MediaFormatDetector.Format.FLAC,
++                ChapterUtils.detectHintFromMetadata(null, "http://example.com/file.flac"));
++    }
++
+     @Test
+     public void testMimeM4a_selectsM4a() {
+         assertEquals(MediaFormatDetector.Format.M4A,

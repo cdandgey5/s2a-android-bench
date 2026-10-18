@@ -25,3 +25,31 @@ def sha256_file(p: Path) -> str:
 
 def sha256_bytes(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
+
+
+def glob_regex(pattern: str) -> "re.Pattern[str]":
+    """repo-config globs ("**/src/test/**", "gradle/**", "*.log") -> a regex over POSIX relative paths."""
+    import re
+
+    out, i = "", 0
+    while i < len(pattern):
+        if pattern.startswith("**/", i):
+            out += "(?:.*/)?"
+            i += 3
+        elif pattern.startswith("**", i):
+            out += ".*"
+            i += 2
+        elif pattern[i] == "*":
+            out += "[^/]*"
+            i += 1
+        elif pattern[i] == "?":
+            out += "[^/]"
+            i += 1
+        else:
+            out += re.escape(pattern[i])
+            i += 1
+    return re.compile(out + r"\Z")
+
+
+def glob_match(path: str, patterns: list[str]) -> bool:
+    return any(glob_regex(p).match(path) for p in patterns)

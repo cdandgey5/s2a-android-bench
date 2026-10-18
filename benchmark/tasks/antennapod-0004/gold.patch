@@ -1,0 +1,124 @@
+diff --git a/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/feed/local/LocalFeedUpdater.java b/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/feed/local/LocalFeedUpdater.java
+index f90f3b54f..f3b68250f 100644
+--- a/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/feed/local/LocalFeedUpdater.java
++++ b/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/feed/local/LocalFeedUpdater.java
+@@ -44,6 +44,7 @@ import de.danoeh.antennapod.model.playback.MediaType;
+ import de.danoeh.antennapod.parser.feed.util.MimeTypeUtils;
+ import de.danoeh.antennapod.parser.media.id3.ID3ReaderException;
+ import de.danoeh.antennapod.parser.media.id3.Id3MetadataReader;
++import de.danoeh.antennapod.parser.media.m4a.M4AMetadataReader;
+ import de.danoeh.antennapod.parser.media.vorbis.VorbisCommentMetadataReader;
+ import de.danoeh.antennapod.parser.media.vorbis.VorbisCommentReaderException;
+ 
+@@ -249,6 +250,14 @@ public class LocalFeedUpdater {
+                     Log.d(TAG, "Unable to parse vorbis comments of " + file.getUri() + ": " + e2.getMessage());
+                 }
+             }
++
++            try (InputStream inputStream = context.getContentResolver().openInputStream(file.getUri())) {
++                M4AMetadataReader reader = new M4AMetadataReader(new BufferedInputStream(inputStream));
++                reader.readInputStream();
++                item.setDescriptionIfLonger(reader.getDescription());
++            } catch (IOException e) {
++                Log.d(TAG, "Unable to parse m4a metadata of " + file.getUri() + ": " + e.getMessage());
++            }
+         }
+     }
+ 
+diff --git a/parser/media/src/main/java/de/danoeh/antennapod/parser/media/m4a/M4AMetadataReader.java b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/m4a/M4AMetadataReader.java
+new file mode 100644
+index 000000000..ba17fb5ca
+--- /dev/null
++++ b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/m4a/M4AMetadataReader.java
+@@ -0,0 +1,65 @@
++package de.danoeh.antennapod.parser.media.m4a;
++
++import android.util.Log;
++
++import java.io.IOException;
++import java.io.InputStream;
++import java.nio.ByteBuffer;
++import java.nio.ByteOrder;
++import java.nio.charset.StandardCharsets;
++
++/**
++ * Reads of an M4A file.
++ */
++public class M4AMetadataReader extends M4AReader {
++    private static final String TAG = "M4AMetadataReader";
++    private static final String ATOM_METADATA = "moov.udta.meta";
++    private static final String[] DESCRIPTION_ATOMS = {
++        "moov.udta.meta.ilst.desc.data",
++        "moov.udta.meta.ilst.ldes.data",
++        "moov.udta.meta.ilst.©cmt.data"
++    };
++    private static final int FULL_BOX_HEADER_LENGTH = 4;
++    private static final int DATA_HEADER_LENGTH = 8;
++    private static final int DATA_TYPE_UTF8 = 1;
++    private static final int MAX_DESCRIPTION_LENGTH = 1024 * 1024;
++
++    private String description = null;
++
++    public M4AMetadataReader(InputStream input) {
++        super(input, DESCRIPTION_ATOMS);
++    }
++
++    public void readInputStream() throws IOException {
++        readAtoms();
++    }
++
++    @Override
++    protected int childAtomsOffset(String path) {
++        // Skip version and flags
++        return ATOM_METADATA.equals(path) ? FULL_BOX_HEADER_LENGTH : 0;
++    }
++
++    @Override
++    protected void onAtom(String path, long payloadLength) throws IOException {
++        if (payloadLength <= DATA_HEADER_LENGTH || payloadLength > MAX_DESCRIPTION_LENGTH) {
++            Log.d(TAG, "Skipping " + path + " of unrealistic length " + payloadLength);
++            return;
++        }
++        ByteBuffer byteBuffer = ByteBuffer.allocate((int) payloadLength).order(ByteOrder.BIG_ENDIAN);
++        readFully(byteBuffer.array());
++        if (byteBuffer.getInt() != DATA_TYPE_UTF8) {
++            Log.d(TAG, "Skipping " + path + " because it does not hold text");
++            return;
++        }
++        String value = new String(byteBuffer.array(), DATA_HEADER_LENGTH,
++                (int) payloadLength - DATA_HEADER_LENGTH, StandardCharsets.UTF_8);
++        if (description == null || value.length() > description.length()) {
++            description = value;
++        }
++    }
++
++    public String getDescription() {
++        return description;
++    }
++}
+diff --git a/parser/media/src/main/java/de/danoeh/antennapod/parser/media/m4a/M4AReader.java b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/m4a/M4AReader.java
+index c9979ea85..c0e24c27b 100644
+--- a/parser/media/src/main/java/de/danoeh/antennapod/parser/media/m4a/M4AReader.java
++++ b/parser/media/src/main/java/de/danoeh/antennapod/parser/media/m4a/M4AReader.java
+@@ -40,6 +40,10 @@ public abstract class M4AReader {
+      */
+     protected abstract void onAtom(String path, long payloadLength) throws IOException;
+ 
++    protected int childAtomsOffset(String path) {
++        return 0;
++    }
++
+     protected void readAtoms() throws IOException {
+         assertM4A();
+         try {
+@@ -73,7 +77,9 @@ public abstract class M4AReader {
+             if (pendingPaths.remove(path)) {
+                 onAtom(path, payloadLength);
+             } else if (hasPendingChildren(path)) {
+-                readAtoms(path, payloadLength);
++                int offset = childAtomsOffset(path);
++                skipBytes(offset);
++                readAtoms(path, payloadLength - offset);
+                 // Whatever is not inside this atom cannot be anywhere else in the file
+                 removePendingChildren(path);
+             }

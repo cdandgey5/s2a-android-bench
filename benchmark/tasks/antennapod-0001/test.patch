@@ -1,0 +1,33 @@
+diff --git a/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/namespace/RssParserTest.java b/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/namespace/RssParserTest.java
+index 027e843a8..6914732d9 100644
+--- a/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/namespace/RssParserTest.java
++++ b/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/namespace/RssParserTest.java
+@@ -68,6 +68,13 @@ public class RssParserTest {
+         assertEquals(0, feed.getItems().size());
+     }
+ 
++    @Test
++    public void testLegacyItunesNamespace() throws Exception {
++        File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testLegacyItunesNamespace.xml");
++        Feed feed = FeedParserTestHelper.runFeedParser(feedFile);
++        assertEquals("https://example.com/image.png", feed.getImageUrl());
++    }
++
+     @Test
+     public void testMediaContentMime() throws Exception {
+         File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testMediaContentMime.xml");
+diff --git a/parser/feed/src/test/resources/feed-rss-testLegacyItunesNamespace.xml b/parser/feed/src/test/resources/feed-rss-testLegacyItunesNamespace.xml
+new file mode 100644
+index 000000000..8ff8d1229
+--- /dev/null
++++ b/parser/feed/src/test/resources/feed-rss-testLegacyItunesNamespace.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<rss version="2.0" xmlns:itunes="http://www.itunes.com/DTDs/Podcast-1.0.dtd">
++    <channel>
++        <title>title</title>
++        <description>description</description>
++        <link>https://example.com</link>
++        <itunes:image href="https://example.com/image.png" />
++    </channel>
++</rss>
