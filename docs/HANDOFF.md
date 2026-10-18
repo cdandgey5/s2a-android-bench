@@ -12,7 +12,7 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `7` gate pending (S2 approved, S3 passed: all 25 tasks validated 3x, 16:52-20:11 UTC); `abb env verify antennapod` + `wikipedia` (`--transforms off`) running in the background since 20:13 UTC, logs `C:bb\logserify-phase7-<repo>.log`. Phases 5 and 6 built in the overlap window (RUN-ALL): Phase 5 code done (gate run pending), Phase 6 code done through step 16 (end-to-end and runs pending).
+- Phase: `7` gate pending (S2 approved, S3 passed: all 25 tasks validated 3x, 16:52-20:11 UTC); `abb env verify antennapod` + `wikipedia` (`--transforms off`) running in the background since 20:13 UTC, logs `C:\abb\logs\verify-phase7-<repo>.log`. Phases 5 and 6 built in the overlap window (RUN-ALL): Phase 5 code done (gate run pending), Phase 6 code done through step 16 (end-to-end and runs pending).
 - Last commit: `phase 6: wip — s2a orchestrator package …` (`fa49cca`) + this handoff
 - Working tree: clean after the handoff commit
 - Date: `2026-10-18`
