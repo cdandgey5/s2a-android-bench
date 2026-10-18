@@ -379,7 +379,7 @@ def tasks_list() -> None:
 # ---------------------------------------------------------------------------- run, grading, analysis
 @run_app.callback()
 def run_main(ctx: typer.Context,
-             arm: Optional[list[str]] = typer.Option(None, "--arm", help="plain | plain-guided | plain-gate (repeatable)"),
+             arm: Optional[list[str]] = typer.Option(None, "--arm", help="plain | plain-guided | plain-gate | speckit | speckit-sdd (repeatable)"),
              tasks: str = typer.Option("dev5", help="dev5 | dev | test | comma-separated ids"),
              trials: int = typer.Option(1), model: str = typer.Option("claude-sonnet-5-5"),
              label: str = typer.Option("run"), grade: bool = typer.Option(True, "--grade/--no-grade"),

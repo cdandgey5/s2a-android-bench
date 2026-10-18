@@ -62,8 +62,21 @@ def render(run_id: str) -> str:
         lines.append(f"| {r['arm']} | {r['task']} | {r['trial']} | {r['resolved']} | {r['reason'] or ''} | {r['exit_reason']} | "
                      f"{r['turns']} | {r['tool_calls']} | {r['interventions']} | {usd} | {r['duration_s']} | {r['f2p']} | "
                      f"{r['regressions']} | {r['gate_runs'] or 0} | {r['builds']} | {r['tokens_out']} | {r['tokens_in_total']} |")
-    lines += ["", "## Setup (one-time, per repo)", "", "None for these arms." if not (root / "setup").exists() else
-              "\n".join(f"- {p.relative_to(root)}" for p in sorted((root / "setup").glob("*/*/run.json")))]
+    lines += ["", "## Setup (one-time, per repo)", ""]
+    setups = sorted((root / "setup").glob("*/*/run.json")) if (root / "setup").exists() else []
+    if not setups:
+        lines.append("None for these arms.")
+    else:
+        lines += ["Reported separately from the per-task numbers; a reused setup costs 0 here and names the run that "
+                  "produced it.", "", "| setup kind | repo | est. USD | turns | calls | produced by | cache key |",
+                  "|---|---|---|---|---|---|---|"]
+        for sp in setups:
+            sd = _load(sp)
+            usd = sd.get("cost_usd") if sd.get("cost_usd") is not None else sd.get("cost_usd_imputed")
+            by = sd.get("reused_from") or "this run"
+            extra = f" (produced at {sd.get('produced_cost_usd')})" if sd.get("reused_from") else ""
+            lines.append(f"| {sd.get('setup_kind')} | {sd.get('repo')} | {usd if usd is not None else '—'}{extra} | "
+                         f"{sd.get('num_turns')} | {len(sd.get('calls') or [])} | {by} | {sd.get('cache_key')} |")
     lines += ["", "## Totals", ""]
     by_arm: dict[str, list[dict]] = {}
     for r in rs:

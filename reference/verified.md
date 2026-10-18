@@ -185,9 +185,9 @@ WebFetch,WebSearch`, prompt on stdin. Token usage of every run: `docs/RUNS.md`.
 |---|---|---|
 | `specify --version` | `specify 1.2.1` (provisional pin `v1.2.1`, latest release 2026-10-16T20:41Z; `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.2.1` into `ABB_HOME\tools\uvtools`, exe `ABB_HOME\tools\bin\specify.exe`) | 2026-10-17 |
 | `specify init --help` (flags used) | `[project_name]`, `--here`, `--force`, `--integration <str>` (e.g. `claude`), `--integration-options`, `--script sh/ps/py`, `--non-interactive` ("Required for agent harnesses"), `--ignore-agent-tools`, `--preset`, `--extension`, `--allow-symlinks`; the help's example says "Claude installs skills by default" (Phase 5: skills vs slash commands) | 2026-10-17 |
-| Files created by `specify init --integration claude` | Phase 5 | |
-| Command names found in `.claude/` | Phase 5 | |
-| `specify extension add bug` → command names | Phase 5 | |
+| Files created by `specify init --here --force --non-interactive --integration claude --script ps --ignore-agent-tools` | 2 s, exit 0: `.specify/` (`memory/constitution.md` = unfilled template, `templates/{spec,plan,tasks,checklist,constitution}-template.md`, `scripts/powershell/{check-prerequisites,common,create-new-feature,resolve-template,setup-plan,setup-tasks}.ps1`, `extensions.yml`, `integration.json`, `init-options.json` with `ai_skills: true`, `workflows/speckit/workflow.yml`) and `.claude/skills/speckit-*/SKILL.md` (front matter `user-invocable: true`, body with `$ARGUMENTS`); **no** `.claude/commands/`. AntennaPod's own `.gitignore` already ignores `.claude` | 2026-10-18 |
+| Skill names in `.claude/skills/` | `speckit-analyze`, `speckit-checklist`, `speckit-clarify`, `speckit-constitution`, `speckit-converge`, `speckit-implement`, `speckit-plan`, `speckit-specify`, `speckit-tasks`, `speckit-taskstoissues` (+ the bug extension's three). `claude -p "/speckit-specify …"` as `abb-agent` **expands the skill natively**: `init.slash_commands` lists all 13, first request 31,377 cache-write tokens vs ~15.7k for a plain prompt, and the agent starts with the skill's pre-execution checks (D-048) | 2026-10-18 |
+| `specify extension add bug` → command names | 2 s, exit 0: skills `speckit-bug-assess`, `speckit-bug-fix`, `speckit-bug-test`; files under `.specify/extensions/bug/` ("Configuration may be required" warning; defaults used) | 2026-10-18 |
 
 ## Android SDK
 

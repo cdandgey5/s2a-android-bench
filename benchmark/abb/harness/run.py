@@ -15,7 +15,7 @@ import os
 import platform as _pyplatform
 import shutil
 import subprocess
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -30,6 +30,7 @@ from abb.harness.platform import get_platform
 from abb.harness.proxy import from_sandbox_config
 from abb.harness.tasks import task_dir, task_ids
 from abb.harness.workspace import Workspace
+from abb.harness.setup import SetupError, ensure_setup
 from abb.log import get_logger
 from abb.util import sha256_file, utcnow_iso
 
@@ -78,6 +79,7 @@ class Runner:
         self.limits = load_limits().resolve(self.profile, model=model)
         self.token: str | None = None
         self.aborted: str | None = None
+        self._setups: dict[tuple[str, str], dict | None] = {}  # (setup_kind, repo) -> ensure_setup() result
         self.env_suspect_streak = 0  # D-043 circuit breaker
 
     # ---------------------------------------------------------------- manifest / events
@@ -188,6 +190,37 @@ class Runner:
             self.event(event="run_end", aborted_reason=self.aborted)
         return {"run_id": self.run_id, "aborted_reason": self.aborted}
 
+    def setup_for(self, arm, repo_key: str) -> dict | None:
+        """One-time setup per (setup kind, repo), cached across runs (abb/harness/setup.py)."""
+        key = (arm.setup_kind, repo_key)
+        if key not in self._setups:
+            self.event(event="setup_start", setup_kind=arm.setup_kind, repo=repo_key)
+            holder: dict = {}
+
+            def make_context(a, rk: str, rec_dir: Path):
+                repo = load_repo(rk)
+                root = paths.work_dir() / self.run_id / "_setup" / a.setup_kind / rk
+                if root.exists():
+                    get_platform().rmtree_robust(root)
+                ws = Workspace(repo, root, self.sandbox)  # type: ignore[arg-type]
+                ws.snapshot(repo.build.setup_commit)
+                rec_dir.mkdir(parents=True, exist_ok=True)
+                ctx = DriverContext(ws=ws, record_dir=rec_dir, run_dir=self.root, tag=f"setup-{a.setup_kind}-{rk}",
+                                    token=self.token or "", budget=TrialBudget.start(replace(self.limits, **a.setup_limits())),
+                                    as_agent=self.sandbox == "user")
+                holder["ctx"] = ctx
+                return ws, ctx
+
+            try:
+                res = ensure_setup(arm, repo_key, self.root, run_id=self.run_id, make_context=make_context)
+            finally:
+                for ev in (holder["ctx"].events if "ctx" in holder else []):
+                    self.event(**ev)
+            self._setups[key] = res
+            self.event(event="setup_end", setup_kind=arm.setup_kind, repo=repo_key, reused=res["reused"] if res else None,
+                       cache_key=res["key"] if res else None)
+        return self._setups[key]
+
     def trial(self, arm_name: str, tid: str, k: int, attempt: int = 1) -> None:
         rec = self.root / arm_name / tid / f"t{k}"
         if complete(rec, self.grade):
@@ -208,6 +241,16 @@ class Runner:
             ctx = DriverContext(ws=ws, record_dir=rec, run_dir=self.root, tag=f"{arm_name}-{tid}-t{k}",
                                 token=self.token or "", budget=budget, as_agent=self.sandbox == "user")
             arm = get_arm(arm_name)
+            if getattr(arm, "setup_kind", None):
+                try:
+                    setup = self.setup_for(arm, task.repo)
+                except SetupError as e:
+                    self.event(event="setup_failed", arm=arm_name, repo=task.repo, subtype=e.subtype, error=str(e)[:300])
+                    self.aborted = "usage_limit" if e.subtype == "usage_limited" else "setup_failed"
+                    ws.cleanup()
+                    shutil.rmtree(rec, ignore_errors=True)
+                    return
+                arm.install_setup(ws, setup["artifacts"])
             ticket = (task_dir(tid) / task.problem_statement).read_text(encoding="utf-8")
             arm_task = task.model_copy(update={"test_patch": None, "gold_patch": None})
             self.event(event="trial_start", arm=arm_name, task=tid, trial=k, attempt=attempt)

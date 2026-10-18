@@ -1,0 +1,26 @@
+# Arm B — GitHub Spec Kit, driven headlessly (specs/speckit-automation.md). Verified on specify 1.2.1:
+# `--integration claude` installs user-invocable skills (.claude/skills/speckit-*/SKILL.md) that `claude -p`
+# expands natively as `/speckit-<name> …` (reference/verified.md, Phase 5 step 2).
+invocation: native            # native: send "/speckit-<name> <args>"; inline: send the SKILL.md body with $ARGUMENTS replaced
+path_by_category: {bugfix: bug, feature: sdd, refactor: sdd, cross_module: sdd}
+setup:
+  init_args: ["init", "--here", "--force", "--non-interactive", "--integration", "claude", "--script", "ps", "--ignore-agent-tools"]
+  extensions: ["bug"]
+  constitution_prompt_file: prompts/constitution.md
+  turn_cap: 40
+  limits: {timeout_minutes: 30, max_turns_total: 60, max_usd: 5.0}
+paths:
+  sdd:
+    - {name: speckit-specify, command: speckit-specify, args: "{{ticket}}", turn_cap: 15}
+    - {name: speckit-plan, command: speckit-plan, args_file: prompts/plan.md, turn_cap: 15}
+    - {name: speckit-tasks, command: speckit-tasks, args: "", turn_cap: 15}
+    - {name: speckit-implement, command: speckit-implement, args: "", turn_cap: 120, implementing: true}
+    - {name: speckit-converge, command: speckit-converge, args: "", turn_cap: 20}
+    - {name: speckit-implement-2, command: speckit-implement, args: "", turn_cap: null, implementing: true, only_if: open_tasks}
+  bug:
+    - {name: speckit-bug-assess, command: speckit-bug-assess, args: "{{ticket}}", turn_cap: 20}
+    - {name: speckit-bug-fix, command: speckit-bug-fix, args: "", turn_cap: 120, implementing: true}
+    - {name: speckit-bug-test, command: speckit-bug-test, args: "", turn_cap: 40}
+artifacts:
+  copy: ["specs/**", ".specify/**"]
+  skip: [".specify/templates/**", ".specify/scripts/**", ".specify/integrations/**", ".specify/workflows/**"]

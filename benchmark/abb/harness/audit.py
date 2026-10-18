@@ -105,7 +105,8 @@ def audit(run_id: str) -> dict:
     root = paths.results_dir() / run_id
     pin = load_toolchain().claude_code.version
     trials = {}
-    for rj in sorted(root.glob("*/*/t*/run.json")) + sorted(root.glob("usage_limited/*/*/t*/run.json")):
+    for rj in (sorted(root.glob("*/*/t*/run.json")) + sorted(root.glob("usage_limited/*/*/t*/run.json"))
+               + sorted(root.glob("setup/*/*/run.json"))):  # one-time setup calls are audited like trials
         rec = rj.parent
         key = str(rec.relative_to(root)).replace("\\", "/")
         trials[key] = audit_trial(rec, pin)
