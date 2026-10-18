@@ -374,6 +374,12 @@ class WindowsPlatform:
         inh = "(OI)(CI)" if Path(path).is_dir() else ""
         self._icacls(str(path), "/grant", f"*S-1-3-4:{inh}(S)")
 
+    def inherit_acl(self, path: Path) -> None:
+        """Replace every ACL under `path` with what its parent passes down. A directory moved within
+        a volume keeps the ACEs it inherited where it was built (env warm's `_staging`), so the new
+        parent's inheritable entries (e.g. the deny on caches/gradle-pristine) are missing (D-043)."""
+        self._icacls(str(path), "/reset", "/T", "/Q")
+
     def reset_inheritance(self, root: Path, owners: list[str]) -> None:
         grants: list[str] = []
         for o in owners:

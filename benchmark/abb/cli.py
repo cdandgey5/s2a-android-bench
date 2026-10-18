@@ -92,11 +92,16 @@ def ws_smoke(
     env: Optional[list[str]] = typer.Option(None, "--env", help="KEY=VALUE override of the agent block (experiments)"),
     allowed_tools: Optional[str] = typer.Option(None, help="pass --allowedTools <value>"),
     permission_mode: str = typer.Option("bypassPermissions"),
+    until_limit: bool = typer.Option(False, "--until-limit", help="usage-limit canary: repeat the probe prompt as the "
+                                     "sandbox user until a limit answers (costs the rest of the window)"),
+    max_calls: int = typer.Option(200, help="cap for --until-limit"),
 ) -> None:
     """Run the pinned claude.exe headlessly through the platform layer with a trial-shaped env block."""
     from abb import paths
     from abb.harness import smoke
 
+    if until_limit:
+        raise typer.Exit(smoke.until_limit(max_calls=max_calls, model=model))
     if prompt_file is not None:
         pf = prompt_file if prompt_file.is_absolute() else paths.benchmark_dir() / prompt_file
         prompt = pf.read_text(encoding="utf-8")
@@ -457,12 +462,20 @@ def labels_agreement(run_id: str) -> None:
 
 
 @app.command("audit")
-def audit(run_id: str) -> None:
+def audit(run_id: str,
+          rederive: bool = typer.Option(False, help="first rewrite run.json/calls.jsonl/metrics.json from the transcripts "
+                                        "(after a parser fix; every change is logged in events.jsonl and run.json)"),
+          reason: str = typer.Option("", help="why (required with --rederive), e.g. a D-number")) -> None:
     """Recompute run.json/calls.jsonl totals from the verbatim transcripts; fail on mismatch or any token in the run."""
     import json
 
     from abb.harness import audit as aud
 
+    if rederive:
+        if not reason:
+            typer.echo("--rederive needs --reason", err=True)
+            raise typer.Exit(2)
+        typer.echo(json.dumps({"rederived": aud.rederive(run_id, reason)}, indent=2, default=str))
     r = aud.audit(run_id)
     typer.echo(json.dumps(r, indent=2))
     if not r["ok"]:

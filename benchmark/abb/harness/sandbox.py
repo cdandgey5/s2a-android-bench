@@ -100,6 +100,61 @@ def apply_list_grants() -> list[str]:
     return done
 
 
+def apply_cache_grants(repos: list[str]) -> list[str]:
+    """Read+execute for the sandbox user on the repos' read-only caches (the `rx` entries under
+    caches/). No admin rights needed: the harness user owns ABB_HOME. `env warm` calls it after it
+    replaces a cache, because the replacement directory has none of the old grants (D-043)."""
+    plat = get_platform()
+    params = setup_params(repos)
+    user = params["user"]
+    if not plat.user_exists(user):
+        return []
+    caches = paths.caches_dir().resolve()
+    done = []
+    for p in map(Path, params["rx"]):
+        if p.exists() and caches in p.resolve().parents:
+            plat.grant(p, user, "rx")
+            done.append(str(p))
+    return done
+
+
+def check_fs(user: str) -> list[tuple[str, bool, str]]:
+    """The filesystem rows of `abb sandbox check`: real read/create attempts as the sandbox user,
+    one launch. The runner's preflight runs it before every run (D-043)."""
+    plat = get_platform()
+    items: list[tuple[str, Path, str, str]] = []  # (label, path, op, expected)
+    for key in CHOSEN_REPOS:
+        r = load_repo(key)
+        items += [
+            (f"mirror {key}", paths.caches_dir() / "repos" / f"{r.key}.git", "read", "denied"),
+            (f"pristine {key}", paths.caches_dir() / "gradle-pristine" / r.key, "read", "denied"),
+            (f"gradle-ro {key} read", paths.caches_dir() / "gradle-ro" / r.key, "read", "ok"),
+            (f"gradle-ro {key} create", paths.caches_dir() / "gradle-ro" / r.key, "create", "denied"),
+            (f"robolectric {key} read", paths.caches_dir() / "robolectric" / r.key, "read", "ok"),
+        ]
+    items += [
+        ("results", paths.results_dir(), "read", "denied"),
+        ("results create", paths.results_dir(), "create", "denied"),
+        ("env.lock.json", paths.abb_home() / "env.lock.json", "read", "denied"),
+        ("code checkout", paths.repo_clone(), "read", "denied"),
+        ("tasks (hidden tests)", paths.tasks_dir(), "read", "denied"),
+        ("ABB_HOME list (names only, D-036)", paths.abb_home(), "read", "ok"),
+        ("caches list (names only, D-036)", paths.caches_dir(), "read", "ok"),
+        ("ABB_HOME create", paths.abb_home(), "create", "denied"),
+        ("work create", paths.work_dir(), "create", "denied"),
+        ("tools read", paths.tools_dir(), "read", "ok"),
+        ("tools create", paths.tools_dir(), "create", "denied"),
+        ("claude template read", template_dir() / "settings.json", "read", "ok"),
+        (f"C:/Users/{user} create", Path("C:/Users") / user, "create", "denied"),
+    ]
+    res = plat.check_paths([(p, op) for _, p, op, _ in items], as_user=user)
+    rows = []
+    for (label, p, op, want), got in zip(items, res):
+        ok = got == want or (want == "denied" and got == "missing" and op == "read" and not p.exists())
+        rows.append((f"fs: {label}", ok, f"{op} {p} -> {got} (want {want})"))
+    return rows
+
+
 def prepare(repos: list[str]) -> dict:
     """Everything that needs no admin rights. Idempotent."""
     import keyring
@@ -119,6 +174,7 @@ def prepare(repos: list[str]) -> dict:
     if not (paths.abb_home() / "env.lock.json").exists():
         (paths.abb_home() / "env.lock.json").write_text("{}\n", encoding="utf-8")
     apply_list_grants()
+    apply_cache_grants(repos)
     params = setup_params(repos)
     pf = paths.state_dir() / "sandbox-setup-params.json"
     pf.write_text(json.dumps(params, indent=2), encoding="utf-8")
@@ -183,35 +239,8 @@ def check(*, smoke: bool = True) -> list[tuple[str, bool, str]]:
     row("firewall rule", plat.firewall_rule_present(sb.modes["user"].firewall_rule), sb.modes["user"].firewall_rule)
     before = _profile_hash(user)
     # ---- filesystem (real attempts as the user)
-    items: list[tuple[str, Path, str, str]] = []  # (label, path, op, expected)
-    for key in CHOSEN_REPOS:
-        r = load_repo(key)
-        items += [
-            (f"mirror {key}", paths.caches_dir() / "repos" / f"{r.key}.git", "read", "denied"),
-            (f"pristine {key}", paths.caches_dir() / "gradle-pristine" / r.key, "read", "denied"),
-            (f"gradle-ro {key} read", paths.caches_dir() / "gradle-ro" / r.key, "read", "ok"),
-            (f"gradle-ro {key} create", paths.caches_dir() / "gradle-ro" / r.key, "create", "denied"),
-            (f"robolectric {key} read", paths.caches_dir() / "robolectric" / r.key, "read", "ok"),
-        ]
-    items += [
-        ("results", paths.results_dir(), "read", "denied"),
-        ("results create", paths.results_dir(), "create", "denied"),
-        ("env.lock.json", paths.abb_home() / "env.lock.json", "read", "denied"),
-        ("code checkout", paths.repo_clone(), "read", "denied"),
-        ("tasks (hidden tests)", paths.tasks_dir(), "read", "denied"),
-        ("ABB_HOME list (names only, D-036)", paths.abb_home(), "read", "ok"),
-        ("caches list (names only, D-036)", paths.caches_dir(), "read", "ok"),
-        ("ABB_HOME create", paths.abb_home(), "create", "denied"),
-        ("work create", paths.work_dir(), "create", "denied"),
-        ("tools read", paths.tools_dir(), "read", "ok"),
-        ("tools create", paths.tools_dir(), "create", "denied"),
-        ("claude template read", template_dir() / "settings.json", "read", "ok"),
-        (f"C:/Users/{user} create", Path("C:/Users") / user, "create", "denied"),
-    ]
-    res = plat.check_paths([(p, op) for _, p, op, _ in items], as_user=user)
-    for (label, p, op, want), got in zip(items, res):
-        ok = got == want or (want == "denied" and got == "missing" and op == "read" and not p.exists())
-        row(f"fs: {label}", ok, f"{op} {p} -> {got} (want {want})")
+    for name, ok, detail in check_fs(user):
+        row(name, ok, detail)
     # ---- network as the user, then as the harness user
     work = paths.work_dir() / "sbcheck" / stamp()
     work.mkdir(parents=True)

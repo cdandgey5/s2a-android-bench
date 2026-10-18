@@ -75,8 +75,8 @@ class EgressProxy:
         rec.update(method=method, target=target)
         if method != "CONNECT":
             rec.update(decision="deny", reason="only CONNECT is proxied")
+            self._log(rec)  # before the reply: a client that reads the 403 sees the decision logged
             await self._reply(writer, 403, "Forbidden")
-            self._log(rec)
             return
         host, _, port_s = target.rpartition(":")
         host = host.strip("[]")
@@ -86,8 +86,8 @@ class EgressProxy:
             port = -1
         if not self.allowed(host, port):
             rec.update(decision="deny", reason="host not allow-listed")
+            self._log(rec)  # before the reply: a client that reads the 403 sees the decision logged
             await self._reply(writer, 403, "Forbidden")
-            self._log(rec)
             return
         up_r = up_w = None
         last: BaseException | None = None

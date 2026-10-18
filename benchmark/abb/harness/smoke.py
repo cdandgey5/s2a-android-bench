@@ -190,3 +190,45 @@ def smoke_cli(prompt: str, *, model: str, max_turns: int, max_usd: float, deadli
         (dst.with_suffix(".meta.json")).write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8", newline="\n")
         print(f"saved {dst}")
     return 0
+
+
+def until_limit(*, max_calls: int, model: str, sandbox: str = "user", save: str = "probe-limited-canary") -> int:
+    """Usage-limit canary (phases/phase-4 step 8): the probe prompt through the launcher, repeated
+    until a call answers with a usage limit or `max_calls` is reached. The first limited call's
+    verbatim stream-json becomes tests/fixtures/transcripts/<save>.jsonl with a .meta.json (exit
+    code, stderr tail, error text) for reference/verified.md. Costs the rest of the window."""
+    from abb.harness import transcript as tx
+    from abb.harness.proxy import from_sandbox_config
+
+    as_user = load_sandbox().modes["user"].run_as if sandbox == "user" else None
+    log = paths.work_dir() / "smoke" / f"{stamp()}-until-limit-proxy.log"
+    with from_sandbox_config("user", log):
+        for i in range(1, max_calls + 1):
+            s = run_smoke("ping", model=model, max_turns=1, max_usd=1.0, deadline=120, grace=10, interrupt=None,
+                          tools="", proxy=True, label=f"until-limit-{i}", as_user=as_user, proxy_running=True)
+            if s["token_leak_files"]:
+                print("TOKEN FOUND in: " + ", ".join(s["token_leak_files"]) + " — stop (D-026)")
+                return 3
+            out = Path(s["trial_dir"]) / "agent-out" / "stdout.txt"
+            t = tx.parse_file(out)
+            w = {}
+            for e in t.rate_limit_events:
+                w = (e.get("rate_limit_info") or {}).get("unifiedWindows") or w
+            util = {k: (v or {}).get("utilization") for k, v in w.items()}
+            limited = t.usage_limited_text(s["stderr_tail"])
+            print(json.dumps({"call": i, "subtype": t.subtype, "exit_code": s["exit_code"], "utilization": util,
+                              "limited": bool(limited)}))
+            if limited or (t.subtype != "success"):
+                dst = paths.fixtures_dir() / "transcripts" / f"{save}.jsonl"
+                shutil.copyfile(out, dst)
+                meta = {"captured_at": utcnow_iso(), "call": i, "argv": s["argv"], "exit_code": s["exit_code"],
+                        "result_subtype": t.subtype, "result_is_error": (t.result or {}).get("is_error"),
+                        "result_text": t.result_text()[:1000], "last_text": (t.last_text or "")[:1000],
+                        "stderr_tail": s["stderr_tail"], "limited_text": limited,
+                        "resets_hint": tx.parse_resets(limited or ""), "rate_limit_events": t.rate_limit_events}
+                dst.with_suffix(".meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8",
+                                                         newline="\n")
+                print(f"{'limit reached' if limited else 'non-success ending (check it)'}: saved {dst}")
+                return 0 if limited else 4
+    print(f"no limit after {max_calls} calls")
+    return 5

@@ -43,6 +43,7 @@ seven-day 54 % — almost all of it this building session, not the smoke tests.
 | 00:21 (18th) | ping `20261018-002130-smoke` | claude-sonnet-5-5 | success | 2 | 21 | 0 | 2,268 | 0.0093 | 0 | rate_limit_event: five-hour 42 %, seven-day 60 % |
 | 01:05 (18th) | **S1b throughput probe** `20261018-010536-smoke` (Pro) | claude-sonnet-5-5 | success, 8 turns, 3 min 4 s | 16 | 1,188 | 194,077 | 16,683 | 0.0981 | 0 | as `abb-agent` via the proxy, seed task antennapod-0000 at its base, plain-arm shape (one call, 200 turns, 45 min, $5 cap); the agent fixed it (1-line diff in the duration parser); peak job memory 4.3 GB. **Owner meter: session 0 % → 3 %, weekly 0 % → 0 %**; rate_limit_event five-hour 1 % at start → 2 % after |
 | 01:09 (18th) | ping `20261018-010907-smoke` | claude-sonnet-5-5 | success | 2 | 21 | 0 | 2,268 | 0.0093 | 0 | after-probe cross-check: rate_limit_event five-hour 2 %, seven-day 0 % |
+| 01:12 (18th) | Phase 1 gate `abb sandbox check` smoke `20261018-011201-sbcheck` | claude-sonnet-5-5 | success | — | — | — | — | ~0.03 | 0 | as `abb-agent` via the proxy; part of the gate |
 
 ### S1b throughput estimate (2026-10-18, Pro; D-027, D-038)
 
@@ -60,4 +61,33 @@ Lower bound: the seed task is trivial (8 turns, ~213k tokens incl. cache reads, 
 Decision (autopilot default, D-038): the dev runs fit in < 8 weeks, so **stay on Pro**; the MVP cut
 is decided when the first results table exists (end of Phase 4), which also measures trials per
 window on realistic tasks. Moving to Max remains the owner's call.
-| 01:12 (18th) | Phase 1 gate `abb sandbox check` smoke `20261018-011201-sbcheck` | claude-sonnet-5-5 | success | — | — | — | — | ~0.03 | 0 | as `abb-agent` via the proxy; part of the gate |
+
+## 2026-10-18 — Phase 4 (plain arm through `abb run`: sandbox user, proxy, driver, grading, audit)
+
+From here on every row comes from `<results>/<run_id>/` (`run.json`, `grade.json`, transcripts);
+"five-hour"/"seven-day" are the `rate_limit_event` utilisations (`unifiedWindows`) at the first and
+last API call of the trial. The five-hour window ran 01:00–06:00 UTC.
+
+**Runs before 04:10 UTC are invalid (D-043):** the sandbox user could not read the read-only
+Gradle and Robolectric caches (Phase 2's warm had replaced them without the grants), so every agent
+Gradle run failed and the agents fixed tasks without running a test. They are kept for the cost log.
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 03:14 | AskUserQuestion check, smoke `20261018-031351-smoke` | claude-sonnet-5-5 | success, 2 turns | 4 | 267 | 36,684 | 11,704 | 0.0532 | 0 | as `abb-agent` via the proxy; no question tool in `-p`: one `ToolSearch`, then a plain-text question ("…I'll wait for your reply…"); no permission denial (D-040); five-hour 35 %, seven-day 5 % |
+| 03:15 | driver check `_driver-check/20261018-031524` (`run_headless`, question prompt) | claude-sonnet-5-5 | success, 2 + 1 turns | 6 | 560 | 52,098 | 29,538 | 0.1290 | 0 | trigger (b) nudged once; `--resume` continued the same session. The nudge's `total_cost_usd` (0.1290) was the session total, not its own 0.0064 (D-041); five-hour 38 % |
+| 03:17 | `20261018-0317-shakedown` plain/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 11 turns, 69 s | 18 | 1,967 | 215,491 | 12,596 | 0.0916 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.39 → 0.40, seven-day 0.05 |
+| | **`20261018-0317-shakedown` total (1 trials, 1 resolved)** | | mean 69 s | **18** | **1,967** | **215,491** | **12,596** | **0.0916** (mean 0.0916) | 0 | **invalid (D-043)** |
+| 03:23 | `20261018-0322-dev5-plain-1` plain/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 11 turns, 65 s | 16 | 1,845 | 195,899 | 13,904 | 0.0937 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.43 → 0.44, seven-day 0.06 |
+| 03:25 | `20261018-0322-dev5-plain-1` plain/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 14 turns, 80 s | 20 | 3,121 | 276,438 | 17,966 | 0.1308 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.45 → 0.46, seven-day 0.06 |
+| 03:27 | `20261018-0322-dev5-plain-1` plain/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 9 turns, 66 s | 14 | 2,018 | 174,801 | 13,761 | 0.0927 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.48 → 0.49, seven-day 0.06 |
+| 03:29 | `20261018-0322-dev5-plain-1` plain/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 40 turns, 163 s | 36 | 15,169 | 841,496 | 48,420 | 0.4296 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.50 → 0.54, seven-day 0.07 |
+| 03:34 | `20261018-0322-dev5-plain-1` plain/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 8 turns, 88 s | 16 | 5,987 | 250,647 | 24,211 | 0.1818 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.55 → 0.56, seven-day 0.07 |
+| 03:37 | `20261018-0322-dev5-plain-1` plain/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 12 turns, 75 s | 18 | 5,577 | 256,263 | 19,812 | 0.1607 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.56 → 0.57, seven-day 0.07 |
+| | **`20261018-0322-dev5-plain-1` total (6 trials, 6 resolved)** | | mean 89 s | **120** | **33,717** | **1,995,544** | **138,074** | **1.0893** (mean 0.1815) | 0 | **invalid (D-043)** |
+| 03:40 | `20261018-0340-dev5-guided-1` plain-guided/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 15 turns, 84 s | 22 | 2,790 | 321,200 | 20,891 | 0.1436 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.58 → 0.59, seven-day 0.07 |
+| 03:42 | `20261018-0340-dev5-guided-1` plain-guided/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 27 turns (two results, D-042), 701 s | 42 | 5,313 | 712,170 | 26,200 | 0.2292 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.6 → 0.61, seven-day 0.07 |
+| 03:55 | `20261018-0340-dev5-guided-1` plain-guided/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 11 turns, 66 s | 16 | 2,549 | 214,878 | 16,013 | 0.1111 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.61 → 0.62, seven-day 0.07 |
+| 03:57 | `20261018-0340-dev5-guided-1` plain-guided/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 31 turns, 154 s | 28 | 16,841 | 699,675 | 52,677 | 0.4491 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.62 → 0.65, seven-day 0.08 |
+| | **`20261018-0340-dev5-guided-1` total (4 trials, 4 resolved)** | | mean 251 s | **108** | **27,493** | **1,947,923** | **115,781** | **0.9330** (mean 0.2333) | 0 | **invalid (D-043)**; stopped after 4 trials when the cause was found |
+| 04:00 | `20261018-0340-dev5-guided-1` plain-guided/antennapod-0004/t1 | claude-sonnet-5-5 | stopped by the operator (harness killed) | — | — | — | — | unknown (< 0.5) | 0 | **invalid (D-043)**; the stream lived only in the workspace's `agent-out/` and was deleted with the workspace before it was copied: **transcript lost**. `abb run` now salvages `agent-out` streams into the run before it deletes stale workspaces |

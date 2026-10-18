@@ -45,7 +45,11 @@ def render(run_id: str) -> str:
              f"Arms: {', '.join(man.get('arms', []))} · tasks: {man.get('task_set')} ({len(man.get('task_ids', []))}) · "
              f"trials: {man.get('trials')} · model: {(man.get('limits') or {}).get('model')} · Claude Code "
              f"{man.get('agent_version')} · sandbox: {man.get('sandbox_mode')} · plan: {man.get('plan')} · "
-             f"aborted: {man.get('aborted_reason')}", "",
+             f"aborted: {man.get('aborted_reason')}", ""]
+    if man.get("invalid"):
+        lines += [f"> **INVALID run ({man['invalid'].get('decision')}):** {man['invalid'].get('reason')}. Its numbers are "
+                  "kept for the cost log only and enter no comparison.", ""]
+    lines += [
              "Cost columns are **est. API-equivalent USD** (Claude Code's client-side estimate at list price; there is no "
              "bill under the subscription). Tokens: output / total input incl. cache reads and writes.", "",
              "| arm | task | trial | resolved | reason | exit | turns | tools | nudges | est. USD | duration s | F2P | regr. | gate runs | out tok | in tok |",

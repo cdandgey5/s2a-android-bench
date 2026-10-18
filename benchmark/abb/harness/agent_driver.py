@@ -96,6 +96,7 @@ class DriverContext:
     proxy: bool = True
     events: list = field(default_factory=list)   # usage_limited / probe records for events.jsonl
     probes: int = 0
+    history: list = field(default_factory=list)  # this trial's transcripts in execution order (invocation_cost)
 
 
 def _claude(ctx: DriverContext) -> str:
@@ -223,10 +224,12 @@ def run_headless(
     if t.unparsable and not t.lines - t.unparsable:
         raise HarnessError(f"{call_name}: transcript unparsable ({t.unparsable} lines)")
     _check_init(t, model)
+    own = tx.invocation_cost(t, ctx.history)
+    ctx.history.append(t)
     call = PhaseCall(
         name=call_name, session_id=t.session_id, cmd=argv, started_at=started, duration_ms=0, num_turns=t.num_turns,
-        tool_calls=t.tool_calls, tool_errors=t.tool_errors, cost_usd=t.cost_usd,
-        cost_usd_imputed=None if t.has_result else tx.impute_cost(t, model),
+        tool_calls=t.tool_calls, tool_errors=t.tool_errors, cost_usd=own,
+        cost_usd_imputed=None if own is not None else tx.impute_cost(t, model),
         **{k: v for k, v in t.usage_totals().items()}, subtype="", interventions=0,
         asked_question=t.asked_question, rate_limit_retries=t.rate_limit_retries, other_retries=t.other_retries,
         claude_code_version=(t.init or {}).get("claude_code_version") or "", model_drift=False,
@@ -238,7 +241,7 @@ def run_headless(
     call.background_models, call.model_drift = background, drift
     if drift:
         raise HarnessError(f"{call_name}: modelUsage has a foreign model {list(t.model_usage)} (pinned {model})")
-    b.charge(t.num_turns, t.cost_usd if t.cost_usd is not None else call.cost_usd_imputed)
+    b.charge(t.num_turns, own if own is not None else call.cost_usd_imputed)
     # ---- nudge protocol (D-005): identical caps for every arm
     per_call = 0
     last = t
@@ -258,6 +261,8 @@ def run_headless(
             shutil.copyfile(nr.stdout_path, npath)
         nt = tx.parse_file(npath)
         _check_init(nt, model)
+        nown = tx.invocation_cost(nt, ctx.history)
+        ctx.history.append(nt)
         nb, nd = _models(nt, model)
         if nd:
             raise HarnessError(f"{name}: modelUsage has a foreign model {list(nt.model_usage)}")
@@ -269,18 +274,18 @@ def run_headless(
         call.tool_errors += nt.tool_errors
         for k, v in nt.usage_totals().items():
             setattr(call, k, getattr(call, k) + v)
-        if nt.cost_usd is None or call.cost_usd is None:
+        if nown is None or call.cost_usd is None:
             call.cost_usd_imputed = round((call.cost_usd if call.cost_usd is not None else (call.cost_usd_imputed or 0))
-                                          + (nt.cost_usd if nt.cost_usd is not None else (tx.impute_cost(nt, model) or 0)), 6)
+                                          + (nown if nown is not None else (tx.impute_cost(nt, model) or 0)), 6)
             call.cost_usd = None
         else:
-            call.cost_usd = round(call.cost_usd + nt.cost_usd, 6)
+            call.cost_usd = round(call.cost_usd + nown, 6)
         call.asked_question = call.asked_question or nt.asked_question
         call.rate_limit_retries += nt.rate_limit_retries
         call.other_retries += nt.other_retries
         call.background_models = sorted(set(call.background_models) | set(nb))
         call.subtype = _classify(ctx, nt, nr, nr.stderr(), model)
-        b.charge(nt.num_turns, nt.cost_usd if nt.cost_usd is not None else tx.impute_cost(nt, model))
+        b.charge(nt.num_turns, nown if nown is not None else tx.impute_cost(nt, model))
         last = nt
     call.duration_ms = int((time.monotonic() - t0) * 1000)
     if call.cost_usd is None and call.cost_usd_imputed is None:

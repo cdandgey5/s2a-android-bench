@@ -90,6 +90,12 @@ Behaviour:
    - `assistant` messages: count `tool_use` blocks → `tool_calls`; count `tool_result` blocks
      with `is_error` → `tool_errors`; remember the last text block; set `asked_question=True`
      if a `tool_use` block is named `AskUserQuestion`.
+   - **One process can emit several `init`/`result` pairs** (Phase 4 finding, 2.1.302, D-042):
+     when a background task (e.g. a Bash call auto-backgrounded after its 120 s timeout) finishes
+     after the first result, `-p` waits for it and runs another turn for its notification
+     (`result.origin.kind: task-notification`). Sum `num_turns` and `usage` over every result;
+     take `subtype`, `total_cost_usd` and `modelUsage` (the process's running totals) from the
+     last; collect `permission_denials` from all.
    - final `result` message: read `subtype`, `session_id`, `num_turns`, `duration_ms`,
      `duration_api_ms`, `total_cost_usd`, `usage.{input_tokens,output_tokens,
      cache_read_input_tokens,cache_creation_input_tokens}`, `permission_denials` (an entry
@@ -148,6 +154,15 @@ Behaviour:
      `transcript/<call_name>.nudge<k>.jsonl`, listed in `PhaseCall.nudge_transcript_paths`; its
      turns, tool calls, tokens and cost are **added into the same `PhaseCall`** (same
      `session_id`); the trigger and text go into `PhaseCall.interventions_log`.
+   - **Phase 4 finding (2.1.302, D-041): a resumed process's `total_cost_usd` and `modelUsage`
+     can be session-cumulative**: Claude Code restores the session's running totals when that
+     session was the last to exit in the config dir. `usage` and `num_turns` stay per process.
+     Every driver therefore adds each process's **own** cost: `total_cost_usd` minus the total
+     of the earlier transcript of the same session whose `modelUsage[main].outputTokens` equals
+     this one's minus `usage.output_tokens` (a difference of 0 means nothing was restored). When
+     no earlier transcript matches, the cost is imputed from the result's `usage` at list price
+     (`cost_usd_imputed`). `--max-budget-usd` on a resumed process is checked against the
+     restored total, so it binds a little early there; it only catches runaways.
    - **Phase 4 finding (2.1.302, D-040):** `-p` exposes no `AskUserQuestion` tool at all; a model
      told to ask searches for one (`ToolSearch`), finds none and asks in plain text, ending
      `success` with no permission denial. Trigger (a) therefore never fires on this version; (b)

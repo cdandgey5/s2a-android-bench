@@ -36,7 +36,8 @@ class Transcript:
     rate_limit_retries: int = 0
     other_retries: int = 0
     rate_limit_events: list = field(default_factory=list)
-    result: dict | None = None
+    result: dict | None = None   # the LAST result event of the process
+    results: list = field(default_factory=list)  # every result event, in order (see num_turns)
     message_usage: dict = field(default_factory=dict)  # message id -> usage dict (deduplicated)
 
     # ---------------------------------------------------------------- derived
@@ -54,9 +55,14 @@ class Transcript:
             return self.result["session_id"]
         return (self.init or {}).get("session_id")
 
+    # One -p process can emit several init/result pairs: when a background task finishes after
+    # the first result, Claude Code runs another turn for its notification (`origin.kind:
+    # task-notification`) and writes another result (Phase 4 finding, D-042). Each result's
+    # `num_turns` and `usage` cover its own segment; `total_cost_usd` and `modelUsage` are the
+    # process's running totals, so the last result carries them.
     @property
     def num_turns(self) -> int:
-        return int((self.result or {}).get("num_turns") or 0)
+        return sum(int(r.get("num_turns") or 0) for r in self.results)
 
     @property
     def cost_usd(self) -> float | None:
@@ -67,10 +73,12 @@ class Transcript:
     def model_usage(self) -> dict:
         return (self.result or {}).get("modelUsage") or {}
 
+    def result_usages(self) -> list[dict]:
+        return [r["usage"] for r in self.results if r.get("usage")]
+
     def usage_totals(self) -> dict:
-        """Tokens from the result line when present, else summed from the assistant messages."""
-        u = (self.result or {}).get("usage")
-        src = [u] if u else list(self.message_usage.values())
+        """Tokens summed over the result events when present, else over the assistant messages."""
+        src = self.result_usages() or list(self.message_usage.values())
         tot = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0}
         for x in src:
             tot["input_tokens"] += int(x.get("input_tokens") or 0)
@@ -80,7 +88,7 @@ class Transcript:
         return tot
 
     def permission_denials(self) -> list:
-        return (self.result or {}).get("permission_denials") or []
+        return [d for r in self.results for d in (r.get("permission_denials") or [])]
 
     def result_text(self) -> str:
         r = (self.result or {}).get("result")
@@ -150,6 +158,7 @@ def parse_text(text: str) -> Transcript:
                     t.tool_errors += 1
         elif typ == "result":
             t.result = ev
+            t.results.append(ev)
     for d in t.permission_denials():
         if (d or {}).get("tool_name") == "AskUserQuestion":
             t.asked_question = True
@@ -179,12 +188,14 @@ def price_for(model: str) -> dict | None:
 
 
 def impute_cost(t: Transcript, model: str) -> float | None:
-    """List-price estimate from per-message usage (1h cache writes unless the message says 5m)."""
+    """List-price estimate: from the result events' own `usage` when there are any (exact for the
+    main model; background models are not in it), else from the per-message usage, whose
+    output counts run short in the stream. 1h cache writes unless the usage says 5m."""
     p = price_for(model)
     if not p:
         return None
     usd = 0.0
-    for u in t.message_usage.values():
+    for u in (t.result_usages() or t.message_usage.values()):
         cc = u.get("cache_creation") or {}
         w5 = int(cc.get("ephemeral_5m_input_tokens") or 0)
         w1 = int(cc.get("ephemeral_1h_input_tokens") or 0)
@@ -195,6 +206,39 @@ def impute_cost(t: Transcript, model: str) -> float | None:
                 + int(u.get("cache_read_input_tokens") or 0) * p["cache_read"] + w5 * p["cache_write_5m"]
                 + w1 * p["cache_write_1h"]) / 1e6
     return round(usd, 6)
+
+
+def _main_output(t: Transcript) -> int:
+    """modelUsage output tokens of the main (init) model."""
+    mu = t.model_usage
+    want = str((t.init or {}).get("model") or "")
+    key = next((k for k in mu if want and (k.startswith(want) or want.startswith(k))), None)
+    if key is None:
+        key = next((k for k in mu if not k.startswith("claude-haiku")), next(iter(mu), None))
+    return int((mu.get(key) or {}).get("outputTokens") or 0) if key else 0
+
+
+def invocation_cost(t: Transcript, prior: list[Transcript]) -> float | None:
+    """This process's own est. USD (D-041).
+
+    On `--resume`, Claude Code restores the session's running totals when that session was the
+    last to exit in the config dir: the resumed result's `total_cost_usd` and `modelUsage` are then
+    cumulative, while `usage` and `num_turns` are per process. The restored base shows in the
+    output tokens (modelUsage[main].outputTokens - the results' usage.output_tokens): 0 means nothing was
+    restored; otherwise it must equal an earlier transcript of the same session (`prior`, in
+    execution order), whose total is subtracted. None when there is no result line or the base
+    cannot be identified (then the caller imputes from the per-message usage).
+    """
+    if t.cost_usd is None:
+        return None
+    inv_out = sum(int(u.get("output_tokens") or 0) for u in t.result_usages())
+    base_out = _main_output(t) - inv_out
+    if base_out <= 0:
+        return t.cost_usd
+    for p in reversed(prior):
+        if p.session_id == t.session_id and p.cost_usd is not None and _main_output(p) == base_out:
+            return round(t.cost_usd - p.cost_usd, 6)
+    return None
 
 
 def parse_resets(text: str) -> str | None:

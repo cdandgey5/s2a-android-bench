@@ -148,6 +148,14 @@ def warm(key: str, extra_commits: list[str] | None = None, keep_scratch: bool = 
     _replace_dir(robo_new, gradle.robolectric_dir(repo))
     _replace_dir(pristine_new, gradle_pristine(repo))
     plat.rmtree_robust(staging)
+    # D-043: the replacements carry staging's ACLs; take the new parents' (incl. the pristine deny)
+    # and give the sandbox user its read grants back (abb sandbox setup set them on the old dirs)
+    from abb.harness import sandbox
+
+    for d in (gradle_ro(repo), gradle.robolectric_dir(repo), gradle_pristine(repo)):
+        plat.inherit_acl(d)
+    granted = sandbox.apply_cache_grants([repo.key])
+    log.info("sandbox read grants re-applied: %s", granted)
     rec = fingerprint(repo, commits=commits, wrapper=next(iter(wrappers.values())))
     rec.update({"warm_runs": runs, "warm_minutes": round((time.monotonic() - t0) / 60, 1), "robolectric_jars": [j.name for j in jars],
                 "mirror": str(mirror), "scratch": str(scratch)})

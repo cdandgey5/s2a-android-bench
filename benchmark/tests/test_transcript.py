@@ -74,3 +74,30 @@ def test_opus_prices_known() -> None:
 def test_unknown_events_and_garbage_tolerated() -> None:
     t = tx.parse_text('{"type":"brand_new_event"}\nnot json\n{"type":"result","subtype":"success","num_turns":1}\n')
     assert t.unparsable == 1 and t.subtype == "success" and t.event_types.get("brand_new_event") == 1
+
+
+def test_resumed_result_is_session_cumulative_and_invocation_cost_subtracts_it() -> None:
+    # Phase 4 driver check: the nudge resumed the first call's session; its total_cost_usd and
+    # modelUsage include the first call, its usage and num_turns do not (D-041)
+    a, b = p("resume-first"), p("resume-nudge")
+    assert a.session_id == b.session_id and b.num_turns == 1
+    assert b.model_usage["claude-sonnet-5-5"]["outputTokens"] == (
+        a.usage_totals()["output_tokens"] + b.usage_totals()["output_tokens"])
+    assert tx.invocation_cost(a, []) == a.cost_usd
+    own = tx.invocation_cost(b, [a])
+    assert own == pytest.approx(b.cost_usd - a.cost_usd) and 0 < own < 0.02
+    assert own == pytest.approx(tx.impute_cost(b, "claude-sonnet-5-5"), abs=1e-6)  # priced from its own usage
+    assert tx.invocation_cost(b, []) is None  # base not identifiable -> caller imputes
+
+
+def test_two_results_in_one_process_background_task() -> None:
+    # Phase 4 (dev5-guided-1, antennapod-0001): an auto-backgrounded Bash finished after the first
+    # result; Claude Code ran one more turn for its notification and wrote a second init/result
+    # pair. Turns and usage add up per result; cost and modelUsage are the process's running total.
+    t = p("two-results-bg-task")
+    assert len(t.results) == 2 and t.results[1]["origin"]["kind"] == "task-notification"
+    assert t.num_turns == 26 + 1
+    assert t.usage_totals()["output_tokens"] == 5230 + 83 == t.model_usage["claude-sonnet-5-5"]["outputTokens"]
+    assert t.cost_usd == pytest.approx(0.229231)
+    assert tx.invocation_cost(t, []) == t.cost_usd  # nothing restored: the base is 0
+    assert t.tool_calls == 25 and t.subtype == "success"

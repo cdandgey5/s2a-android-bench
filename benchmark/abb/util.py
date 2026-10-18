@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -29,7 +30,6 @@ def sha256_bytes(b: bytes) -> str:
 
 def glob_regex(pattern: str) -> "re.Pattern[str]":
     """repo-config globs ("**/src/test/**", "gradle/**", "*.log") -> a regex over POSIX relative paths."""
-    import re
 
     out, i = "", 0
     while i < len(pattern):

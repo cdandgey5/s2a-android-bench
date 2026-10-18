@@ -117,8 +117,16 @@ class Runner:
         rec = auth.check()
         if not rec.get("ok"):
             raise SystemExit("abb auth check failed: the token is not accepted (docs/DAY-0.md §3)")
-        if self.sandbox == "user" and not get_platform().as_user_available(load_sandbox().modes["user"].run_as):
-            raise SystemExit("sandbox user missing: abb sandbox setup")
+        if self.sandbox == "user":
+            user = load_sandbox().modes["user"].run_as
+            if not get_platform().as_user_available(user):
+                raise SystemExit("sandbox user missing: abb sandbox setup")
+            from abb.harness.sandbox import check_fs
+
+            bad = [f"{n}: {d}" for n, ok, d in check_fs(user) if not ok]  # D-043: real attempts as the user
+            if bad:
+                raise SystemExit("sandbox filesystem check failed (see `abb sandbox check`; lost cache grants "
+                                 "come back with `abb sandbox setup --prepare-only`):\n  " + "\n  ".join(bad))
         lock = load_env_lock()
         for tid in self.tasks:
             t = load_task(tid)
@@ -141,6 +149,19 @@ class Runner:
             self.write_manifest(resumes=m.get("resumes", []) + [{"at": utcnow_iso(), "reason": "--resume"}],
                                 aborted_reason=None)
         self.preflight()
+        stale = paths.work_dir() / self.run_id  # a killed harness leaves a live trial open to the sandbox user (D-037)
+        if stale.exists():
+            # keep the verbatim streams of the interrupted processes first: they exist only in agent-out/
+            for so in stale.glob("*/*/t*/agent-out/*/stdout.txt"):
+                trial = so.parents[2]
+                dst = self.root / trial.relative_to(stale) / "transcript" / f"{so.parent.name}.salvaged.jsonl"
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(so, dst)
+                self.event(event="stream_salvaged", file=str(dst.relative_to(self.root)), bytes=so.stat().st_size)
+            left = get_platform().rmtree_robust(stale)
+            self.event(event="stale_workspaces_removed", path=str(stale), leftovers=len(left))
+            if left:
+                raise SystemExit(f"could not delete stale workspaces under {stale} ({len(left)} leftovers)")
         self.event(event="run_start", arms=self.arms, tasks=self.tasks, trials=self.trials, model=self.model)
         proxy = from_sandbox_config("user", self.root / "proxy.log")
         proxy.start()

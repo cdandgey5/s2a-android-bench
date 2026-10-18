@@ -120,8 +120,17 @@ read-only cache must be seeded by the Gradle version that consumes it). Then:
   list, cache_commit, sorted warm commits, gradle wrapper version, gradle_user_home_props,
   claude_code_version, platform id, modules-2 content hash, robolectric jar dir hash)`.
 
+Each cache directory is built under `caches/_staging` and moved into place, so it arrives with
+staging's ACLs. After the move the warm resets every replaced tree to inherit from its new parent
+(which restores the inherited deny on `caches/gradle-pristine`) and re-grants the sandbox user
+read+execute on `gradle-ro/<repo>` and `robolectric/<repo>` (D-043; `abb sandbox setup
+--prepare-only` does the same for every chosen repo).
+
 Tasks record the fingerprint they were validated against; `abb run` refuses a different one
-unless `--allow-env-drift` (recorded in the manifest).
+unless `--allow-env-drift` (recorded in the manifest). Before every run with `--sandbox user`,
+`abb run` also repeats the filesystem rows of `abb sandbox check` as the sandbox user (real read
+and create attempts, one launch) and refuses to start on any failure (D-043): the environment
+fingerprint hashes cache *contents*, not who may read them.
 
 **Per-trial Gradle home.** `snapshot()` creates `gradle-home/` with `gradle.properties` rendered
 from `toolchain.gradle_user_home_props`, a harness-written `init.d/abb.gradle` that sets, for every

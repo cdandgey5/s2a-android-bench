@@ -15,6 +15,7 @@ from pathlib import Path
 from abb import paths
 from abb.config import load_toolchain, oauth_token
 from abb.harness import transcript as tx
+from abb.util import utcnow_iso
 
 KEY = re.compile(rb"sk-ant-[a-z]+\d{2}-")
 
@@ -32,6 +33,7 @@ def audit_trial(rec: Path, pin: str) -> list[str]:
         return errs
     model = (rj.get("limits") or {}).get("model") or rj.get("model") or ""
     total_turns = 0
+    history: list[tx.Transcript] = []  # execution order: calls in order, each call's nudges after it
     for c in rj.get("calls") or []:
         name = c["name"]
         files = [rec / "transcript" / f"{name}.jsonl"] + [Path(p) for p in c.get("nudge_transcript_paths") or []]
@@ -46,14 +48,16 @@ def audit_trial(rec: Path, pin: str) -> list[str]:
                 errs.append(f"{name}: transcript {f.name} missing")
                 continue
             t = tx.parse_file(f)
+            own = tx.invocation_cost(t, history)
+            history.append(t)
             turns += t.num_turns
             tools += t.tool_calls
             for k, v in t.usage_totals().items():
                 tok[k] += v
-            if t.cost_usd is None:
+            if own is None:
                 cost_known = False
             else:
-                cost += t.cost_usd
+                cost += own
             if t.init:
                 if not str(t.init.get("model") or "").startswith(model):
                     errs.append(f"{name}: init.model {t.init.get('model')} != {model}")
@@ -119,3 +123,102 @@ def audit(run_id: str) -> dict:
         m["audit_ok"] = not trials.get(key) and not leaks
         mf.write_text(json.dumps(m, indent=2, default=str), encoding="utf-8")
     return out
+
+
+# ---------------------------------------------------------------------------- re-derivation
+DERIVED = ("num_turns", "tool_calls", "tool_errors", "input_tokens", "output_tokens", "cache_read_tokens",
+           "cache_write_tokens", "rate_limit_retries", "other_retries", "cost_usd", "cost_usd_imputed")
+
+
+def recompute_calls(rec: Path, rj: dict) -> list[dict]:
+    """Every call's derived fields from its transcripts, by the driver's rules (invocation_cost per
+    process in execution order; imputed when a process's own cost is unknown)."""
+    model = (rj.get("limits") or {}).get("model") or rj.get("model") or ""
+    history: list[tx.Transcript] = []
+    out = []
+    for c in rj.get("calls") or []:
+        d = {k: 0 for k in DERIVED}
+        known, cost, est = True, 0.0, 0.0
+        files = [rec / "transcript" / f"{c['name']}.jsonl"] + [
+            rec / "transcript" / Path(x).name for x in c.get("nudge_transcript_paths") or []]
+        for f in files:
+            t = tx.parse_file(f)
+            own = tx.invocation_cost(t, history)
+            history.append(t)
+            d["num_turns"] += t.num_turns
+            d["tool_calls"] += t.tool_calls
+            d["tool_errors"] += t.tool_errors
+            d["rate_limit_retries"] += t.rate_limit_retries
+            d["other_retries"] += t.other_retries
+            for k, v in t.usage_totals().items():
+                d[k] += v
+            if own is None:
+                known = False
+                est += tx.impute_cost(t, model) or 0.0
+            else:
+                cost += own
+                est += own
+        d["cost_usd"] = round(cost, 6) if known else None
+        d["cost_usd_imputed"] = None if known else round(est, 6)
+        out.append(d)
+    return out
+
+
+def _same(a, b) -> bool:
+    if isinstance(a, float) or isinstance(b, float):
+        return _close(a, b, 1e-6)
+    return a == b
+
+
+def rederive_trial(rec: Path, *, run_id: str, reason: str) -> dict:
+    """Rewrite run.json / calls.jsonl / metrics.json from the transcripts (AGENTS.md rule 11: they
+    are derived). Returns {field: [old, new]} for what changed; the caller logs it."""
+    from abb.harness import metrics
+    from abb.harness.agent_driver import write_json
+
+    rj = json.loads((rec / "run.json").read_text(encoding="utf-8"))
+    calls = rj.get("calls") or []
+    changes: dict = {}
+    for c, new in zip(calls, recompute_calls(rec, rj)):
+        for k, v in new.items():
+            if not _same(c.get(k), v):
+                changes[f"{c['name']}.{k}"] = [c.get(k), v]
+                c[k] = v
+    totals = {
+        "cost_usd": None if any(c.get("cost_usd") is None for c in calls) else round(sum(c["cost_usd"] for c in calls), 4),
+        "cost_usd_imputed": round(sum((c["cost_usd"] if c.get("cost_usd") is not None else (c.get("cost_usd_imputed") or 0.0))
+                                      for c in calls), 4),
+        "num_turns": sum(int(c.get("num_turns") or 0) for c in calls),
+        "tool_calls": sum(int(c.get("tool_calls") or 0) for c in calls),
+    }
+    for k, v in totals.items():
+        if not _same(rj.get(k), v):
+            changes[k] = [rj.get(k), v]
+            rj[k] = v
+    if changes:
+        rj.setdefault("rederived", []).append({"at": utcnow_iso(), "reason": reason, "changes": changes})
+        write_json(rec / "run.json", rj)
+        with open(rec / "calls.jsonl", "w", encoding="utf-8") as f:
+            for c in calls:
+                f.write(json.dumps(c, default=str) + "\n")
+        if (rec / "grade.json").exists():
+            metrics.build(rec, run_id=run_id, arm=rec.parent.parent.name, task_id=rec.parent.name,
+                          trial=int(rec.name[1:].split("-")[0]))
+    return changes
+
+
+def rederive(run_id: str, reason: str) -> dict:
+    root = paths.results_dir() / run_id
+    done = {}
+    for rj in sorted(root.glob("*/*/t*/run.json")):
+        rec = rj.parent
+        if rec.parts[-4] in ("usage_limited", "setup") or json.loads(rj.read_text(encoding="utf-8")).get("exit_reason") == "harness_error":
+            continue
+        ch = rederive_trial(rec, run_id=run_id, reason=reason)
+        if ch:
+            key = str(rec.relative_to(root)).replace("\\", "/")
+            done[key] = ch
+            with open(root / "events.jsonl", "a", encoding="utf-8") as f:
+                f.write(json.dumps({"at": utcnow_iso(), "event": "rederived", "trial": key, "reason": reason,
+                                    "changes": ch}, default=str) + "\n")
+    return done
