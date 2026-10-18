@@ -57,8 +57,8 @@ already works end to end.
 | Phase | Name | Status |
 |---|---|---|
 | 0 | Foundations (Windows-native): CLI skeleton, platform layer, pinned toolchain, repo selection experiment | **passed 2026-10-17** — toolchain locked, `abb auth check` → `oauth_token`, 5 smoke fixtures, AntennaPod + Wikipedia chosen (`reference/build-experiments.md`), seed task `antennapod-0000`; findings D-030…D-035 |
-| 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | in progress (autopilot) |
-| 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | not started |
+| 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | **passed 2026-10-18** — both repos' unit tests offline as `abb-agent` (AntennaPod 130 s, Wikipedia 347 s), `abb sandbox check` green, invariants 28/1 skipped, throughput probe on Pro ~3 % session per trial (lower bound); D-036…D-038 |
+| 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | in progress: tooling done, dev5 drafted, waiting for S2 review |
 | 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | not started |
 | 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | not started |
 | 5 | Arm B: GitHub Spec Kit adapter | not started |
