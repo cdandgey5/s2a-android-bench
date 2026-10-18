@@ -58,6 +58,9 @@ class RepoToolchain(_M):
 class WarmCommand(_M):
     cmd: str
     allow_failure: bool = False
+    # compile everything the command reaches but execute no test (warm-only init script): fills the
+    # dependency cache for every variant an agent may build, at compile cost (D-044)
+    no_test_execution: bool = False
 
 
 class Stub(_M):

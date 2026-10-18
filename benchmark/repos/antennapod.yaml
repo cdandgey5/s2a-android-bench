@@ -31,6 +31,9 @@ build:
     - cmd: "{gradlew} --console=plain --no-daemon assembleFreeDebug"
     - cmd: "{gradlew} --console=plain --no-daemon testFreeDebugUnitTest testDebugUnitTest"
       allow_failure: true
+    - cmd: "{gradlew} --console=plain --no-daemon --continue test assembleDebug"   # D-044: every variant an agent may build (play too)
+      allow_failure: true
+      no_test_execution: true
   stubs: []                                 # nothing to stub: builds and tests ran without secrets (Phase 0)
   env:
     JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"

@@ -84,12 +84,26 @@ def _replace_dir(new: Path, final: Path) -> None:
     new.rename(final)
 
 
+# D-044: test tasks run but match nothing, so every variant's classpaths resolve and compile
+NO_TESTS_INIT = """// written by abb env warm (no_test_execution): resolve and compile, run no test
+allprojects {
+    tasks.withType(Test).configureEach {
+        filter { includeTestsMatching "abb.warm.NoSuchTest"; failOnNoMatchingTests = false }
+    }
+}
+"""
+
+
 def _run_warm_commands(repo: RepoConfig, src: Path, guh: Path, home: Path, logs: Path, label: str) -> list[dict]:
     env = gradle.harness_gradle_env(repo, guh=guh, home=home)
     mem = 10240
     results = []
     for i, wc in enumerate(repo.build.warm_commands):
         argv = gradle.expand_cmd(wc.cmd, src)
+        if wc.no_test_execution:
+            init = logs / "abb-warm-no-tests.gradle"
+            init.write_text(NO_TESTS_INIT, encoding="utf-8", newline="\n")
+            argv = argv[:1] + ["--init-script", str(init)] + argv[1:]
         out = logs / f"{label}-{i}"
         log.info("[%s] %s", label, " ".join(argv[1:]))
         r = gradle.run(argv, src=src, env=env, out_dir=out, memory_mb=mem)

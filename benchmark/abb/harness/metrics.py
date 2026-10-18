@@ -14,6 +14,19 @@ def _load(p: Path) -> dict:
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
+def _agent_builds(trial_dir: Path) -> dict:
+    """Gradle outcomes in the agent's tool results over all transcripts (D-043 health signal)."""
+    from abb.harness import transcript as tx
+
+    out = {"agent_gradle_ok": 0, "agent_gradle_failed": 0, "agent_env_errors": 0}
+    for f in sorted((trial_dir / "transcript").glob("*.jsonl")):
+        t = tx.parse_file(f)
+        out["agent_gradle_ok"] += t.gradle_ok
+        out["agent_gradle_failed"] += t.gradle_failed
+        out["agent_env_errors"] += t.env_errors
+    return out
+
+
 def build(trial_dir: Path, *, run_id: str, arm: str, task_id: str, trial: int, manifest: dict | None = None) -> dict:
     t = load_task(task_id)
     run = _load(trial_dir / "run.json")
@@ -50,6 +63,7 @@ def build(trial_dir: Path, *, run_id: str, arm: str, task_id: str, trial: int, m
         "env_fingerprint": g.get("env_fingerprint"), "platform": (manifest or {}).get("platform", "windows"),
         "audit_ok": None, "failure_label": None, "failure_label_source": None, "label_confidence": None,
         "convention_score": None,
+        **_agent_builds(trial_dir),
     }
     tmp = trial_dir / "metrics.json.tmp"
     tmp.write_text(json.dumps(row, indent=2, default=str), encoding="utf-8")

@@ -141,8 +141,16 @@ class EgressProxy:
         ready = threading.Event()
         err: list[BaseException] = []
 
+        def _quiet_resets(loop: asyncio.AbstractEventLoop, ctx: dict) -> None:
+            # Windows Proactor: a peer that resets a tunnel makes _call_connection_lost's shutdown() raise
+            # WinError 10054 inside the loop; the connection is gone either way
+            if isinstance(ctx.get("exception"), ConnectionResetError):
+                return
+            loop.default_exception_handler(ctx)
+
         def _run() -> None:
             self._loop = asyncio.new_event_loop()
+            self._loop.set_exception_handler(_quiet_resets)
             try:
                 self._server = self._loop.run_until_complete(
                     asyncio.start_server(self._handle, self.cfg.host, self.cfg.port, limit=MAX_HEADER))

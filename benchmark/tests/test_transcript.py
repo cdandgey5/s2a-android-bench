@@ -101,3 +101,11 @@ def test_two_results_in_one_process_background_task() -> None:
     assert t.cost_usd == pytest.approx(0.229231)
     assert tx.invocation_cost(t, []) == t.cost_usd  # nothing restored: the base is 0
     assert t.tool_calls == 25 and t.subtype == "success"
+
+
+def test_gradle_health_counters() -> None:
+    # D-043: the same transcript is an invalid-environment trial (read-only cache not readable)
+    t = p("two-results-bg-task")
+    assert t.gradle_ok == 0 and t.gradle_failed >= 1 and t.env_errors >= 1
+    ok = p("smoke-success")
+    assert ok.env_errors == 0

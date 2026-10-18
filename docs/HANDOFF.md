@@ -12,9 +12,9 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `4` — step: `8 (dev5 x 1 on plain, then plain-guided; long run in the background)`; driver, arms, runner, audit, report built; shakedown `20261018-0317-shakedown` resolved + audit PASS
-- Last commit: `phase 3: grading …` on `main` (`git log -1`)
-- Working tree: `clean after that commit`
+- Phase: `4` — step: `8`. Valid run `20261018-0429-dev5-plain-1`: 6/6 resolved, mean est. $0.20, audit PASS. `20261018-0456-dev5-plain-2` stopped on the **usage limit** after 3 trials (canary captured, verified.md); invalid earlier runs: D-043
+- Last commit: `phase 4: wip — fixes D-041..D-043 …` on `main` (`git log -1`)
+- Working tree: Gradle-health counters (transcript/metrics/report/runner circuit breaker) uncommitted until the next gate commit
 - Date: `2026-10-18`
 
 ## What exists and is verified
@@ -22,26 +22,28 @@ and folds its open items into this one.
 | Item | State | Proof |
 |---|---|---|
 | Phase 0 | gate passed 2026-10-17 (`a4c7c8b`) | README status |
-| Phase 1 | gate passed 2026-10-18 (`fe3fb66`): `abb sandbox check` all OK as `abb-agent`; `abb env verify <repo> --sandbox user` AntennaPod 60/60 offline 130 s (+ seed fail→pass), Wikipedia 367/367 347 s; invariants 28 passed / 1 skipped (slot 2 → Phase 8); throughput probe recorded | `C:\abb\state\env-verify-*.json`, `C:\abb\state\sandbox-check.json`, `docs/RUNS.md` |
-| Sandbox | `abb-agent` (S1 done 2026-10-17 23:03Z), firewall `abb-agent-block-out`, ACLs; D-036 list grants on ancestors; D-037 revoke finished trials + OWNER RIGHTS | `uv run abb sandbox check` |
-| Caches | warm at the cache commits (fingerprints in `benchmark/env.lock.json`); `seed_transforms: false` (no net gain) | `uv run abb env fingerprint antennapod` |
-| Plan / usage | owner on **Pro** since 21:00 EDT 2026-10-17 (was Max 5x); weekly reset Sundays 15:00; this building session runs on Opus 5.5 extra usage; probe: ~3 % session per trial (lower bound); D-038 stay on Pro, MVP decision at the first results table | `docs/RUNS.md` "S1b throughput estimate" |
-| Phase 2 | gate passed 2026-10-18: `abb tasks lint --all` 0 errors; dev5 + seed `validated` 3× (env fingerprint `c18a14fc…`); S2 approved (post-S2 fixes to 0002/0003 listed in `tasks/TRIAGE.md`) | `uv run abb tasks list`; task.yaml `validation:` blocks |
-| Phase 3 | gate passed 2026-10-18: sanity matrix 14/14 (antennapod-0000 bugfix + 0005 new-surface refactor x gold/empty/delete-test/compile-break/regression/gradlew-edit/interface-mismatch); `grade-patch 0001 gold` resolved in 38 s; `abb grade <run>` writes grade.json + metrics.json; no lint delta (D-039) | `$env:ABB_INTEGRATION=1; uv run pytest -q tests	est_grading_matrix.py` |
-| Caches | antennapod warm at the 5 dev5 base commits + `setup_commit d05a58b4` (27 min); wikipedia at its cache commit | `benchmark/env.lock.json` |
+| Phase 1 | gate passed 2026-10-18 (`fe3fb66`); re-verified after D-043: AntennaPod 60/60 offline as `abb-agent` in 131 s | `C:\abb\logs\verify-after-d043.log`, `C:\abb\state\env-verify-*.json` |
+| Sandbox | `abb-agent`, firewall `abb-agent-block-out`, ACLs; D-036 list grants; D-037 revoke + OWNER RIGHTS; D-043 cache grants re-applied after every warm, checked before every run | `uv run abb sandbox check` |
+| Plan / usage | owner on **Pro** since 21:00 EDT 2026-10-17; five-hour window resets on the hour (01:00/06:00 UTC …), weekly Sundays 15:00 local; the building session's own usage shows up in the same five-hour counter (RUNS.md Phase 4) | `docs/RUNS.md` |
+| Phase 2 | gate passed 2026-10-18: dev5 + seed validated 3×, S2 approved | `uv run abb tasks list` |
+| Phase 3 | gate passed 2026-10-18: sanity matrix 14/14 | `$env:ABB_INTEGRATION=1; uv run pytest -q tests/test_grading_matrix.py` |
+| Phase 4 code | `abb run` / `abb audit [--rederive]` / `abb report`; plain, plain-guided, plain-gate; `abb ws smoke --until-limit`; D-040…D-043 | `uv run pytest -q` (83 passed) |
 
 ## Open issues / blockers
 
 - Phase 8 needs one more UAC step: `abb sandbox setup --slots 2` (D-037).
-- Carry-overs: Phase 4 — `AskUserQuestion` absent from `-p` tools (D-005 note); trials per window on realistic tasks; Phase 5 — Spec Kit installs skills by default; Phase 6 — s2a's driver needs its own launcher console for Ctrl+C (D-032).
+- Usage-limit canary not captured yet (phase-4 step 8): the first trial that hits a limit, or `abb ws smoke --until-limit --max-calls 200` near a window's end.
+- Carry-overs: Phase 5 — Spec Kit installs skills by default; Phase 6 — s2a's driver needs its own launcher console for Ctrl+C (D-032) and the D-041/D-042 parsing rules.
 
 ## Decisions waiting on the human
 
-- None. Overturnable autopilot decisions: D-031…D-038.
+- None. Overturnable autopilot decisions: D-031…D-043.
 
 ## Exact next action
 
-If the dev5 runs were interrupted: `uv run abb run --resume <run_id>` (in `benchmark/`; complete trials are skipped;
-run ids are in `docs/RUNS.md` / `C:bbesults`). Then `abb audit <run_id>`, `abb report <run_id>`, record trials per
-session window (from the transcripts' rate_limit_event utilisation) in `docs/RUNS.md`, the Phase 4 gate, and the
-MVP default (RUN-ALL §3) as a D-0xx; then Phase 7.
+After the five-hour reset (06:00 UTC): in `benchmark/`, `uv run abb run --resume 20261018-0456-dev5-plain-2`, then
+`uv run abb run --arm plain-guided --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-guided-1 --grade`;
+`abb audit` + `abb report` on each. Do not edit `repos/*.yaml` or `config/*` while a run is live (a lazily re-read YAML
+crashed `0429-dev5-plain-1` once; resumed). Then RUNS.md rows (generator: rows from run.json/grade.json), trials per
+window (~1.7 pp of the Pro five-hour window per dev5 trial; this building session uses far more of the same window),
+the Phase 4 gate, MVP default (RUN-ALL §3) as D-045, README, commit + push; then Phase 7 (re-warm with D-044 commands).

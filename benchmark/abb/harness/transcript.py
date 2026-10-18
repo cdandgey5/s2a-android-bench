@@ -18,6 +18,12 @@ import yaml
 from abb import paths
 
 LIMIT_TEXT = re.compile(r"hit your (?:session|weekly|Opus|Sonnet|usage)? ?limit|usage limit reached|rate_limit_error", re.I)
+# Gradle outcomes in the agent's own tool results (environment-health signal, D-043; not a grade)
+GRADLE_OK = re.compile(r"BUILD SUCCESSFUL")
+GRADLE_FAILED = re.compile(r"BUILD FAILED|FAILURE: Build failed")
+ENV_ERROR = re.compile(r"was not found in any of the following sources|No cached version of .{1,200} available for offline"
+                       r"|Could not resolve all (?:files|dependencies|artifacts)|AccessDeniedException|"
+                       r"Access to the path '[^']*[\\/]caches[\\/][^']*' is denied")
 RESETS = re.compile(r"resets\s+(?:at\s+)?([0-9]{1,2}(?::[0-9]{2})?\s*(?:am|pm)?)", re.I)
 
 
@@ -39,6 +45,9 @@ class Transcript:
     result: dict | None = None   # the LAST result event of the process
     results: list = field(default_factory=list)  # every result event, in order (see num_turns)
     message_usage: dict = field(default_factory=dict)  # message id -> usage dict (deduplicated)
+    gradle_ok: int = 0          # tool results with "BUILD SUCCESSFUL"
+    gradle_failed: int = 0      # tool results with "BUILD FAILED"
+    env_errors: int = 0         # tool results with an offline-resolution / cache-access error (ENV_ERROR)
 
     # ---------------------------------------------------------------- derived
     @property
@@ -154,8 +163,16 @@ def parse_text(text: str) -> Transcript:
                     t.last_text = b["text"]
         elif typ == "user":
             for b in (ev.get("message") or {}).get("content") or []:
-                if isinstance(b, dict) and b.get("type") == "tool_result" and b.get("is_error"):
+                if not (isinstance(b, dict) and b.get("type") == "tool_result"):
+                    continue
+                if b.get("is_error"):
                     t.tool_errors += 1
+                c = b.get("content")
+                text = c if isinstance(c, str) else " ".join(
+                    x.get("text", "") for x in (c or []) if isinstance(x, dict))
+                t.gradle_ok += bool(GRADLE_OK.search(text))
+                t.gradle_failed += bool(GRADLE_FAILED.search(text))
+                t.env_errors += bool(ENV_ERROR.search(text))
         elif typ == "result":
             t.result = ev
             t.results.append(ev)

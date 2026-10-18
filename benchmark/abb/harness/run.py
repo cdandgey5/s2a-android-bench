@@ -72,6 +72,7 @@ class Runner:
         self.limits = load_limits().resolve(self.profile, model=model)
         self.token: str | None = None
         self.aborted: str | None = None
+        self.env_suspect_streak = 0  # D-043 circuit breaker
 
     # ---------------------------------------------------------------- manifest / events
     def event(self, **kw) -> None:
@@ -172,6 +173,9 @@ class Runner:
                         if self.aborted:
                             break
                         self.trial(arm, tid, k)
+        except BaseException as e:  # a harness crash must not end as a clean run (resume with --resume)
+            self.aborted = self.aborted or f"harness_crash: {type(e).__name__}: {str(e)[:200]}"
+            raise
         finally:
             proxy.stop()
             self.write_manifest(finished_at=utcnow_iso(), aborted_reason=self.aborted)
@@ -237,6 +241,16 @@ class Runner:
                     f.write(json.dumps(c, default=str) + "\n")
             self.event(event="trial_end", arm=arm_name, task=tid, trial=k, exit_reason=rr.exit_reason,
                        turns=rr.num_turns, cost_usd=rr.cost_usd, duration_ms=rr.duration_ms)
+            builds = metrics._agent_builds(rec)
+            if builds["agent_env_errors"] and not builds["agent_gradle_ok"]:
+                # the agent's Gradle never succeeded and hit offline-resolution/cache-access errors: an
+                # agent can cause that itself, two trials in a row is the environment (D-043)
+                self.env_suspect_streak += 1
+                self.event(event="env_suspect", arm=arm_name, task=tid, trial=k, streak=self.env_suspect_streak, **builds)
+                if self.env_suspect_streak >= 2:
+                    self.aborted = "env_suspect"
+            else:
+                self.env_suspect_streak = 0
             if rr.exit_reason == "usage_limited":
                 n = 1
                 while (self.root / "usage_limited" / arm_name / tid / f"t{k}-a{n}").exists():

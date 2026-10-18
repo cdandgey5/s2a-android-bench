@@ -31,6 +31,9 @@ build:
     - cmd: "{gradlew} --console=plain --no-daemon :app:assembleAlphaDebug"
     - cmd: "{gradlew} --console=plain --no-daemon testAlphaDebugUnitTest"
       allow_failure: true
+    - cmd: "{gradlew} --console=plain --no-daemon --continue test assembleDebug"   # D-044: every variant an agent may build
+      allow_failure: true
+      no_test_execution: true
   stubs: []                                  # app/google-services.json, repo.keystore, repo.properties are tracked upstream: nothing to stub
   env:
     JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"

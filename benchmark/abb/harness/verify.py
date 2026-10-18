@@ -96,7 +96,10 @@ def verify(key: str, *, sandbox: str = "user", transforms: str = "both", keep: b
             # JUnit files are rewritten by v2; v1 status comes from its own counts
             rec["v1_failed"] = [k for m in v1["modules"].values() for k in m["failed"]]
             rec["v2_f2p"] = f2p_status(v2)
-            rec["fail_to_pass_ok"] = bool(rec["v1_failed"]) and all(s == "passed" for s in rec["v2_f2p"])
+            # D-020: on a new_surface task the hidden tests may not compile at base (v1 fails with no failed test)
+            rec["v1_test_compile_failed"] = bool(t.tags.new_surface and v1["exit_code"] and not rec["v1_failed"])
+            rec["fail_to_pass_ok"] = ((bool(rec["v1_failed"]) or rec["v1_test_compile_failed"])
+                                      and all(s == "passed" for s in rec["v2_f2p"]))
         report["seed_tasks"].append(rec)
         log.info("seed task %s: %s", t.id, rec)
         if not keep:

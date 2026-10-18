@@ -106,7 +106,11 @@ Run by the harness user: clone a bare mirror into `caches/repos/<repo>.git`; scr
 `cache_commit`; with a scratch `GRADLE_USER_HOME` **and** `JAVA_TOOL_OPTIONS=-Duser.home=<scratch>\home`
 (so Robolectric's downloads land in `<scratch>\home\.m2`, not the owner's profile), run every
 `build.warm_commands` entry (`gradlew.bat`, `--no-daemon`, `org.gradle.caching=false`), once at
-`cache_commit` and once at every task base commit and the `setup_commit`. The warm fails if the
+`cache_commit` and once at every task base commit and the `setup_commit`. The commands must reach
+everything an agent would naturally build — every module and variant of `gradlew test` and
+`assembleDebug`, not only the variant the grader runs — or the arms that trust the agent's own Gradle
+commands meet offline failures that the arms with configured test tasks never see (D-044); a command
+with `no_test_execution: true` compiles and resolves without executing tests. The warm fails if the
 wrapper version in `gradle/wrapper/gradle-wrapper.properties` differs between those commits (the
 read-only cache must be seeded by the Gradle version that consumes it). Then:
 

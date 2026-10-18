@@ -31,6 +31,8 @@ def rows(root: Path) -> list[dict]:
             "duration_s": round((run.get("duration_ms") or 0) / 1000, 1),
             "f2p": f"{sum(1 for v in f2p.values() if v == 'passed')}/{len(f2p)}",
             "regressions": len(g.get("regressions") or []), "gate_runs": run.get("gate_gradle_runs"),
+            "builds": f"{m.get('agent_gradle_ok', '?')}/{m.get('agent_gradle_failed', '?')}/{m.get('agent_env_errors', '?')}",
+            "env_errors": m.get("agent_env_errors") or 0, "gradle_ok": m.get("agent_gradle_ok") or 0,
             "tokens_out": m.get("output_tokens"), "tokens_in_total": (m.get("input_tokens") or 0) + (m.get("cache_read_tokens") or 0)
             + (m.get("cache_write_tokens") or 0) if m else None,
         })
@@ -52,14 +54,14 @@ def render(run_id: str) -> str:
     lines += [
              "Cost columns are **est. API-equivalent USD** (Claude Code's client-side estimate at list price; there is no "
              "bill under the subscription). Tokens: output / total input incl. cache reads and writes.", "",
-             "| arm | task | trial | resolved | reason | exit | turns | tools | nudges | est. USD | duration s | F2P | regr. | gate runs | out tok | in tok |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+             "| arm | task | trial | resolved | reason | exit | turns | tools | nudges | est. USD | duration s | F2P | regr. | gate runs | builds ok/failed/env | out tok | in tok |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rs:
         usd = f"{r['cost_usd']:.4f}" if r["cost_usd"] is not None else (
             f"~{r['cost_usd_imputed']:.4f}" if r["cost_usd_imputed"] else "—")
         lines.append(f"| {r['arm']} | {r['task']} | {r['trial']} | {r['resolved']} | {r['reason'] or ''} | {r['exit_reason']} | "
                      f"{r['turns']} | {r['tool_calls']} | {r['interventions']} | {usd} | {r['duration_s']} | {r['f2p']} | "
-                     f"{r['regressions']} | {r['gate_runs'] or 0} | {r['tokens_out']} | {r['tokens_in_total']} |")
+                     f"{r['regressions']} | {r['gate_runs'] or 0} | {r['builds']} | {r['tokens_out']} | {r['tokens_in_total']} |")
     lines += ["", "## Setup (one-time, per repo)", "", "None for these arms." if not (root / "setup").exists() else
               "\n".join(f"- {p.relative_to(root)}" for p in sorted((root / "setup").glob("*/*/run.json")))]
     lines += ["", "## Totals", ""]
@@ -75,6 +77,10 @@ def render(run_id: str) -> str:
     lines += ["", f"Audit: {'PASS' if aud.get('ok') else ('FAIL' if aud else 'not run')}"
               + (f" (token leaks: {aud.get('token_leak_files')})" if aud.get("token_leak_files") else ""),
               f"Usage-limited attempts kept: {aud.get('usage_limited_attempts', 0)}; probes: {aud.get('probes', 0)}", ""]
+    sus = [f"{r['arm']}/{r['task']}/t{r['trial']}" for r in rs if r["env_errors"] and not r["gradle_ok"]]
+    if sus:
+        lines.append(f"**Environment check:** the agent's Gradle never succeeded and hit offline-resolution or cache-access "
+                     f"errors in {len(sus)} trial(s): {', '.join(sus)} (D-043). Check them before using this run.")
     if any(r["gate_runs"] for r in rs):
         lines.append("plain-gate: exactly one harness test run + one resume per trial (S2A allows up to 2 fix rounds per task).")
     text = "\n".join(lines) + "\n"
