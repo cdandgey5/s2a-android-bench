@@ -255,7 +255,12 @@ def sandbox_check(smoke: bool = typer.Option(True, help="include the Claude smok
 
 @sandbox_app.command("install-s2a")
 def sandbox_install_s2a() -> None:
-    _stub(6)
+    """uv tool install <repo>/s2a for the sandbox user (tools/bin/s2a.exe); records s2a_git_sha in env.lock.json."""
+    import json
+
+    from abb.harness import tools
+
+    typer.echo(json.dumps(tools.install_s2a(), indent=2))
 
 
 # ---------------------------------------------------------------------------- tasks

@@ -29,6 +29,7 @@ from abb.harness.env import load_env_lock
 from abb.harness.platform import get_platform
 from abb.harness.proxy import from_sandbox_config
 from abb.harness.tasks import task_dir, task_ids
+from abb.harness.tools import load_lock
 from abb.harness.workspace import Workspace
 from abb.harness.setup import SetupError, ensure_setup
 from abb.log import get_logger
@@ -104,7 +105,8 @@ class Runner:
                 "arms": self.arms, "task_set": self.task_set, "task_ids": self.tasks,
                 "task_set_sha256": task_set_sha(self.tasks), "split_sha256": _split_sha(), "trials": self.trials,
                 "limits": asdict(self.limits), "profile": self.profile,
-                "agent_version": load_toolchain().claude_code.version, "speckit_version": None, "s2a_git_sha": None,
+                "agent_version": load_toolchain().claude_code.version, "speckit_version": (load_lock().get("speckit") or {}).get("ref"),
+                "s2a_git_sha": (load_env_lock().get("_s2a") or {}).get("s2a_git_sha"),
                 "platform": get_platform().id,
                 "env_fingerprints": {r: (lock.get(r) or {}).get("fingerprint") for r in sorted({load_task(t).repo for t in self.tasks})},
                 "toolchain_lock_sha256": sha256_file(tl) if tl.exists() else None,

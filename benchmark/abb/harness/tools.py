@@ -463,3 +463,39 @@ def check() -> list[tuple[str, bool, str]]:
     else:
         row("git", False, "not in lock")
     return rows
+
+
+# ---------------------------------------------------------------------------- s2a (Phase 6)
+def s2a_exe(tc: ToolchainConfig) -> Path:
+    return _expand(tc.python.uv_tool_bin_dir) / "s2a.exe"
+
+
+def install_s2a() -> dict:
+    """`abb sandbox install-s2a` (harness user): `uv tool install` of <repo>/s2a into ABB_HOME/tools/uvtools,
+    s2a.exe in tools/bin (read/execute for the sandbox user); records s2a_git_sha in env.lock.json
+    under `_s2a` (the run manifest copies it). Re-run after every prompt/pipeline change."""
+    import json
+
+    from abb.harness import env as envmod
+
+    tc = load_toolchain()
+    lock = load_lock()
+    py = paths.abb_home() / (lock.get("python") or {}).get("path", "")
+    if not py.exists():
+        raise ToolError("the pinned CPython is missing: abb tools install")
+    src = paths.repo_clone() / "s2a"
+    sha = _run(["git", "log", "-1", "--format=%H", "--", "s2a"], cwd=paths.repo_clone(), timeout_s=60).stdout().strip()
+    dirty = bool(_run(["git", "status", "--porcelain", "--", "s2a"], cwd=paths.repo_clone(), timeout_s=60).stdout().strip())
+    env = {"UV_TOOL_DIR": str(_expand(tc.python.uv_tool_dir)), "UV_TOOL_BIN_DIR": str(_expand(tc.python.uv_tool_bin_dir)),
+           "UV_PYTHON_INSTALL_DIR": str(_expand(tc.python.uv_python_install_dir))}
+    _run([_uv(), "tool", "install", "--force", "--reinstall", "--python", py, str(src)], extra_env=env, timeout_s=1800)
+    exe = s2a_exe(tc)
+    help_out = _run([exe, "--help"], timeout_s=120).stdout()
+    if "resume" not in help_out:
+        raise ToolError(f"{exe} --help does not list `resume`")
+    rec = {"s2a_git_sha": sha, "dirty": dirty, "path": _rel(exe), "installed_at": utcnow_iso()}
+    elock = envmod.load_env_lock()
+    elock["_s2a"] = rec
+    envmod.lock_file().write_text(json.dumps(elock, indent=2) + "\n", encoding="utf-8", newline="\n")
+    shutil.copyfile(envmod.lock_file(), paths.abb_home() / "env.lock.json")
+    return rec

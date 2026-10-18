@@ -1,0 +1,11 @@
+# Arm C — the S2A orchestrator, driven through its CLI only (AGENTS.md rule 13; phases/phase-6 step 15).
+profile: android
+setup:                                   # `s2a map` at repos.<repo>.build.setup_commit, cached (setup kind s2a-map)
+  limits: {timeout_minutes: 20, max_turns_total: 25, max_usd: 5.0}
+  keep: [map.md, map.json, map.key.json, map.calls.jsonl, map]   # what the cache keeps of .s2a/ (no runs/, baseline/)
+variants:                                # skip: s2a --skip values; turns_off: the skipped stages' turn caps, taken off
+  s2a: {skip: [], map: true, turns_off: 0}                       # max_turns_total so an ablation never gets more
+  s2a-nomap: {skip: [map], map: false, turns_off: 0}             # implement turns than the full pipeline (map is a
+  s2a-noverify: {skip: [verify], map: true, turns_off: 30}       # setup cost, outside the trial budget)
+  s2a-norepro: {skip: [reproduce], map: true, turns_off: 15}     # verify 15 + fix 15; reproduce 15 (s2a pipeline.yaml)
+harness_margin_s: 60                     # s2a gets the trial's whole minutes and stops itself; the harness hard-stops this much later

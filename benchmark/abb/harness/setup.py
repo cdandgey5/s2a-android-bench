@@ -76,7 +76,8 @@ def ensure_setup(arm, repo_key: str, run_dir: Path, *, run_id: str,
     ws, ctx = make_context(arm, repo_key, rec_dir)
     try:
         calls = arm.one_time_setup(repo_key, ws, ctx.budget.limits, ctx=ctx)
-        final = calls[-1].subtype if calls else "agent_error"
+        # an arm whose setup can fail after a successful call (s2a map: its gate) reports the real ending
+        final = getattr(arm, "setup_subtype", None) or (calls[-1].subtype if calls else "agent_error")
         art = rec_dir / "artifacts"
         for d in arm.setup_dirs:
             if (ws.dirs.work / d).exists():
