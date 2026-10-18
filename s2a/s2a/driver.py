@@ -152,7 +152,9 @@ class Driver:
         self.run_dir, self.cwd, self.model, self.budget = run_dir, cwd, model, budget
         self.stop = stop
         self.claude = claude_exe or os.environ.get("S2A_CLAUDE_EXE") or shutil.which("claude") or "claude"
-        self.permission_mode, self.grace_s = permission_mode, grace_s
+        # S2A_GRACE_S: how long a stopped claude gets to write its result; an outer supervisor that itself
+        # waits N seconds after its Ctrl+C sets this below N so the interrupted call is still recorded
+        self.permission_mode, self.grace_s = permission_mode, float(os.environ.get("S2A_GRACE_S") or grace_s)
         self.expect_version = expect_version or os.environ.get("S2A_EXPECT_CLAUDE_VERSION") or None
         self.history: list[tx.Transcript] = []   # every process of this run, in order (per-process cost)
         self.probes = 0

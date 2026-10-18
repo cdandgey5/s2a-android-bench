@@ -24,7 +24,7 @@ import yaml
 
 from abb.arms.base import Limits, PhaseCall, RunResult
 from abb.arms.plain.arm import COMMON
-from abb.config import TaskConfig, load_toolchain
+from abb.config import TaskConfig, load_sandbox, load_toolchain
 from abb.harness import transcript as tx
 from abb.harness.agent_driver import AbortRun, DriverContext, HarnessError
 from abb.harness.platform import get_platform, run_capture
@@ -56,6 +56,8 @@ def s2a_env(ctx: DriverContext) -> dict[str, str]:
     env = ctx.ws.agent_env(ctx.token, proxy=ctx.proxy)
     env.update({"S2A_AUTONOMOUS": "1", "S2A_CLAUDE_EXE": str(get_platform().claude_exe()),
                 "S2A_EXPECT_CLAUDE_VERSION": load_toolchain().claude_code.version,
+                # below the launcher's own grace, so s2a records a call our Ctrl+C interrupted before we kill it
+                "S2A_GRACE_S": str(max(5, int(load_sandbox().process.grace_s) - 10)),
                 "PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1"})
     return env
 
