@@ -13,3 +13,4 @@
   (`getComparator` does not exist) -> V1 `test_compile_failed` as expected for `new_surface`.
   The 15 existing tests of the class are P2P and pin the unchanged behaviour.
 - LICENSE-NOTE: patches derive from AntennaPod (GPL-3.0).
+- S2 review: approved by the owner on 2026-10-18 (unchanged).

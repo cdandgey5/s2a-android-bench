@@ -5,3 +5,4 @@
 - problem.md is written as a feature request in the project's issue style (no upstream issue).
 - Ticket (agent, 2026-10-18): written as a maintainer-style feature request. The hidden tests use the surface the feature introduces (`M4AMetadataReader`, `readInputStream()`, `getDescription()`), so the ticket names it (D-020): `tags.new_surface: true`, and `ticket_mentions_code: true` because a reverted task has no upstream ticket and the names are the public surface, not the fix location. It does not describe the atom parsing.
 - Pairs with antennapod-0003 (FLAC half of the same user request, #8694); separate base commits.
+- S2 review: approved by the owner on 2026-10-18 (unchanged).
