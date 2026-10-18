@@ -157,6 +157,8 @@ def repos_list() -> None:
 # ---------------------------------------------------------------------------- env / sandbox
 @env_app.command("warm")
 def env_warm(repo: str, warm_commits: Optional[list[str]] = typer.Option(None, "--warm-commits"),
+             warm_commits_from_tasks: bool = typer.Option(True, "--warm-commits-from-tasks/--no-warm-commits-from-tasks",
+                                                          help="also warm every task's base commit and the setup_commit"),
              keep_scratch: bool = typer.Option(False)) -> None:
     """Mirror + warm caches (gradle-ro, robolectric, gradle-pristine) + fingerprint in env.lock.json."""
     import json
@@ -164,7 +166,7 @@ def env_warm(repo: str, warm_commits: Optional[list[str]] = typer.Option(None, "
     from abb.harness import env
 
     try:
-        rec = env.warm(repo, warm_commits, keep_scratch=keep_scratch)
+        rec = env.warm(repo, warm_commits, keep_scratch=keep_scratch, include_tasks=warm_commits_from_tasks)
     except env.WarmError as e:
         typer.echo(f"ERROR: {e}", err=True)
         raise typer.Exit(1)
@@ -266,11 +268,43 @@ def tasks_new(task_id: str, repo: str = typer.Option(...), base_commit: str = ty
     typer.echo(tasks.new_task(task_id, repo, base_commit, source=source))
 
 
+@tasks_app.command("coverage")
+def tasks_coverage(set_setup: bool = typer.Option(True, "--set-setup/--no-set-setup",
+                                                  help="write each repo's octopus merge-base into repos/<repo>.yaml")) -> None:
+    """Coverage vs the (MVP-scaled) targets -> tasks/COVERAGE.md; sets build.setup_commit per repo."""
+    from abb.harness import taskset
+
+    out = taskset.coverage(set_setup=set_setup)
+    for r in out["rows"]:
+        typer.echo(f"{'ok ' if r['ok'] else 'NO '} {r['dimension']:<13} {str(r['value'])[:48]:<48} have {str(r['have']):<14} target {r['target']}")
+    typer.echo(taskset.summary_json(out["setup_commits"]))
+
+
+@tasks_app.command("hash")
+def tasks_hash() -> None:
+    """sha256 over every task's task.yaml, problem.md, test.patch, gold.patch -> tasks/TASKSET.sha256."""
+    from abb.harness import taskset
+
+    p = taskset.write_hash()
+    typer.echo(p.read_text(encoding="utf-8").splitlines()[0])
+
+
 @tasks_app.command("lint")
 def tasks_lint(task_id: Optional[str] = typer.Argument(None), all_: bool = typer.Option(False, "--all"),
-               offline_only: bool = typer.Option(False, "--offline-only", help="skip checks that need the repo")) -> None:
+               offline_only: bool = typer.Option(False, "--offline-only", help="skip checks that need the repo"),
+               setup_leak: bool = typer.Option(False, "--setup-leak",
+                                               help="only check cached setup artifacts against every gold.patch")) -> None:
     """Named lint checks (specs/task-format.md rules 1-8, D-020); exit 1 on any error."""
     from abb.harness import tasks
+
+    if setup_leak:
+        from abb.harness import taskset
+
+        hits = taskset.setup_leaks()
+        for h in hits:
+            typer.echo(f"ERROR setup-leak {h}")
+        typer.echo(f"{len(hits)} leak(s)")
+        raise typer.Exit(1 if hits else 0)
 
     ids = tasks.task_ids() if all_ else [task_id] if task_id else []
     if not ids:
@@ -446,9 +480,15 @@ def report(run_id: str) -> None:
 
 
 @app.command("split")
-def split() -> None:
-    """Freeze the dev/test split (Phase 7)."""
-    _stub(7)
+def split(seed: int = typer.Option(20261101), dev_frac: float = typer.Option(0.30),
+          pin_dev: Optional[list[str]] = typer.Option(None, "--pin-dev",
+                                                      help="task ids forced into dev (default: every task with a trial under results/)")) -> None:
+    """Freeze the dev/test split (Phase 7): stratified on repo x category -> tasks/split.yaml + task.yaml split fields."""
+    from abb.harness import taskset
+
+    doc = taskset.make_split(seed, dev_frac, list(pin_dev) if pin_dev else None)
+    typer.echo(taskset.summary_json({k: doc[k] for k in ("seed", "dev_frac", "pinned_dev", "counts", "task_ids_sha256")}))
+    typer.echo(f"dev {len(doc['dev'])} / test {len(doc['test'])}; wrote tasks/split.yaml")
 
 
 @labels_app.command("prepare")

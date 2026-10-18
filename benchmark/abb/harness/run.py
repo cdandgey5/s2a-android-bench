@@ -47,6 +47,12 @@ def resolve_tasks(spec: str) -> list[str]:
     return [s.strip() for s in spec.split(",") if s.strip()]
 
 
+def _split_sha() -> str | None:
+    from abb.harness.taskset import split_sha256
+
+    return split_sha256()
+
+
 def task_set_sha(ids: list[str]) -> str:
     h = hashlib.sha256()
     for tid in ids:
@@ -94,7 +100,7 @@ class Runner:
             m = {
                 "run_id": self.run_id, "created_at": utcnow_iso(), "label": self.label, "prereg_sha256": None,
                 "arms": self.arms, "task_set": self.task_set, "task_ids": self.tasks,
-                "task_set_sha256": task_set_sha(self.tasks), "trials": self.trials,
+                "task_set_sha256": task_set_sha(self.tasks), "split_sha256": _split_sha(), "trials": self.trials,
                 "limits": asdict(self.limits), "profile": self.profile,
                 "agent_version": load_toolchain().claude_code.version, "speckit_version": None, "s2a_git_sha": None,
                 "platform": get_platform().id,

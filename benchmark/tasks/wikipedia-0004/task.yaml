@@ -1,0 +1,35 @@
+id: wikipedia-0004
+repo: wikipedia
+base_commit: 23316f08f5349f643252d49a4be586082aa2a386
+source: mined
+category: feature
+upstream:
+  issue_url: https://phabricator.wikimedia.org/T415791
+  pr_url: https://github.com/wikimedia/apps-android-wikipedia/pull/6750
+  fix_commit: da06c20eeb605b9ce998f1cdb17740f6e21eb9a0
+  fix_date: '2026-08-03'
+  issue_created: '2026-01-28'
+tags:
+  files_touched: 1
+  files_bucket: '1'
+  modules: 1
+  lang: kotlin
+  ui: none
+  test_kind: robolectric
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :app
+  test: org.wikipedia.dataclient.donate.CampaignCollectionTest
+pass_to_pass:
+- module: :app
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation: null

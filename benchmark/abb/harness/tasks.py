@@ -62,10 +62,16 @@ _URL = re.compile(r"\b\w+://\S+")
 
 
 def code_only(text: str) -> str:
-    """Drop string literals, // comments and URLs: identifiers there are not interfaces (D-020)."""
+    """Drop string literals, comments and URLs: identifiers there are not interfaces (D-020).
+    Works line by line on diff fragments, so a block-comment line is recognised by its shape
+    (`/*`, `*`, `*/` first): Javadoc/KDoc lines in a hunk have lost their opening `/**`."""
     out = []
     for ln in text.splitlines():
+        if ln.lstrip().startswith(("/*", "*")):
+            continue
         ln = _URL.sub("", _STRING.sub('""', ln))
+        ln = re.sub(r"/\*.*?\*/", "", ln)
+        ln = re.sub(r"`[^`\n]*`", "", ln)  # Kotlin backtick names (`test names with spaces`)
         out.append(re.sub(r"//.*$", "", ln))
     return "\n".join(out)
 
@@ -298,7 +304,8 @@ def lint(task_id: str, *, offline_only: bool = False) -> list[Finding]:
     # member calls on project types: `Foo.bar(` / `foo.bar(` -> bar must exist at base too
     used |= {m for m in re.findall(r"\.\s*([a-z]\w{2,})\s*\(", test_added)} - declared
     # constants / enum values on project types: `Format.FLAC`, `SortOrder.RANDOM`
-    used |= {m for m in re.findall(r"\b[A-Z]\w*\.([A-Z][A-Z0-9_]+)\b", test_added)} - declared - lib_ids
+    used |= {c for q, c in re.findall(r"\b([A-Z]\w*)\.([A-Z][A-Z0-9_]+)\b", test_added)
+             if q not in lib_ids} - declared - lib_ids  # `XmlPullParser.END_TAG` is a library constant
     not_at_base = used - base_ids
     new_surface = sorted(not_at_base & problem_ids)
     unknown = sorted(not_at_base - problem_ids)
@@ -309,7 +316,7 @@ def lint(task_id: str, *, offline_only: bool = False) -> list[Finding]:
     if not new_surface and t.tags.new_surface:
         warn("new-surface", "tags.new_surface is true but test.patch uses only base identifiers")
     gold_only = set(CAMEL.findall(code_only("\n".join(added_lines(gold_txt))))) - base_ids
-    leak = sorted(problem_ids & gold_only)
+    leak = sorted((problem_ids & gold_only) - not_at_base)  # new surface the hidden tests use must be named (D-020)
     if leak and not t.tags.ticket_mentions_code:
         err("identifier-leak", f"problem.md contains identifiers that only gold.patch introduces: {leak}")
     # patches apply to an extracted snapshot (bytes, no 3-way)

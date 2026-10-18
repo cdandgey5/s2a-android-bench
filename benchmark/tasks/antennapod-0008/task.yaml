@@ -1,0 +1,37 @@
+id: antennapod-0008
+repo: antennapod
+base_commit: bb6daf84be1db9c580ffa95832c3bb58d77a5bdb
+source: mined
+category: refactor
+upstream:
+  issue_url: https://github.com/AntennaPod/AntennaPod/issues/8655
+  pr_url: https://github.com/AntennaPod/AntennaPod/pull/8656
+  fix_commit: 3ea424da3d5b444784eee840a5eab38bfbe4e902
+  fix_date: '2026-08-26'
+  issue_created: '2026-08-14'
+tags:
+  new_surface: true
+  files_touched: 3
+  files_bucket: 2-5
+  modules: 2
+  lang: java
+  ui: none
+  test_kind: junit
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :net:download:service
+  test: de.danoeh.antennapod.net.download.service.episode.autodownload.DbReaderTest
+pass_to_pass:
+- module: :net:download:service
+- module: :storage:database
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation: null

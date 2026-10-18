@@ -1,0 +1,36 @@
+diff --git a/app/src/main/java/org/wikipedia/dataclient/WikiSite.kt b/app/src/main/java/org/wikipedia/dataclient/WikiSite.kt
+index 3767599684..7f13d2c764 100644
+--- a/app/src/main/java/org/wikipedia/dataclient/WikiSite.kt
++++ b/app/src/main/java/org/wikipedia/dataclient/WikiSite.kt
+@@ -159,6 +159,7 @@ data class WikiSite(
+                 AppLanguageLookUpTable.BELARUSIAN_LEGACY_LANGUAGE_CODE -> AppLanguageLookUpTable.BELARUSIAN_TARASK_LANGUAGE_CODE // T111853
+                 AppLanguageLookUpTable.CHINESE_LEGACY_YUE_LANGUAGE_CODE -> AppLanguageLookUpTable.CHINESE_YUE_LANGUAGE_CODE
+                 AppLanguageLookUpTable.CHINESE_CLASSICAL_LANGUAGE_CODE -> AppLanguageLookUpTable.CHINESE_CLASSICAL_LEGACY_LANGUAGE_CODE
++                AppLanguageLookUpTable.CHINESE_MIN_NAN_LANGUAGE_CODE -> AppLanguageLookUpTable.CHINESE_MIN_NAN_LEGACY_LANGUAGE_CODE
+                 else -> languageCode
+             }
+         }
+diff --git a/app/src/main/java/org/wikipedia/language/AppLanguageLookUpTable.kt b/app/src/main/java/org/wikipedia/language/AppLanguageLookUpTable.kt
+index b71f635c0d..cd2ac8b20b 100644
+--- a/app/src/main/java/org/wikipedia/language/AppLanguageLookUpTable.kt
++++ b/app/src/main/java/org/wikipedia/language/AppLanguageLookUpTable.kt
+@@ -67,6 +67,9 @@ class AppLanguageLookUpTable(context: Context) {
+                 CHINESE_CLASSICAL_LANGUAGE_CODE -> {
+                     name = localizedNames.getOrNull(indexOfCode(CHINESE_CLASSICAL_LEGACY_LANGUAGE_CODE))
+                 }
++                CHINESE_MIN_NAN_LANGUAGE_CODE -> {
++                    name = localizedNames.getOrNull(indexOfCode(CHINESE_MIN_NAN_LEGACY_LANGUAGE_CODE))
++                }
+             }
+         }
+         return name
+@@ -118,7 +121,9 @@ class AppLanguageLookUpTable(context: Context) {
+         const val NORWEGIAN_LEGACY_LANGUAGE_CODE = "no"
+         const val NORWEGIAN_BOKMAL_LANGUAGE_CODE = "nb"
+         const val CHINESE_CLASSICAL_LANGUAGE_CODE = "lzh"
++        const val CHINESE_MIN_NAN_LANGUAGE_CODE = "nan"
+         const val CHINESE_CLASSICAL_LEGACY_LANGUAGE_CODE = "zh-classical"
++        const val CHINESE_MIN_NAN_LEGACY_LANGUAGE_CODE = "zh-min-nan"
+         const val BELARUSIAN_LEGACY_LANGUAGE_CODE = "be-x-old"
+         const val BELARUSIAN_TARASK_LANGUAGE_CODE = "be-tarask"
+         const val TEST_LANGUAGE_CODE = "test"

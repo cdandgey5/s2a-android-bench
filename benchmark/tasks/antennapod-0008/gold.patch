@@ -1,0 +1,124 @@
+diff --git a/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/episode/autodownload/AutomaticDownloadAlgorithm.java b/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/episode/autodownload/AutomaticDownloadAlgorithm.java
+index bd2360fa7..e51dc94b7 100644
+--- a/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/episode/autodownload/AutomaticDownloadAlgorithm.java
++++ b/net/download/service/src/main/java/de/danoeh/antennapod/net/download/service/episode/autodownload/AutomaticDownloadAlgorithm.java
+@@ -10,9 +10,8 @@ import java.util.ArrayList;
+ import java.util.Iterator;
+ import java.util.List;
+ 
+-import de.danoeh.antennapod.model.feed.FeedItemFilter;
+-import de.danoeh.antennapod.model.feed.SortOrder;
+ import de.danoeh.antennapod.model.feed.FeedItem;
++import de.danoeh.antennapod.model.feed.FeedItemFilter;
+ import de.danoeh.antennapod.model.feed.FeedPreferences;
+ import de.danoeh.antennapod.net.download.serviceinterface.DownloadServiceInterface;
+ import de.danoeh.antennapod.storage.database.DBReader;
+@@ -50,27 +49,22 @@ public class AutomaticDownloadAlgorithm {
+ 
+                 Log.d(TAG, "Performing auto-dl of undownloaded episodes");
+ 
+-                final List<FeedItem> newItems = DBReader.getEpisodes(0, Integer.MAX_VALUE,
+-                        new FeedItemFilter(FeedItemFilter.NEW), SortOrder.DATE_NEW_OLD);
++                boolean globalAutoDownloadEnabled = UserPreferences.isEnableAutodownloadGlobal();
++                boolean autoDownloadQueueEnabled = UserPreferences.isEnableAutodownloadQueue();
++                final List<FeedItem> newItems = DBReader.getAutoDownloadCandidates(
++                        globalAutoDownloadEnabled, autoDownloadQueueEnabled);
+                 final List<FeedItem> candidates = new ArrayList<>();
++
+                 for (FeedItem newItem : newItems) {
+                     FeedPreferences feedPrefs = newItem.getFeed().getPreferences();
+-                    if (feedPrefs.isAutoDownload(UserPreferences.isEnableAutodownloadGlobal())
+-                            && !candidates.contains(newItem)
+-                            && feedPrefs.getFilter().shouldAutoDownload(newItem)) {
++                    boolean shouldAdd = (autoDownloadQueueEnabled && newItem.isTagged(FeedItem.TAG_QUEUE))
++                            || (feedPrefs.isAutoDownload(globalAutoDownloadEnabled)
++                            && feedPrefs.getFilter().shouldAutoDownload(newItem));
++                    if (shouldAdd) {
+                         candidates.add(newItem);
+                     }
+                 }
+ 
+-                if (UserPreferences.isEnableAutodownloadQueue()) {
+-                    final List<FeedItem> queue = DBReader.getQueue();
+-                    for (FeedItem item : queue) {
+-                        if (!candidates.contains(item)) {
+-                            candidates.add(item);
+-                        }
+-                    }
+-                }
+-
+                 // filter items that are not auto downloadable
+                 Iterator<FeedItem> it = candidates.iterator();
+                 while (it.hasNext()) {
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java
+index b6b09a6ac..a3df07186 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java
+@@ -234,6 +234,32 @@ public final class DBReader {
+         }
+     }
+ 
++    /**
++     * Loads episodes that are eligible for automatic download, newest first.
++     * This should be preferred over loading all new episodes and filtering them in Java.
++     *
++     * @param globalAutoDownloadEnabled Whether automatic download is enabled in the global settings.
++     * @param includeQueue Whether episodes in the queue should be included.
++     * @return A list of FeedItems that are candidates for automatic download.
++     *         The Feed-attribute of the FeedItems will already be set correctly.
++     */
++    @NonNull
++    public static synchronized List<FeedItem> getAutoDownloadCandidates(boolean globalAutoDownloadEnabled,
++                                                                         boolean includeQueue) {
++        PodDBAdapter adapter = PodDBAdapter.getInstance();
++        adapter.open();
++        try (FeedItemCursor cursor = new FeedItemCursor(
++                adapter.getAutoDownloadCandidatesCursor(globalAutoDownloadEnabled, includeQueue))) {
++            List<FeedItem> items = extractItemlistFromCursor(cursor);
++            if (!items.isEmpty()) {
++                loadFeedDataOfFeedItemList(items);
++            }
++            return items;
++        } finally {
++            adapter.close();
++        }
++    }
++
+     public static synchronized int getTotalEpisodeCount(FeedItemFilter filter) {
+         PodDBAdapter adapter = PodDBAdapter.getInstance();
+         adapter.open();
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java
+index 2562c8472..4c78ca6e0 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java
+@@ -1125,6 +1125,30 @@ public class PodDBAdapter {
+         return db.rawQuery(query, null);
+     }
+ 
++    public final Cursor getAutoDownloadCandidatesCursor(boolean globalAutoDownloadEnabled, boolean includeQueue) {
++        String feedAutoDownloadCondition = globalAutoDownloadEnabled
++                ? "!=" + FeedPreferences.AutoDownloadSetting.DISABLED.code
++                : "=" + FeedPreferences.AutoDownloadSetting.ENABLED.code;
++        String feedHasAutoDownload = TABLE_NAME_FEED_ITEMS + "." + KEY_FEED
++                + " IN (SELECT " + KEY_ID + " FROM " + TABLE_NAME_FEEDS
++                + " WHERE " + KEY_STATE + "=" + Feed.STATE_SUBSCRIBED
++                + " AND " + KEY_AUTO_DOWNLOAD_ENABLED + feedAutoDownloadCondition + ")";
++        String feedIsNotLocal = TABLE_NAME_FEED_ITEMS + "." + KEY_FEED
++                + " IN (SELECT " + KEY_ID + " FROM " + TABLE_NAME_FEEDS
++                + " WHERE " + KEY_DOWNLOAD_URL + " IS NULL OR " + KEY_DOWNLOAD_URL
++                + " NOT LIKE '" + Feed.PREFIX_LOCAL_FOLDER + "%')";
++        String queueCondition = includeQueue ? " OR " + SELECT_KEY_IS_IN_QUEUE : "";
++        final String query = SELECT_FEED_ITEMS_AND_MEDIA
++                + " WHERE " + TABLE_NAME_FEED_ITEMS + "." + KEY_AUTO_DOWNLOAD_ENABLED + "!=0"
++                + " AND " + TABLE_NAME_FEED_MEDIA + "." + KEY_ID + " IS NOT NULL"
++                + " AND " + TABLE_NAME_FEED_MEDIA + "." + KEY_DOWNLOAD_DATE + "=0"
++                + " AND " + feedIsNotLocal
++                + " AND ((" + TABLE_NAME_FEED_ITEMS + "." + KEY_READ + "=" + FeedItem.NEW
++                + " AND " + feedHasAutoDownload + ")" + queueCondition + ")"
++                + " ORDER BY " + TABLE_NAME_FEED_ITEMS + "." + KEY_PUBDATE + " DESC";
++        return db.rawQuery(query, null);
++    }
++
+     public final Cursor getEpisodeCountCursor(FeedItemFilter filter) {
+         String filterQuery = FeedItemFilterQuery.generateFrom(filter);
+         String whereClause = "".equals(filterQuery) ? "" : " WHERE " + filterQuery;

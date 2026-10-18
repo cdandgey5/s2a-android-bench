@@ -1,0 +1,134 @@
+diff --git a/app/src/test/java/org/wikipedia/watchlist/WatchlistFilterHelperTest.kt b/app/src/test/java/org/wikipedia/watchlist/WatchlistFilterHelperTest.kt
+new file mode 100644
+index 0000000..4e3ffef
+--- /dev/null
++++ b/app/src/test/java/org/wikipedia/watchlist/WatchlistFilterHelperTest.kt
+@@ -0,0 +1,128 @@
++package org.wikipedia.watchlist
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertNull
++import org.junit.Test
++
++class WatchlistFilterHelperTest {
++
++    private val defaultCodes = WatchlistFilterTypes.DEFAULT_FILTER_TYPE_SET.map { it.id }.toSet()
++
++    private val nonDefaultChoices = codes(
++        WatchlistFilterTypes.NOT_LATEST_REVISION,
++        WatchlistFilterTypes.UNSEEN_CHANGES,
++        WatchlistFilterTypes.HUMAN,
++        WatchlistFilterTypes.NON_MINOR_EDITS,
++        WatchlistFilterTypes.REGISTERED,
++        WatchlistFilterTypes.PAGE_EDITS,
++        WatchlistFilterTypes.PAGE_CREATIONS,
++        WatchlistFilterTypes.LOGGED_ACTIONS
++    )
++
++    private val oppositeNonDefaultChoices = codes(
++        WatchlistFilterTypes.LATEST_REVISION,
++        WatchlistFilterTypes.SEEN_CHANGES,
++        WatchlistFilterTypes.BOT,
++        WatchlistFilterTypes.MINOR_EDITS,
++        WatchlistFilterTypes.UNREGISTERED,
++        WatchlistFilterTypes.PAGE_EDITS,
++        WatchlistFilterTypes.CATEGORY_CHANGES,
++        WatchlistFilterTypes.WIKIDATA_EDITS
++    )
++
++    private fun codes(vararg types: WatchlistFilterTypes) = types.map { it.id }.toSet()
++
++    @Test
++    fun `default filters ask for the latest revision only`() {
++        assertNull(WatchlistFilterHelper.latestRevisions(defaultCodes))
++    }
++
++    @Test
++    fun `default filters send an empty show criteria`() {
++        assertEquals("", WatchlistFilterHelper.showCriteriaString(defaultCodes))
++    }
++
++    @Test
++    fun `default filters send page edits, page creations and logged actions`() {
++        assertEquals("edit|new|log", WatchlistFilterHelper.showTypesString(defaultCodes))
++    }
++
++    @Test
++    fun `default filters count as no filters`() {
++        assertEquals(0, WatchlistFilterHelper.filtersCount(defaultCodes, emptySet(), listOf("en", "fr")))
++    }
++
++    @Test
++    fun `not latest revision asks for all revisions`() {
++        assertEquals("1", WatchlistFilterHelper.latestRevisions(nonDefaultChoices))
++        assertNull(WatchlistFilterHelper.latestRevisions(oppositeNonDefaultChoices))
++    }
++
++    @Test
++    fun `non-default single choice filters are sent in group order`() {
++        assertEquals("unread|!bot|!minor|!anon", WatchlistFilterHelper.showCriteriaString(nonDefaultChoices))
++        assertEquals("!unread|bot|minor|anon", WatchlistFilterHelper.showCriteriaString(oppositeNonDefaultChoices))
++    }
++
++    @Test
++    fun `only the non-default single choice filter is sent`() {
++        val humanOnly = defaultCodes - WatchlistFilterTypes.ALL_EDITORS.id + WatchlistFilterTypes.HUMAN.id
++        assertEquals("!bot", WatchlistFilterHelper.showCriteriaString(humanOnly))
++        assertNull(WatchlistFilterHelper.latestRevisions(humanOnly))
++        assertEquals("edit|new|log", WatchlistFilterHelper.showTypesString(humanOnly))
++    }
++
++    @Test
++    fun `types of change are sent in the order of the type of changes group`() {
++        val withCategoryChanges = defaultCodes - WatchlistFilterTypes.LOGGED_ACTIONS.id + WatchlistFilterTypes.CATEGORY_CHANGES.id
++        assertEquals("edit|new|categorize", WatchlistFilterHelper.showTypesString(withCategoryChanges))
++        assertEquals("edit|categorize|external", WatchlistFilterHelper.showTypesString(oppositeNonDefaultChoices))
++
++        val selectedInReverse = codes(
++            WatchlistFilterTypes.LOGGED_ACTIONS,
++            WatchlistFilterTypes.WIKIDATA_EDITS,
++            WatchlistFilterTypes.CATEGORY_CHANGES,
++            WatchlistFilterTypes.PAGE_CREATIONS,
++            WatchlistFilterTypes.PAGE_EDITS
++        )
++        assertEquals("edit|new|categorize|external|log", WatchlistFilterHelper.showTypesString(selectedInReverse))
++    }
++
++    @Test
++    fun `no types of change sends an empty type string`() {
++        val noTypesOfChange = defaultCodes - WatchlistFilterTypes.TYPE_OF_CHANGES_GROUP.map { it.id }.toSet()
++        assertEquals("", WatchlistFilterHelper.showTypesString(noTypesOfChange))
++    }
++
++    @Test
++    fun `each non-default single choice group counts as one filter`() {
++        assertEquals(5, WatchlistFilterHelper.filtersCount(nonDefaultChoices, emptySet(), listOf("en")))
++
++        val humanOnly = defaultCodes - WatchlistFilterTypes.ALL_EDITORS.id + WatchlistFilterTypes.HUMAN.id
++        assertEquals(1, WatchlistFilterHelper.filtersCount(humanOnly, emptySet(), listOf("en")))
++    }
++
++    @Test
++    fun `each type of change that differs from the default counts as one filter`() {
++        val withCategoryChanges = defaultCodes - WatchlistFilterTypes.LOGGED_ACTIONS.id + WatchlistFilterTypes.CATEGORY_CHANGES.id
++        assertEquals(2, WatchlistFilterHelper.filtersCount(withCategoryChanges, emptySet(), listOf("en")))
++
++        val noTypesOfChange = defaultCodes - WatchlistFilterTypes.TYPE_OF_CHANGES_GROUP.map { it.id }.toSet()
++        assertEquals(3, WatchlistFilterHelper.filtersCount(noTypesOfChange, emptySet(), listOf("en")))
++
++        assertEquals(8, WatchlistFilterHelper.filtersCount(oppositeNonDefaultChoices, emptySet(), listOf("en")))
++    }
++
++    @Test
++    fun `each excluded app language counts as one filter`() {
++        assertEquals(1, WatchlistFilterHelper.filtersCount(defaultCodes, setOf("fr"), listOf("en", "fr", "de")))
++        assertEquals(2, WatchlistFilterHelper.filtersCount(defaultCodes, setOf("en", "fr"), listOf("en", "fr", "de")))
++        assertEquals(6, WatchlistFilterHelper.filtersCount(nonDefaultChoices, setOf("de"), listOf("en", "fr", "de")))
++    }
++
++    @Test
++    fun `excluded languages that are not app languages are not counted`() {
++        assertEquals(1, WatchlistFilterHelper.filtersCount(defaultCodes, setOf("fr", "ja"), listOf("en", "fr")))
++        assertEquals(0, WatchlistFilterHelper.filtersCount(defaultCodes, setOf("ja"), listOf("en", "fr")))
++    }
++}

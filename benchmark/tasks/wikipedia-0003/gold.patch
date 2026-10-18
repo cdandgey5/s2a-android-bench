@@ -1,0 +1,38 @@
+diff --git a/app/src/main/java/org/wikipedia/language/LanguageUtil.kt b/app/src/main/java/org/wikipedia/language/LanguageUtil.kt
+index bb8458c0b1..91116ebb3d 100644
+--- a/app/src/main/java/org/wikipedia/language/LanguageUtil.kt
++++ b/app/src/main/java/org/wikipedia/language/LanguageUtil.kt
+@@ -87,11 +87,6 @@ object LanguageUtil {
+         }
+     }
+ 
+-    fun isChineseVariant(langCode: String): Boolean {
+-        return langCode.startsWith(AppLanguageLookUpTable.CHINESE_LANGUAGE_CODE) &&
+-                langCode != AppLanguageLookUpTable.CHINESE_YUE_LANGUAGE_CODE
+-    }
+-
+     fun startsWithArticle(text: String, language: String): Boolean {
+         val first = text.split(" ".toRegex()).toTypedArray()[0].lowercase(Locale.getDefault()).trim()
+ 
+diff --git a/app/src/main/java/org/wikipedia/page/PageTitle.kt b/app/src/main/java/org/wikipedia/page/PageTitle.kt
+index 4d4548e16c..f92b66c8e7 100644
+--- a/app/src/main/java/org/wikipedia/page/PageTitle.kt
++++ b/app/src/main/java/org/wikipedia/page/PageTitle.kt
+@@ -6,7 +6,7 @@ import kotlinx.parcelize.Parcelize
+ import kotlinx.serialization.SerialName
+ import kotlinx.serialization.Serializable
+ import org.wikipedia.dataclient.WikiSite
+-import org.wikipedia.language.LanguageUtil
++import org.wikipedia.language.AppLanguageLookUpTable
+ import org.wikipedia.staticdata.ContributionsNameData
+ import org.wikipedia.staticdata.MainPageNameData
+ import org.wikipedia.util.StringUtil
+@@ -194,7 +194,7 @@ data class PageTitle(
+             "%1\$s://%2\$s/%3\$s/%4\$s%5\$s",
+             wikiSite.scheme(),
+             domain,
+-            if (LanguageUtil.isChineseVariant(domain)) wikiSite.languageCode else "wiki",
++            if (WikiSite.authorityToLanguageCode(domain) == AppLanguageLookUpTable.CHINESE_LANGUAGE_CODE) wikiSite.languageCode else "wiki",
+             UriUtil.encodeURL(prefixedText),
+             if (!fragment.isNullOrEmpty()) "#" + UriUtil.encodeURL(fragment!!) else ""
+         )

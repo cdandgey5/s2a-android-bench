@@ -1,0 +1,181 @@
+diff --git a/app/src/main/java/org/wikipedia/watchlist/WatchlistFilterHelper.kt b/app/src/main/java/org/wikipedia/watchlist/WatchlistFilterHelper.kt
+new file mode 100644
+index 0000000..4f31729
+--- /dev/null
++++ b/app/src/main/java/org/wikipedia/watchlist/WatchlistFilterHelper.kt
+@@ -0,0 +1,74 @@
++package org.wikipedia.watchlist
++
++object WatchlistFilterHelper {
++
++    fun filtersCount(includedTypeCodes: Collection<String>, excludedWikiCodes: Collection<String>, appLanguageCodes: List<String>): Int {
++        val findSelectedTypesOfChanges = includedTypeCodes
++            .filter { code -> WatchlistFilterTypes.TYPE_OF_CHANGES_GROUP.map { it.id }.contains(code) }
++
++        // It should include: "not" default values + "non-selected" default values
++        val defaultTypeOfChangeSet = WatchlistFilterTypes.DEFAULT_FILTER_TYPE_OF_CHANGES.map { it.id }.toSet()
++        val nonDefaultChangeTypes = findSelectedTypesOfChanges.subtract(defaultTypeOfChangeSet)
++            .union(defaultTypeOfChangeSet.subtract(findSelectedTypesOfChanges.toSet()))
++
++        // Find the remaining selected filters
++        val findSelectedOthers = includedTypeCodes.subtract(findSelectedTypesOfChanges.toSet())
++        val defaultOthersSet = WatchlistFilterTypes.DEFAULT_FILTER_OTHERS.map { it.id }.toSet()
++        val nonDefaultOthers = defaultOthersSet.subtract(findSelectedOthers)
++
++        return appLanguageCodes.count { excludedWikiCodes.contains(it) } + nonDefaultChangeTypes.size + nonDefaultOthers.size
++    }
++
++    fun latestRevisions(includedTypeCodes: Collection<String>): String? {
++        if (!includedTypeCodes.containsAll(WatchlistFilterTypes.LATEST_REVISIONS_GROUP.map { it.id }) &&
++            !includedTypeCodes.contains(WatchlistFilterTypes.LATEST_REVISION.id)) {
++            return WatchlistFilterTypes.NOT_LATEST_REVISION.value
++        }
++        return null
++    }
++
++    fun showCriteriaString(includedTypeCodes: Collection<String>): String {
++        val list = mutableListOf<String>()
++        if (!includedTypeCodes.containsAll(WatchlistFilterTypes.UNSEEN_CHANGES_GROUP.map { it.id })) {
++            if (includedTypeCodes.contains(WatchlistFilterTypes.UNSEEN_CHANGES.id)) {
++                list.add(WatchlistFilterTypes.UNSEEN_CHANGES.value)
++            }
++            if (includedTypeCodes.contains(WatchlistFilterTypes.SEEN_CHANGES.id)) {
++                list.add(WatchlistFilterTypes.SEEN_CHANGES.value)
++            }
++        }
++
++        if (!includedTypeCodes.containsAll(WatchlistFilterTypes.BOT_EDITS_GROUP.map { it.id })) {
++            if (includedTypeCodes.contains(WatchlistFilterTypes.BOT.id)) {
++                list.add(WatchlistFilterTypes.BOT.value)
++            }
++            if (includedTypeCodes.contains(WatchlistFilterTypes.HUMAN.id)) {
++                list.add(WatchlistFilterTypes.HUMAN.value)
++            }
++        }
++
++        if (!includedTypeCodes.containsAll(WatchlistFilterTypes.MINOR_EDITS_GROUP.map { it.id })) {
++            if (includedTypeCodes.contains(WatchlistFilterTypes.MINOR_EDITS.id)) {
++                list.add(WatchlistFilterTypes.MINOR_EDITS.value)
++            }
++            if (includedTypeCodes.contains(WatchlistFilterTypes.NON_MINOR_EDITS.id)) {
++                list.add(WatchlistFilterTypes.NON_MINOR_EDITS.value)
++            }
++        }
++
++        if (!includedTypeCodes.containsAll(WatchlistFilterTypes.USER_STATUS_GROUP.map { it.id })) {
++            if (includedTypeCodes.contains(WatchlistFilterTypes.REGISTERED.id)) {
++                list.add(WatchlistFilterTypes.REGISTERED.value)
++            }
++            if (includedTypeCodes.contains(WatchlistFilterTypes.UNREGISTERED.id)) {
++                list.add(WatchlistFilterTypes.UNREGISTERED.value)
++            }
++        }
++        return list.joinToString(separator = "|")
++    }
++
++    fun showTypesString(includedTypeCodes: Collection<String>): String {
++        val types = WatchlistFilterTypes.TYPE_OF_CHANGES_GROUP.filter { includedTypeCodes.contains(it.id) }.map { it.value }
++        return types.joinToString(separator = "|")
++    }
++}
+diff --git a/app/src/main/java/org/wikipedia/watchlist/WatchlistViewModel.kt b/app/src/main/java/org/wikipedia/watchlist/WatchlistViewModel.kt
+index e876e39..046d68a 100644
+--- a/app/src/main/java/org/wikipedia/watchlist/WatchlistViewModel.kt
++++ b/app/src/main/java/org/wikipedia/watchlist/WatchlistViewModel.kt
+@@ -88,10 +88,14 @@ class WatchlistViewModel : ViewModel() {
+         _uiState.value = Resource.Loading()
+         viewModelScope.launch(handler) {
+             watchlistItems = mutableListOf()
++            val includedTypeCodes = Prefs.watchlistIncludedTypeCodes
++            val latestRevisions = WatchlistFilterHelper.latestRevisions(includedTypeCodes)
++            val showCriteria = WatchlistFilterHelper.showCriteriaString(includedTypeCodes)
++            val showTypes = WatchlistFilterHelper.showTypesString(includedTypeCodes)
+             displayLanguages.map { language ->
+                 async {
+                     ServiceFactory.get(WikiSite.forLanguageCode(language))
+-                        .getWatchlist(latestRevisions(), showCriteriaString(), showTypesString())
++                        .getWatchlist(latestRevisions, showCriteria, showTypes)
+                         .query?.watchlist?.map {
+                             it.wiki = WikiSite.forLanguageCode(language)
+                             watchlistItems.add(it)
+@@ -108,78 +112,8 @@ class WatchlistViewModel : ViewModel() {
+     }
+ 
+     fun filtersCount(): Int {
+-        val excludedWikiCodes = Prefs.watchlistExcludedWikiCodes
+-
+-        val findSelectedTypesOfChanges = Prefs.watchlistIncludedTypeCodes
+-            .filter { code -> WatchlistFilterTypes.TYPE_OF_CHANGES_GROUP.map { it.id }.contains(code) }
+-
+-        // It should include: "not" default values + "non-selected" default values
+-        val defaultTypeOfChangeSet = WatchlistFilterTypes.DEFAULT_FILTER_TYPE_OF_CHANGES.map { it.id }.toSet()
+-        val nonDefaultChangeTypes = findSelectedTypesOfChanges.subtract(defaultTypeOfChangeSet)
+-            .union(defaultTypeOfChangeSet.subtract(findSelectedTypesOfChanges.toSet()))
+-
+-        // Find the remaining selected filters
+-        val findSelectedOthers = Prefs.watchlistIncludedTypeCodes.subtract(findSelectedTypesOfChanges.toSet())
+-        val defaultOthersSet = WatchlistFilterTypes.DEFAULT_FILTER_OTHERS.map { it.id }.toSet()
+-        val nonDefaultOthers = defaultOthersSet.subtract(findSelectedOthers)
+-
+-        return WikipediaApp.instance.languageState.appLanguageCodes.count { excludedWikiCodes.contains(it) } + nonDefaultChangeTypes.size + nonDefaultOthers.size
+-    }
+-
+-    private fun latestRevisions(): String? {
+-        val includedTypesCodes = Prefs.watchlistIncludedTypeCodes
+-        if (!includedTypesCodes.containsAll(WatchlistFilterTypes.LATEST_REVISIONS_GROUP.map { it.id }) &&
+-            !includedTypesCodes.contains(WatchlistFilterTypes.LATEST_REVISION.id)) {
+-            return WatchlistFilterTypes.NOT_LATEST_REVISION.value
+-        }
+-        return null
+-    }
+-
+-    private fun showCriteriaString(): String {
+-        val includedTypesCodes = Prefs.watchlistIncludedTypeCodes
+-        val list = mutableListOf<String>()
+-        if (!includedTypesCodes.containsAll(WatchlistFilterTypes.UNSEEN_CHANGES_GROUP.map { it.id })) {
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.UNSEEN_CHANGES.id)) {
+-                list.add(WatchlistFilterTypes.UNSEEN_CHANGES.value)
+-            }
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.SEEN_CHANGES.id)) {
+-                list.add(WatchlistFilterTypes.SEEN_CHANGES.value)
+-            }
+-        }
+-
+-        if (!includedTypesCodes.containsAll(WatchlistFilterTypes.BOT_EDITS_GROUP.map { it.id })) {
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.BOT.id)) {
+-                list.add(WatchlistFilterTypes.BOT.value)
+-            }
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.HUMAN.id)) {
+-                list.add(WatchlistFilterTypes.HUMAN.value)
+-            }
+-        }
+-
+-        if (!includedTypesCodes.containsAll(WatchlistFilterTypes.MINOR_EDITS_GROUP.map { it.id })) {
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.MINOR_EDITS.id)) {
+-                list.add(WatchlistFilterTypes.MINOR_EDITS.value)
+-            }
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.NON_MINOR_EDITS.id)) {
+-                list.add(WatchlistFilterTypes.NON_MINOR_EDITS.value)
+-            }
+-        }
+-
+-        if (!includedTypesCodes.containsAll(WatchlistFilterTypes.USER_STATUS_GROUP.map { it.id })) {
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.REGISTERED.id)) {
+-                list.add(WatchlistFilterTypes.REGISTERED.value)
+-            }
+-            if (includedTypesCodes.contains(WatchlistFilterTypes.UNREGISTERED.id)) {
+-                list.add(WatchlistFilterTypes.UNREGISTERED.value)
+-            }
+-        }
+-        return list.joinToString(separator = "|")
+-    }
+-
+-    private fun showTypesString(): String {
+-        val includedTypesCodes = Prefs.watchlistIncludedTypeCodes
+-        val types = WatchlistFilterTypes.TYPE_OF_CHANGES_GROUP.filter { includedTypesCodes.contains(it.id) }.map { it.value }
+-        return types.joinToString(separator = "|")
++        return WatchlistFilterHelper.filtersCount(Prefs.watchlistIncludedTypeCodes, Prefs.watchlistExcludedWikiCodes,
++            WikipediaApp.instance.languageState.appLanguageCodes)
+     }
+ 
+     companion object {

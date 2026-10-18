@@ -1,0 +1,67 @@
+diff --git a/app/src/test/java/org/wikipedia/util/StringUtilGeoHackTest.kt b/app/src/test/java/org/wikipedia/util/StringUtilGeoHackTest.kt
+new file mode 100644
+index 0000000..d4cbc3a
+--- /dev/null
++++ b/app/src/test/java/org/wikipedia/util/StringUtilGeoHackTest.kt
+@@ -0,0 +1,61 @@
++package org.wikipedia.util
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertNotNull
++import org.junit.Assert.assertNull
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++
++@RunWith(RobolectricTestRunner::class)
++class StringUtilGeoHackTest {
++
++    @Test
++    fun testSignedDecimalCoordinates() {
++        assertLocation("51.5072;-0.1276", 51.5072, -0.1276)
++        assertLocation("-33.8568;151.2153", -33.8568, 151.2153)
++    }
++
++    @Test
++    fun testSignedDecimalCoordinatesWithExtraParams() {
++        assertLocation("-33.8568;151.2153_type:landmark", -33.8568, 151.2153)
++        assertLocation("51.5072;-0.1276_type:city_region:GB_scale:300000", 51.5072, -0.1276)
++    }
++
++    @Test
++    fun testHemisphereCoordinatesUnchanged() {
++        assertLocation("40.6892_N_74.0445_W_region:US", 40.6892, -74.0445)
++        assertLocation("51_30_N_0_7_W_region:GB", 51.5, -0.11666666666666667)
++        assertLocation("42_21_30_N_71_3_37_W", 42.358333333333334, -71.06027777777777)
++        assertLocation("33_51_25_S_151_12_55_E_type:landmark", -33.856944444444444, 151.21527777777777)
++    }
++
++    @Test
++    fun testOutOfRangeSignedDecimalCoordinates() {
++        assertNull(StringUtil.geoHackToLocation("95;10"))
++        assertNull(StringUtil.geoHackToLocation("-95;10"))
++        assertNull(StringUtil.geoHackToLocation("10;190"))
++        assertNull(StringUtil.geoHackToLocation("10;-190_type:landmark"))
++    }
++
++    @Test
++    fun testInvalidCoordinates() {
++        assertNull(StringUtil.geoHackToLocation(null))
++        assertNull(StringUtil.geoHackToLocation(""))
++        assertNull(StringUtil.geoHackToLocation("test"))
++        assertNull(StringUtil.geoHackToLocation("abc;def"))
++        assertNull(StringUtil.geoHackToLocation("51.5072;"))
++        assertNull(StringUtil.geoHackToLocation(";-0.1276"))
++    }
++
++    private fun assertLocation(params: String, expectedLatitude: Double, expectedLongitude: Double) {
++        val location = StringUtil.geoHackToLocation(params)
++        assertNotNull("No location for $params", location)
++        assertEquals(expectedLatitude, location!!.latitude, DELTA)
++        assertEquals(expectedLongitude, location.longitude, DELTA)
++    }
++
++    companion object {
++        private const val DELTA = 0.000001
++    }
++}

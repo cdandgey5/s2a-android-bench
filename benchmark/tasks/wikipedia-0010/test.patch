@@ -1,0 +1,108 @@
+diff --git a/app/src/test/java/org/wikipedia/talk/TalkPageTitleHelperTest.kt b/app/src/test/java/org/wikipedia/talk/TalkPageTitleHelperTest.kt
+new file mode 100644
+index 0000000..a12e6e8
+--- /dev/null
++++ b/app/src/test/java/org/wikipedia/talk/TalkPageTitleHelperTest.kt
+@@ -0,0 +1,102 @@
++package org.wikipedia.talk
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.wikipedia.dataclient.WikiSite
++import org.wikipedia.page.Namespace
++import org.wikipedia.page.PageTitle
++
++@RunWith(RobolectricTestRunner::class)
++class TalkPageTitleHelperTest {
++    private val enwiki = WikiSite.forLanguageCode("en")
++    private val dewiki = WikiSite.forLanguageCode("de")
++
++    @Test
++    fun testSubjectPageTitleOfTalkPage() {
++        val talkTitle = PageTitle("Talk:Earth", enwiki)
++        val subjectTitle = TalkPageTitleHelper.subjectPageTitle(talkTitle)
++
++        assertEquals("", subjectTitle.namespace)
++        assertEquals(Namespace.MAIN, subjectTitle.namespace())
++        assertEquals("Earth", subjectTitle.prefixedText)
++        assertEquals(PageTitle("Earth", enwiki), subjectTitle)
++        assertEquals("https://en.wikipedia.org/wiki/Earth", subjectTitle.uri)
++
++        assertEquals("Talk", talkTitle.namespace)
++        assertEquals("Talk:Earth", talkTitle.prefixedText)
++    }
++
++    @Test
++    fun testSubjectPageTitleOfUserTalkPage() {
++        val talkTitle = PageTitle("User_talk:Foo", enwiki)
++        val subjectTitle = TalkPageTitleHelper.subjectPageTitle(talkTitle)
++
++        assertEquals("User", subjectTitle.namespace)
++        assertEquals(Namespace.USER, subjectTitle.namespace())
++        assertEquals("User:Foo", subjectTitle.prefixedText)
++        assertEquals(PageTitle("User:Foo", enwiki), subjectTitle)
++
++        assertEquals("User_talk:Foo", talkTitle.prefixedText)
++    }
++
++    @Test
++    fun testSubjectPageTitleOfLocalizedUserTalkPage() {
++        val subjectTitle = TalkPageTitleHelper.subjectPageTitle(PageTitle("Benutzer_Diskussion:Foo", dewiki))
++
++        assertEquals("Benutzer", subjectTitle.namespace)
++        assertEquals(Namespace.USER, subjectTitle.namespace())
++        assertEquals("Benutzer:Foo", subjectTitle.prefixedText)
++    }
++
++    @Test
++    fun testSubjectPageTitleOfMainspacePage() {
++        val title = PageTitle("Earth", enwiki)
++        val subjectTitle = TalkPageTitleHelper.subjectPageTitle(title)
++
++        assertEquals(title, subjectTitle)
++        assertEquals("", subjectTitle.namespace)
++        assertEquals("Earth", subjectTitle.prefixedText)
++    }
++
++    @Test
++    fun testLinkedTitleHtmlOfTalkPage() {
++        val talkTitle = PageTitle("Talk:Earth", enwiki)
++
++        assertEquals("Talk: <a href='#'>Earth</a>", TalkPageTitleHelper.linkedTitleHtml(talkTitle, false))
++        assertEquals("Talk: <a href='#'>Earth</a>", TalkPageTitleHelper.linkedTitleHtml(talkTitle, true))
++    }
++
++    @Test
++    fun testLinkedTitleHtmlOfMainspacePageUsesLocalizedTalkNamespace() {
++        val title = PageTitle("Erde", dewiki)
++
++        assertEquals("Diskussion: <a href='#'>Erde</a>", TalkPageTitleHelper.linkedTitleHtml(title, false))
++        assertEquals("Diskussion: <a href='#'>Erde</a>", TalkPageTitleHelper.linkedTitleHtml(title, true))
++    }
++
++    @Test
++    fun testLinkedTitleHtmlKeepsMarkupWithoutStripping() {
++        val talkTitle = PageTitle("Talk:Star_Wars", enwiki)
++        talkTitle.displayText = "Talk:<i>Star Wars</i>"
++
++        assertEquals("Talk: <a href='#'><i>Star Wars</i></a>", TalkPageTitleHelper.linkedTitleHtml(talkTitle, false))
++    }
++
++    @Test
++    fun testLinkedTitleHtmlStripsMarkup() {
++        val talkTitle = PageTitle("Talk:Star_Wars", enwiki)
++        talkTitle.displayText = "Talk:<i>Star Wars</i>"
++
++        assertEquals("Talk: <a href='#'>Star Wars</a>", TalkPageTitleHelper.linkedTitleHtml(talkTitle, true))
++    }
++
++    @Test
++    fun testLinkedTitleHtmlWithHref() {
++        val talkTitle = PageTitle("Talk:Earth", enwiki)
++
++        assertEquals("Talk: <a href='https://en.wikipedia.org/wiki/Earth'>Earth</a>",
++            TalkPageTitleHelper.linkedTitleHtml(talkTitle, true, "https://en.wikipedia.org/wiki/Earth"))
++    }
++}

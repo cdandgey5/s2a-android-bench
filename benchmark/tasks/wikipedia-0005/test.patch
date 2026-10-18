@@ -1,0 +1,12 @@
+diff --git a/app/src/test/java/org/wikipedia/notifications/NotificationClientTest.kt b/app/src/test/java/org/wikipedia/notifications/NotificationClientTest.kt
+index 3dc2c0ce1a..4346712472 100644
+--- a/app/src/test/java/org/wikipedia/notifications/NotificationClientTest.kt
++++ b/app/src/test/java/org/wikipedia/notifications/NotificationClientTest.kt
+@@ -67,6 +67,6 @@ class NotificationClientTest : MockRetrofitTest() {
+     }
+ 
+     private suspend fun allNotification(): MwQueryResponse {
+-        return apiService.getAllNotifications("*", "!read", null)
++        return apiService.getAllNotifications("!read", null)
+     }
+ }

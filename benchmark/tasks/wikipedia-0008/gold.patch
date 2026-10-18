@@ -1,0 +1,100 @@
+diff --git a/app/src/main/java/org/wikipedia/page/PageFragmentLoadState.kt b/app/src/main/java/org/wikipedia/page/PageFragmentLoadState.kt
+index 0ea94d7..35e4199 100644
+--- a/app/src/main/java/org/wikipedia/page/PageFragmentLoadState.kt
++++ b/app/src/main/java/org/wikipedia/page/PageFragmentLoadState.kt
+@@ -24,6 +24,7 @@ import org.wikipedia.history.HistoryEntry
+ import org.wikipedia.notifications.AnonymousNotificationHelper
+ import org.wikipedia.page.leadimages.LeadImagesHandler
+ import org.wikipedia.page.tabs.Tab
++import org.wikipedia.savedpages.SavedPageRevisionChecker
+ import org.wikipedia.settings.Prefs
+ import org.wikipedia.staticdata.UserTalkAliasData
+ import org.wikipedia.util.DateUtil
+@@ -202,6 +203,8 @@ class PageFragmentLoadState(private var model: PageViewModel,
+             createPageModel(pageSummaryResponse, isWatched, hasWatchlistExpiry)
+             if (OfflineCacheInterceptor.SAVE_HEADER_SAVE == pageSummaryResponse.headers()[OfflineCacheInterceptor.SAVE_HEADER]) {
+                 showPageOfflineMessage(pageSummaryResponse.headers().getInstant("date"))
++            } else if (model.isInReadingList) {
++                checkForSavedPageUpdates(title, pageSummaryResponse.body()?.revision ?: 0L)
+             }
+ 
+             val categoryList = (categoriesResponse.query ?: watchedResponse.query)?.firstPage()?.categories?.map { category ->
+@@ -234,6 +237,14 @@ class PageFragmentLoadState(private var model: PageViewModel,
+         }
+     }
+ 
++    private fun checkForSavedPageUpdates(title: PageTitle, latestRevision: Long) {
++        MainScope().launch(CoroutineExceptionHandler { _, throwable ->
++            L.e(throwable)
++        }) {
++            SavedPageRevisionChecker().checkForUpdates(title, latestRevision)
++        }
++    }
++
+     private fun showPageOfflineMessage(dateHeader: Instant?) {
+         if (dateHeader == null) {
+             return
+diff --git a/app/src/main/java/org/wikipedia/readinglist/database/ReadingListPage.kt b/app/src/main/java/org/wikipedia/readinglist/database/ReadingListPage.kt
+index 86eb8eb..adb675a 100644
+--- a/app/src/main/java/org/wikipedia/readinglist/database/ReadingListPage.kt
++++ b/app/src/main/java/org/wikipedia/readinglist/database/ReadingListPage.kt
+@@ -50,6 +50,16 @@ data class ReadingListPage(
+ 
+     val saving get() = offline && (status == STATUS_QUEUE_FOR_SAVE || status == STATUS_QUEUE_FOR_FORCED_SAVE)
+ 
++    fun isOutdated(latestRevision: Long): Boolean {
++        return offline && status == STATUS_SAVED && revId > 0 && revId < latestRevision
++    }
++
++    fun applySummary(summary: PageSummary) {
++        displayTitle = summary.displayTitle
++        description = summary.description.orEmpty()
++        revId = summary.revision
++    }
++
+     companion object {
+         const val STATUS_QUEUE_FOR_SAVE = 0L
+         const val STATUS_SAVED = 1L
+diff --git a/app/src/main/java/org/wikipedia/savedpages/SavedPageRevisionChecker.kt b/app/src/main/java/org/wikipedia/savedpages/SavedPageRevisionChecker.kt
+new file mode 100644
+index 0000000..c31a294
+--- /dev/null
++++ b/app/src/main/java/org/wikipedia/savedpages/SavedPageRevisionChecker.kt
+@@ -0,0 +1,23 @@
++package org.wikipedia.savedpages
++
++import org.wikipedia.database.AppDatabase
++import org.wikipedia.page.PageTitle
++import org.wikipedia.readinglist.database.ReadingListPage
++import org.wikipedia.readinglist.db.ReadingListPageDao
++
++class SavedPageRevisionChecker(
++    private val readingListPageDao: ReadingListPageDao = AppDatabase.instance.readingListPageDao(),
++    private val enqueueSave: () -> Unit = { SavedPageSyncService.enqueue() }
++) {
++    suspend fun checkForUpdates(title: PageTitle, latestRevision: Long) {
++        val outdatedPages = readingListPageDao.getAllPageOccurrences(title)
++            .filter { it.isOutdated(latestRevision) }
++        if (outdatedPages.isEmpty()) {
++            return
++        }
++        // markPagesForOffline() leaves pages that are already offline untouched, so the status is set directly.
++        outdatedPages.forEach { it.status = ReadingListPage.STATUS_QUEUE_FOR_FORCED_SAVE }
++        readingListPageDao.updateReadingListPages(outdatedPages)
++        enqueueSave()
++    }
++}
+diff --git a/app/src/main/java/org/wikipedia/savedpages/SavedPageSyncService.kt b/app/src/main/java/org/wikipedia/savedpages/SavedPageSyncService.kt
+index de16da6..1f6f6b9 100644
+--- a/app/src/main/java/org/wikipedia/savedpages/SavedPageSyncService.kt
++++ b/app/src/main/java/org/wikipedia/savedpages/SavedPageSyncService.kt
+@@ -220,8 +220,7 @@ class SavedPageSyncService(context: Context, params: WorkerParameters) : Corouti
+                     }
+                 }
+             }
+-            page.displayTitle = summaryResponse.displayTitle.orEmpty()
+-            page.description = summaryResponse.description.orEmpty()
++            page.applySummary(summaryResponse)
+ 
+             reqSaveFiles(page, pageTitle, fileUrls)
+ 

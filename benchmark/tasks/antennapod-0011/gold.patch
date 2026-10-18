@@ -1,0 +1,174 @@
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java
+index a3df071..68cfa3e 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBReader.java
+@@ -10,7 +10,6 @@ import androidx.collection.ArrayMap;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.Comparator;
+-import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -21,7 +20,6 @@ import de.danoeh.antennapod.model.feed.FeedItem;
+ import de.danoeh.antennapod.model.feed.FeedItemFilter;
+ import de.danoeh.antennapod.model.feed.FeedMedia;
+ import de.danoeh.antennapod.model.feed.FeedOrder;
+-import de.danoeh.antennapod.model.feed.FeedPreferences;
+ import de.danoeh.antennapod.model.feed.SortOrder;
+ import de.danoeh.antennapod.model.feed.SubscriptionsFilter;
+ import de.danoeh.antennapod.model.download.DownloadResult;
+@@ -746,27 +744,7 @@ public final class DBReader {
+         final int numNewItems = getTotalEpisodeCount(new FeedItemFilter(FeedItemFilter.NEW));
+         final int numDownloadedItems = getTotalEpisodeCount(new FeedItemFilter(FeedItemFilter.DOWNLOADED));
+ 
+-        NavDrawerData.TagItem untaggedTag = new NavDrawerData.TagItem(FeedPreferences.TAG_UNTAGGED);
+-        Map<String, NavDrawerData.TagItem> tags = new HashMap<>();
+-        for (Feed feed : feeds) {
+-            if (feed.getPreferences().getTags().isEmpty() || (feed.getPreferences().getTags().size()) == 1
+-                    && feed.getPreferences().getTags().contains(FeedPreferences.TAG_ROOT)) {
+-                untaggedTag.addFeed(feed, 0);
+-            }
+-            for (String tag : feed.getPreferences().getTags()) {
+-                if (!tags.containsKey(tag)) {
+-                    tags.put(tag, new NavDrawerData.TagItem(tag));
+-                }
+-                int counter = feedCounters.containsKey(feed.getId()) ? feedCounters.get(feed.getId()) : 0;
+-                tags.get(tag).addFeed(feed, counter);
+-            }
+-        }
+-        List<NavDrawerData.TagItem> tagsSorted = new ArrayList<>(tags.values());
+-        Collections.sort(tagsSorted, (o1, o2) -> o1.getTitle().compareToIgnoreCase(o2.getTitle()));
+-
+-        if (!untaggedTag.getFeeds().isEmpty()) {
+-            tagsSorted.add(0, untaggedTag);
+-        }
++        List<NavDrawerData.TagItem> tagsSorted = NavDrawerData.groupFeedsByTag(feeds, feedCounters);
+ 
+         NavDrawerData result = new NavDrawerData(feeds, tagsSorted,
+                 queueSize, numNewItems, numDownloadedItems, feedCounters);
+@@ -775,7 +753,6 @@ public final class DBReader {
+     }
+ 
+     public static synchronized List<NavDrawerData.TagItem> getAllTags(int feedState) {
+-        Map<String, NavDrawerData.TagItem> tags = new HashMap<>();
+         List<Feed> allFeeds = getFeedList();
+         List<Feed> feeds = new ArrayList<>();
+         for (Feed feed : allFeeds) {
+@@ -783,34 +760,7 @@ public final class DBReader {
+                 feeds.add(feed);
+             }
+         }
+-        NavDrawerData.TagItem untaggedTag = new NavDrawerData.TagItem(FeedPreferences.TAG_UNTAGGED);
+-        for (Feed feed : feeds) {
+-            if (feed.getPreferences().getTags().isEmpty() || (feed.getPreferences().getTags().size()) == 1
+-                    && feed.getPreferences().getTags().contains(FeedPreferences.TAG_ROOT)) {
+-                untaggedTag.addFeed(feed, 0);
+-            }
+-            for (String tag : feed.getPreferences().getTags()) {
+-                if (FeedPreferences.TAG_ROOT.equals(tag)) {
+-                    continue;
+-                }
+-                if (!tags.containsKey(tag)) {
+-                    tags.put(tag, new NavDrawerData.TagItem(tag));
+-                }
+-                tags.get(tag).addFeed(feed, 0);
+-            }
+-        }
+-        List<NavDrawerData.TagItem> tagsSorted = new ArrayList<>(tags.values());
+-        Collections.sort(tagsSorted, (o1, o2) -> o1.getTitle().compareToIgnoreCase(o2.getTitle()));
+-        // Root tag here means "all feeds", this is different from the nav drawer.
+-        NavDrawerData.TagItem rootTag = new NavDrawerData.TagItem(FeedPreferences.TAG_ROOT);
+-        for (Feed feed : feeds) {
+-            rootTag.addFeed(feed, 0);
+-        }
+-        tagsSorted.add(0, rootTag);
+-        if (!untaggedTag.getFeeds().isEmpty()) {
+-            tagsSorted.add(untaggedTag);
+-        }
+-        return tagsSorted;
++        return NavDrawerData.buildTagList(feeds);
+     }
+ 
+     public static synchronized List<FeedItem> searchFeedItems(final long feedId, final String query,
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/NavDrawerData.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/NavDrawerData.java
+index 601ae7e..45675ff 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/NavDrawerData.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/NavDrawerData.java
+@@ -1,10 +1,14 @@
+ package de.danoeh.antennapod.storage.database;
+ 
+ import de.danoeh.antennapod.model.feed.Feed;
++import de.danoeh.antennapod.model.feed.FeedPreferences;
+ 
+ import java.util.ArrayList;
++import java.util.Collections;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
++import java.util.Set;
+ 
+ public class NavDrawerData {
+     public final List<Feed> feeds;
+@@ -28,6 +32,61 @@ public class NavDrawerData {
+         this.feedCounters = feedIndicatorValues;
+     }
+ 
++    public static List<TagItem> groupFeedsByTag(List<Feed> feeds, Map<Long, Integer> feedCounters) {
++        List<TagItem> tagsSorted = makeSortedTagItems(feeds, feedCounters, false);
++        TagItem untaggedTag = makeUntaggedTagItem(feeds);
++        if (!untaggedTag.getFeeds().isEmpty()) {
++            tagsSorted.add(0, untaggedTag);
++        }
++        return tagsSorted;
++    }
++
++    public static List<TagItem> buildTagList(List<Feed> feeds) {
++        List<TagItem> tagsSorted = makeSortedTagItems(feeds, Collections.emptyMap(), true);
++        // Root tag here means "all feeds", this is different from the nav drawer.
++        TagItem rootTag = new TagItem(FeedPreferences.TAG_ROOT);
++        for (Feed feed : feeds) {
++            rootTag.addFeed(feed, 0);
++        }
++        tagsSorted.add(0, rootTag);
++        TagItem untaggedTag = makeUntaggedTagItem(feeds);
++        if (!untaggedTag.getFeeds().isEmpty()) {
++            tagsSorted.add(untaggedTag);
++        }
++        return tagsSorted;
++    }
++
++    private static List<TagItem> makeSortedTagItems(List<Feed> feeds, Map<Long, Integer> feedCounters,
++                                                    boolean skipRootTag) {
++        Map<String, TagItem> tags = new HashMap<>();
++        for (Feed feed : feeds) {
++            for (String tag : feed.getPreferences().getTags()) {
++                if (skipRootTag && FeedPreferences.TAG_ROOT.equals(tag)) {
++                    continue;
++                }
++                if (!tags.containsKey(tag)) {
++                    tags.put(tag, new TagItem(tag));
++                }
++                int counter = feedCounters.containsKey(feed.getId()) ? feedCounters.get(feed.getId()) : 0;
++                tags.get(tag).addFeed(feed, counter);
++            }
++        }
++        List<TagItem> tagsSorted = new ArrayList<>(tags.values());
++        Collections.sort(tagsSorted, (o1, o2) -> o1.getTitle().compareToIgnoreCase(o2.getTitle()));
++        return tagsSorted;
++    }
++
++    private static TagItem makeUntaggedTagItem(List<Feed> feeds) {
++        TagItem untaggedTag = new TagItem(FeedPreferences.TAG_UNTAGGED);
++        for (Feed feed : feeds) {
++            Set<String> tags = feed.getPreferences().getTags();
++            if (tags.isEmpty() || (tags.size() == 1 && tags.contains(FeedPreferences.TAG_ROOT))) {
++                untaggedTag.addFeed(feed, 0);
++            }
++        }
++        return untaggedTag;
++    }
++
+     public static class TagItem {
+         private final String name;
+         private List<Feed> feeds = new ArrayList<>();

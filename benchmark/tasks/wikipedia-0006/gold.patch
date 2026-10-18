@@ -1,0 +1,327 @@
+diff --git a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeLargeWidgetContent.kt b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeLargeWidgetContent.kt
+index ebd4ec5d28..a7ae48e77a 100644
+--- a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeLargeWidgetContent.kt
++++ b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeLargeWidgetContent.kt
+@@ -214,13 +214,12 @@ fun StreakOngoingLargeWidget(
+             Column(modifier = GlanceModifier.fillMaxSize()) {
+                 // Top Row: Trophy, Title, W logo
+                 Row(
+-                    modifier = GlanceModifier.fillMaxWidth(),
+-                    verticalAlignment = Alignment.CenterVertically
++                    modifier = GlanceModifier.fillMaxWidth()
+                 ) {
+                     Image(
+                         provider = ImageProvider(R.drawable.ic_trophy24dp),
+                         contentDescription = null,
+-                        modifier = GlanceModifier.size(24.dp),
++                        modifier = GlanceModifier.size(size.trophyIconSize),
+                         colorFilter = ColorFilter.tint(ColorProvider(day = contentColor, night = contentColor))
+                     )
+ 
+@@ -228,14 +227,15 @@ fun StreakOngoingLargeWidget(
+ 
+                     Text(
+                         text = context.getString(R.string.reading_challenge_streak_ongoing_title),
++                        modifier = GlanceModifier.defaultWeight(),
+                         style = TextStyle(
+                             color = ColorProvider(day = contentColor, night = contentColor),
+-                            fontSize = 16.sp,
++                            fontSize = size.titleBarTextSize,
+                             fontWeight = FontWeight.Medium
+                         )
+                     )
+ 
+-                    Spacer(modifier = GlanceModifier.defaultWeight())
++                    Spacer(modifier = GlanceModifier.width(12.dp))
+ 
+                     // W logo (Placeholder)
+                     Image(
+@@ -325,9 +325,8 @@ fun StreakOngoingNeedsReadingLargeWidget(
+                     WidgetBadge(
+                         text = streakText,
+                         textSize = size.streakBadgeTextSize,
+-                        iconResId = R.drawable.ic_flame_24dp,
++                        iconResId = R.drawable.ic_streak_warning,
+                         iconSize = size.streakBadgeIconSize,
+-                        iconTintColor = contentColor,
+                         textColor = contentColor
+                     )
+                     Text(
+@@ -351,6 +350,7 @@ fun StreakOngoingNeedsReadingLargeWidget(
+                         contentDescription = null,
+                         modifier = GlanceModifier.size(size.titleBarIconSize)
+                     )
++                    val mascotSize = minOf(size.sideMascotSize, availableWidth * 0.3f, widgetDimension.height - size.titleBarIconSize)
+                     Box(
+                         modifier = GlanceModifier.fillMaxSize(),
+                         contentAlignment = Alignment.Center
+@@ -359,7 +359,7 @@ fun StreakOngoingNeedsReadingLargeWidget(
+                             provider = ImageProvider(mascotImageResId),
+                             contentDescription = null,
+                             modifier = GlanceModifier
+-                                .size(size.sideMascotSize)
++                                .size(mascotSize)
+                         )
+                     }
+                 }
+@@ -502,6 +502,11 @@ fun GeneralLargeWidget(
+                         contentDescription = null,
+                         modifier = GlanceModifier.size(size.titleBarIconSize)
+                     )
++                    val mascotSize = if (expandMascot) {
++                        minOf(size.expandedMascotSize, availableWidth * 0.3f, widgetDimension.height - size.titleBarIconSize)
++                    } else {
++                        minOf(size.sideMascotSize, availableWidth * 0.3f, widgetDimension.height - size.titleBarIconSize)
++                    }
+                     Box(
+                         modifier = GlanceModifier.fillMaxSize(),
+                         contentAlignment = Alignment.Center
+@@ -509,9 +514,7 @@ fun GeneralLargeWidget(
+                         Image(
+                             provider = ImageProvider(mainImageResId),
+                             contentDescription = null,
+-                            modifier = GlanceModifier.size(
+-                                if (expandMascot) size.expandedMascotSize else size.sideMascotSize
+-                            )
++                            modifier = GlanceModifier.size(mascotSize)
+                         )
+                     }
+                 }
+diff --git a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeSmallWidgetContent.kt b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeSmallWidgetContent.kt
+index beee82b3f8..cb7a19d556 100644
+--- a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeSmallWidgetContent.kt
++++ b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeSmallWidgetContent.kt
+@@ -165,10 +165,9 @@ fun ReadingChallengeSmallWidgetContent(
+                     val size = SmallWidgetSize.from(LocalSize.current)
+                     WidgetBadge(
+                         text = streakText,
+-                        iconResId = R.drawable.ic_flame_24dp,
++                        iconResId = R.drawable.ic_streak_warning,
+                         iconSize = size.badgeIconSize,
+                         textSize = size.badgeTextSize,
+-                        iconTintColor = combination.contentColor,
+                         textColor = combination.contentColor
+                     )
+                 }
+@@ -287,6 +286,21 @@ fun SmallWidgetStreakOngoingReadTodayTierBoundariesPreview() {
+     )
+ }
+ 
++// StreakOngoingNeedsReading: mascot + badge
++@OptIn(ExperimentalGlancePreviewApi::class)
++@Preview(widthDp = 184, heightDp = 130)
++@Preview(widthDp = 130, heightDp = 200)
++@Preview(widthDp = 184, heightDp = 160)
++@Preview(widthDp = 200, heightDp = 200)
++@Preview(widthDp = 250, heightDp = 250)
++@Composable
++fun SmallWidgetStreakOngoingNeedsReadingTierBoundariesPreview() {
++    ReadingChallengeSmallWidgetContent(
++        state = ReadingChallengeState.StreakOngoingNeedsReading(streak = 2),
++        enrollmentDate = LocalDate.now()
++    )
++}
++
+ // ChallengeConcludedIncomplete: button-with-icon (longest button text)
+ @OptIn(ExperimentalGlancePreviewApi::class)
+ @Preview(widthDp = 184, heightDp = 130)
+diff --git a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeState.kt b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeState.kt
+index dbfd4d1d12..f6d2015a34 100644
+--- a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeState.kt
++++ b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeState.kt
+@@ -37,5 +37,6 @@ data class ReadingChallengeUserData(
+     val currentDate: LocalDate,
+     val enabled: Boolean,
+     val currentStreak: Int,
+-    val hasReadToday: Boolean
++    val hasReadToday: Boolean,
++    val hasActiveStreak: Boolean
+ )
+diff --git a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidget.kt b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidget.kt
+index 22ff4f6998..985794800e 100644
+--- a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidget.kt
++++ b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidget.kt
+@@ -124,7 +124,7 @@ fun WidgetBadge(
+     iconResId: Int,
+     iconSize: Dp = 16.dp,
+     spacerWidth: Dp = 4.dp,
+-    iconTintColor: Color,
++    iconTintColor: Color? = null,
+     textColor: Color,
+     modifier: GlanceModifier = GlanceModifier
+ ) {
+@@ -138,7 +138,7 @@ fun WidgetBadge(
+             contentDescription = null,
+             modifier = GlanceModifier
+                 .size(iconSize),
+-            colorFilter = ColorFilter.tint(ColorProvider(day = iconTintColor, night = iconTintColor))
++            colorFilter = iconTintColor?.let { ColorFilter.tint(ColorProvider(day = iconTintColor, night = iconTintColor)) }
+         )
+         Spacer(
+             modifier = GlanceModifier.width(spacerWidth)
+@@ -288,6 +288,22 @@ enum class LargeWidgetSize {
+             FULL -> 16.sp
+         }
+ 
++    val trophyIconSize: Dp
++        get() = when (this) {
++            TINY -> 18.dp
++            EXTRA_COMPACT -> 20.dp
++            COMPACT -> 22.dp
++            FULL -> 24.dp
++        }
++
++    val titleBarTextSize: TextUnit
++        get() = when (this) {
++            TINY -> 12.sp
++            EXTRA_COMPACT -> 13.sp
++            COMPACT -> 14.sp
++            FULL -> 16.sp
++        }
++
+     val streakBadgeTextSize: TextUnit
+         get() = when (this) {
+             TINY -> 18.sp
+diff --git a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidgetRepository.kt b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidgetRepository.kt
+index deefcedfca..fdaac56eb9 100644
+--- a/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidgetRepository.kt
++++ b/app/src/main/java/org/wikipedia/widgets/readingchallenge/ReadingChallengeWidgetRepository.kt
+@@ -54,32 +54,32 @@ class ReadingChallengeWidgetRepository(private val context: Context) {
+     }
+ 
+     fun resolveState(userData: ReadingChallengeUserData): ReadingChallengeState {
+-        // Stage 5: Remove challenge
+         if (userData.currentDate.isAfter(REMOVE_DATE)) {
+             return ReadingChallengeState.ChallengeRemoved
+         }
+ 
+-        // Stage 1: Pre-enrollment
+         if (userData.currentDate.isBefore(START_DATE)) {
+             return ReadingChallengeState.NotLiveYet
+         }
+ 
+-        // From this point onward, we are in the active or past the challenge period
+-
+-        // Stage 2: Challenge is active and user has not enrolled
+         if (!userData.enabled) {
++            // Past end date and never enrolled treat as concluded with no streak
++            if (userData.currentDate.isAfter(END_DATE)) {
++                return ReadingChallengeState.ChallengeConcludedNoStreak
++            }
+             return ReadingChallengeState.NotEnrolled
+         }
+ 
+         // From this point onward, user is enrolled
+ 
+-        // Stage 3: Success State, once user is enrolled we check immediately to bypass other conditions if they finish on time
++        // Success State, once user is enrolled we check immediately to bypass other conditions if they finish on time
+         if (userData.currentStreak >= READING_STREAK_GOAL) {
+             return ReadingChallengeState.ChallengeCompleted
+         }
+ 
+-        // Stage 4: Post Challenge (After May 31, 2026)
+-        if (userData.currentDate.isAfter(END_DATE)) {
++        // Past end date with a broken streak — challenge is concluded and cannot restart.
++        // Active streaks past end date fall through and continue toward completion (buffer period)
++        if (userData.currentDate.isAfter(END_DATE) && !userData.hasActiveStreak) {
+             return if (userData.currentStreak > 0) {
+                 ReadingChallengeState.ChallengeConcludedIncomplete(userData.currentStreak) // streak did not hit 25, but they did have a streak
+             } else {
+@@ -87,12 +87,12 @@ class ReadingChallengeWidgetRepository(private val context: Context) {
+             }
+         }
+ 
+-        // Stage 2: no article opened
++        // no article read since enrollment
+         if (userData.currentStreak == 0) {
+             return ReadingChallengeState.EnrolledNotStarted
+         }
+ 
+-        // Stage 2: Active streak
++        // Active streak
+         return if (userData.hasReadToday) {
+             ReadingChallengeState.StreakOngoingReadToday(userData.currentStreak)
+         } else {
+@@ -107,13 +107,21 @@ class ReadingChallengeWidgetRepository(private val context: Context) {
+                 currentDate = currentDate,
+                 enabled = Prefs.readingChallengeEnrolled,
+                 currentStreak = Prefs.readingChallengeStreak,
+-                hasReadToday = hasReadToday(currentDate)
++                hasReadToday = hasReadToday(currentDate),
++                hasActiveStreak = hasActiveStreak(currentDate)
+             )
+         )
+     }
+ 
++    fun hasActiveStreak(currentDate: LocalDate): Boolean {
++        val lastReadDateStr = Prefs.readingChallengeLastReadDate
++        return lastReadDateStr.isNotEmpty() &&
++                ChronoUnit.DAYS.between(LocalDate.parse(lastReadDateStr), currentDate) <= 1
++    }
++
+     fun recalculateStreakIfNeeded(currentDate: LocalDate) {
+         if (currentDate.isAfter(END_DATE)) return // will not reset after challenge ends
++        if (Prefs.readingChallengeStreak >= READING_STREAK_GOAL) return
+ 
+         val lastReadDateStr = Prefs.readingChallengeLastReadDate
+         if (lastReadDateStr.isNotEmpty()) {
+@@ -130,9 +138,11 @@ class ReadingChallengeWidgetRepository(private val context: Context) {
+         ReadingChallengeWidget().updateAll(context)
+     }
+     suspend fun updateOnArticleRead(currentDate: LocalDate) {
+-        if (currentDate.isBefore(START_DATE) || currentDate.isAfter(END_DATE)) {
+-            return
+-        }
++        if (currentDate.isBefore(START_DATE) || currentDate.isAfter(REMOVE_DATE)) return
++        if (Prefs.readingChallengeStreak >= READING_STREAK_GOAL) return
++
++        // after end date but streak is not active
++        if (currentDate.isAfter(END_DATE) && !hasActiveStreak(currentDate)) return
+ 
+         if (Prefs.readingChallengeEnrolled && !hasReadToday(currentDate)) {
+             Prefs.readingChallengeLastReadDate = currentDate.toString()
+@@ -151,7 +161,7 @@ class ReadingChallengeWidgetRepository(private val context: Context) {
+         private val REMOVE_DATE = LocalDate.of(2026, 7, 27)
+ 
+         private val isChallengeActive: Boolean
+-            get() = !LocalDate.now().isBefore(START_DATE) && LocalDate.now().isBefore(END_DATE)
++            get() = !LocalDate.now().isBefore(START_DATE) && !LocalDate.now().isAfter(END_DATE)
+ 
+         fun isWidgetInstalled(): Boolean {
+             val context = WikipediaApp.instance
+diff --git a/app/src/main/res/drawable/ic_streak_warning.xml b/app/src/main/res/drawable/ic_streak_warning.xml
+new file mode 100644
+index 0000000000..b5db71a94b
+--- /dev/null
++++ b/app/src/main/res/drawable/ic_streak_warning.xml
+@@ -0,0 +1,30 @@
++<!--
++  ~ Copyright (C) 2026 The Android Open Source Project
++  ~
++  ~ Licensed under the Apache License, Version 2.0 (the "License");
++  ~ you may not use this file except in compliance with the License.
++  ~ You may obtain a copy of the License at
++  ~
++  ~      http://www.apache.org/licenses/LICENSE-2.0
++  ~
++  ~ Unless required by applicable law or agreed to in writing, software
++  ~ distributed under the License is distributed on an "AS IS" BASIS,
++  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++  ~ See the License for the specific language governing permissions and
++  ~ limitations under the License.
++  -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="29dp"
++    android:height="33dp"
++    android:viewportWidth="29"
++    android:viewportHeight="33">
++  <path
++      android:pathData="M0,17.875C0,15.031 0.677,12.499 2.031,10.278C3.385,8.057 4.875,6.189 6.5,4.672C8.125,3.155 9.615,1.997 10.969,1.198L13,0V5.363C13,6.365 13.339,7.157 14.016,7.739C14.693,8.321 15.451,8.613 16.291,8.613C16.751,8.613 17.191,8.518 17.611,8.328C18.031,8.139 18.417,7.827 18.769,7.394L19.5,6.5C21.45,7.637 23.021,9.215 24.212,11.233C25.404,13.25 26,15.465 26,17.875C26,20.258 25.418,22.432 24.253,24.395C23.088,26.359 21.558,27.909 19.663,29.047C20.123,28.397 20.482,27.686 20.739,26.914C20.996,26.142 21.125,25.323 21.125,24.456C21.125,23.373 20.922,22.351 20.516,21.389C20.109,20.428 19.527,19.568 18.769,18.809L13,13.163L7.272,18.809C6.486,19.595 5.891,20.462 5.484,21.409C5.078,22.357 4.875,23.373 4.875,24.456C4.875,25.323 5.004,26.142 5.261,26.914C5.518,27.686 5.877,28.397 6.338,29.047C4.442,27.909 2.911,26.359 1.747,24.395C0.582,22.432 0,20.258 0,17.875ZM13,17.712L16.453,21.084C16.913,21.545 17.266,22.059 17.509,22.628C17.753,23.197 17.875,23.806 17.875,24.456C17.875,25.783 17.401,26.914 16.453,27.848C15.505,28.783 14.354,29.25 13,29.25C11.646,29.25 10.495,28.783 9.547,27.848C8.599,26.914 8.125,25.783 8.125,24.456C8.125,23.833 8.247,23.231 8.491,22.648C8.734,22.066 9.086,21.545 9.547,21.084L13,17.712Z"
++      android:fillColor="#A95226"/>
++  <path
++      android:pathData="M28.978,26.864C28.978,30.034 26.408,32.603 23.238,32.603C20.069,32.603 17.499,30.034 17.499,26.864C17.499,23.694 20.069,21.125 23.238,21.125C26.408,21.125 28.978,23.694 28.978,26.864Z"
++      android:fillColor="#FFEAD4"/>
++  <path
++      android:pathData="M23.605,29.231C23.701,29.135 23.749,29.017 23.749,28.875C23.749,28.733 23.701,28.615 23.605,28.519C23.51,28.423 23.391,28.375 23.249,28.375C23.108,28.375 22.989,28.423 22.893,28.519C22.797,28.615 22.749,28.733 22.749,28.875C22.749,29.017 22.797,29.135 22.893,29.231C22.989,29.327 23.108,29.375 23.249,29.375C23.391,29.375 23.51,29.327 23.605,29.231ZM22.749,27.375H23.749V24.375H22.749V27.375ZM23.249,31.875C22.558,31.875 21.908,31.744 21.299,31.481C20.691,31.219 20.162,30.862 19.712,30.413C19.262,29.962 18.906,29.433 18.643,28.825C18.381,28.217 18.249,27.567 18.249,26.875C18.249,26.183 18.381,25.533 18.643,24.925C18.906,24.317 19.262,23.788 19.712,23.337C20.162,22.888 20.691,22.531 21.299,22.269C21.908,22.006 22.558,21.875 23.249,21.875C23.941,21.875 24.591,22.006 25.199,22.269C25.808,22.531 26.337,22.888 26.787,23.337C27.237,23.788 27.593,24.317 27.855,24.925C28.118,25.533 28.249,26.183 28.249,26.875C28.249,27.567 28.118,28.217 27.855,28.825C27.593,29.433 27.237,29.962 26.787,30.413C26.337,30.862 25.808,31.219 25.199,31.481C24.591,31.744 23.941,31.875 23.249,31.875Z"
++      android:fillColor="#A95226"/>
++</vector>

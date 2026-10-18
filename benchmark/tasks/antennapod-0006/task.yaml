@@ -1,0 +1,45 @@
+id: antennapod-0006
+repo: antennapod
+base_commit: 9c7ffa16736c020045571d274aef4cdcf0878100
+source: mined
+category: bugfix
+upstream:
+  issue_url: https://github.com/AntennaPod/AntennaPod/issues/8643
+  pr_url: https://github.com/AntennaPod/AntennaPod/pull/8835
+  fix_commit: af615843cf7b8aede5bcbd5979be90e0b8e6b00a
+  fix_date: '2026-10-11'
+  issue_created: '2026-08-04'
+tags:
+  new_surface: true
+  files_touched: 2
+  files_bucket: 2-5
+  modules: 2
+  lang: java
+  ui: none
+  test_kind: junit
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :net:common
+  test: de.danoeh.antennapod.net.common.UrlCheckerTest
+pass_to_pass:
+- module: :net:common
+- module: :ui:preferences
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation:
+  runs: 1
+  last_validated: '2026-10-18T15:03:59Z'
+  env_fingerprint: sha256:45f0558c1b74e41545f421d51f6eaf597afc361fb34c0de5a3a8f3ff88e45256
+  p2p_stable:
+  - de.danoeh.antennapod.net.common.UriUtilTest.testGetURIFromRequestUrlShouldEncode
+  - de.danoeh.antennapod.net.common.UriUtilTest.testGetURIFromRequestUrlShouldNotEncode
+  v1_test_compile: failed_as_expected
+  flaky_tests: []

@@ -1,0 +1,48 @@
+diff --git a/app/src/test/java/org/wikipedia/dataclient/WikiSiteLanguageCodeTest.kt b/app/src/test/java/org/wikipedia/dataclient/WikiSiteLanguageCodeTest.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/test/java/org/wikipedia/dataclient/WikiSiteLanguageCodeTest.kt
+@@ -0,0 +1,43 @@
++package org.wikipedia.dataclient
++
++import org.junit.Assert.assertEquals
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.wikipedia.WikipediaApp
++import org.wikipedia.language.AppLanguageLookUpTable
++import org.wikipedia.page.PageTitle
++
++@RunWith(RobolectricTestRunner::class)
++class WikiSiteLanguageCodeTest {
++    @Test
++    fun minNanWikiUsesItsLegacySubdomain() {
++        val site = WikiSite.forLanguageCode("nan")
++        assertEquals("zh-min-nan.wikipedia.org", site.authority())
++    }
++
++    @Test
++    fun minNanCodeIsNormalizedToTheLegacyCode() {
++        assertEquals("zh-min-nan", WikiSite.normalizeLanguageCode("nan"))
++    }
++
++    @Test
++    fun minNanArticleLinkPointsToTheLegacySubdomain() {
++        val title = PageTitle("Taiwan", WikiSite.forLanguageCode("nan"))
++        assertEquals("https://zh-min-nan.wikipedia.org/wiki/Taiwan", title.uri)
++    }
++
++    @Test
++    fun minNanLanguageHasTheLegacyLanguageName() {
++        val table = AppLanguageLookUpTable(WikipediaApp.instance)
++        assertEquals("Bân-lâm-gú", table.getLocalizedName("nan"))
++    }
++
++    @Test
++    fun otherLanguageCodesKeepTheirSubdomains() {
++        assertEquals("zh-classical.wikipedia.org", WikiSite.forLanguageCode("lzh").authority())
++        assertEquals("zh-yue.wikipedia.org", WikiSite.forLanguageCode("zh-yue").authority())
++        assertEquals("en.wikipedia.org", WikiSite.forLanguageCode("en").authority())
++        assertEquals("en", WikiSite.normalizeLanguageCode("en"))
++    }
++}

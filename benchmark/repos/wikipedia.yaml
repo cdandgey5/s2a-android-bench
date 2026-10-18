@@ -5,6 +5,7 @@ display_name: Wikipedia Android
 url: https://github.com/wikimedia/apps-android-wikipedia
 license: Apache-2.0
 default_branch: main
+issue_tracker: phabricator   # Wikimedia Phabricator tasks (T123456) linked from PR bodies; GitHub issues are disabled
 language: kotlin
 ui: mixed                                    # XML layouts + Compose (123 files with @Composable in app/src/main, 2026-10-17)
 structure: single_module                     # one app module (+ the small :analytics:testkitchen library)
@@ -26,12 +27,12 @@ toolchain:
 
 build:
   cache_commit: 0c7ee9b4682512217e01d829fb0b6d068d268724   # main on 2026-10-17: the Phase 0 experiment
-  setup_commit: 0c7ee9b4682512217e01d829fb0b6d068d268724   # no tasks yet: = cache_commit until `abb tasks coverage` sets the octopus merge-base
+  setup_commit: 97ff25cb3dfc4aa0d22962a92e7655fe6205975f   # git merge-base --octopus of all 10 task base commits (2026-10-18, Phase 7); `abb tasks coverage` re-sets it
   warm_commands:                             # flavors alpha/beta/custom/dev/fdroid/prod; CI tests `testAlphaDebugUnitTest`
     - cmd: "{gradlew} --console=plain --no-daemon :app:assembleAlphaDebug"
     - cmd: "{gradlew} --console=plain --no-daemon testAlphaDebugUnitTest"
       allow_failure: true
-    - cmd: "{gradlew} --console=plain --no-daemon --continue test assembleDebug"   # D-044: every variant an agent may build
+    - cmd: "{gradlew} --console=plain --no-daemon --continue assembleDevDebug testDevDebugUnitTest"   # D-044: the variant the repo's AGENTS.md tells agents to build (12 variants share their dependencies; all of them would cost ~40 min per commit)
       allow_failure: true
       no_test_execution: true
   stubs: []                                  # app/google-services.json, repo.keystore, repo.properties are tracked upstream: nothing to stub

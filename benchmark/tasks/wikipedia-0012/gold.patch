@@ -1,0 +1,44 @@
+diff --git a/app/src/main/java/org/wikipedia/util/StringUtil.kt b/app/src/main/java/org/wikipedia/util/StringUtil.kt
+index a0671a2..b730a58 100644
+--- a/app/src/main/java/org/wikipedia/util/StringUtil.kt
++++ b/app/src/main/java/org/wikipedia/util/StringUtil.kt
+@@ -239,6 +239,12 @@ object StringUtil {
+ 
+     fun geoHackToLocation(params: String?): Location? {
+         if (!params.isNullOrBlank()) {
++            val decimalMatch = """^(-?[\d.]+);(-?[\d.]+)(_|$)""".toRegex().find(params)
++            if (decimalMatch != null) {
++                val lat = decimalMatch.groupValues[1].toDoubleOrNull() ?: return null
++                val lon = decimalMatch.groupValues[2].toDoubleOrNull() ?: return null
++                return createValidLocation(lat, lon)
++            }
+             val regex = """(([\d.]+)_)(([\d.]+)_)?(([\d.]+)_)?(([NS])_)(([\d.]+)_)?(([\d.]+)_)?(([\d.]+)_)?([EW])""".toRegex()
+             val match = regex.find(params)
+             if (match != null) {
+@@ -253,15 +259,22 @@ object StringUtil {
+                 val lat = latDeg.toDouble() + latMin.toDouble() / 60 + latSec.toDouble() / 3600
+                 val lon = lonDeg.toDouble() + lonMin.toDouble() / 60 + lonSec.toDouble() / 3600
+ 
+-                return Location("").apply {
+-                    latitude = if (latDir == "S") -lat else lat
+-                    longitude = if (lonDir == "W") -lon else lon
+-                }
++                return createValidLocation(if (latDir == "S") -lat else lat, if (lonDir == "W") -lon else lon)
+             }
+         }
+         return null
+     }
+ 
++    private fun createValidLocation(lat: Double, lon: Double): Location? {
++        if (lat !in -90.0..90.0 || lon !in -180.0..180.0) {
++            return null
++        }
++        return Location("").apply {
++            latitude = lat
++            longitude = lon
++        }
++    }
++
+     fun extractStringFromStyle(style: String, snippet: String?): String? {
+         val searchString = Regex("""<span\s+class=["']$style["']\s*>(.*?)</span>""", RegexOption.DOT_MATCHES_ALL)
+             .find(snippet.orEmpty())

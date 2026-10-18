@@ -1,0 +1,214 @@
+diff --git a/model/src/main/java/de/danoeh/antennapod/model/feed/FeedItem.java b/model/src/main/java/de/danoeh/antennapod/model/feed/FeedItem.java
+index d2c9ab1..e5cc8d3 100644
+--- a/model/src/main/java/de/danoeh/antennapod/model/feed/FeedItem.java
++++ b/model/src/main/java/de/danoeh/antennapod/model/feed/FeedItem.java
+@@ -24,6 +24,27 @@ public class FeedItem implements Serializable {
+     /** tag that indicates this item is in favorites */
+     public static final String TAG_FAVORITE = "Favorite";
+ 
++    public enum EpisodeType {
++        FULL(0),
++        TRAILER(1),
++        BONUS(2);
++
++        public final int code;
++
++        EpisodeType(int code) {
++            this.code = code;
++        }
++
++        public static EpisodeType fromCode(int code) {
++            for (EpisodeType type : values()) {
++                if (code == type.code) {
++                    return type;
++                }
++            }
++            return FULL;
++        }
++    }
++
+     private long id;
+     /**
+      * The id/guid that can be found in the rss/atom feed. Might not be set.
+@@ -43,6 +64,8 @@ public class FeedItem implements Serializable {
+     private long feedId;
+     private String podcastIndexChapterUrl;
+     private String socialInteractUrl;
++    @NonNull
++    private EpisodeType episodeType = EpisodeType.FULL;
+     private String podcastIndexTranscriptUrl;
+     private String podcastIndexTranscriptType;
+     private Transcript transcript;
+@@ -87,7 +110,8 @@ public class FeedItem implements Serializable {
+     public FeedItem(long id, String title, String link, Date pubDate, String paymentLink, long feedId,
+                     boolean hasChapters, String imageUrl, int state,
+                     String itemIdentifier, boolean autoDownloadEnabled, String podcastIndexChapterUrl,
+-                    String transcriptType, String transcriptUrl, String socialInteractUrl) {
++                    String transcriptType, String transcriptUrl, String socialInteractUrl,
++                    @NonNull EpisodeType episodeType) {
+         this.id = id;
+         this.title = title;
+         this.link = link;
+@@ -101,6 +125,7 @@ public class FeedItem implements Serializable {
+         this.autoDownloadEnabled = autoDownloadEnabled;
+         this.podcastIndexChapterUrl = podcastIndexChapterUrl;
+         this.socialInteractUrl = socialInteractUrl;
++        this.episodeType = episodeType;
+         if (transcriptUrl != null) {
+             this.podcastIndexTranscriptUrl = transcriptUrl;
+             this.podcastIndexTranscriptType = transcriptType;
+@@ -175,6 +200,7 @@ public class FeedItem implements Serializable {
+         if (other.socialInteractUrl != null) {
+             socialInteractUrl = other.socialInteractUrl;
+         }
++        episodeType = other.episodeType;
+         if (other.getTranscriptUrl() != null) {
+             podcastIndexTranscriptUrl = other.podcastIndexTranscriptUrl;
+         }
+@@ -447,6 +473,15 @@ public class FeedItem implements Serializable {
+         return socialInteractUrl;
+     }
+ 
++    @NonNull
++    public EpisodeType getEpisodeType() {
++        return episodeType;
++    }
++
++    public void setEpisodeType(@NonNull EpisodeType episodeType) {
++        this.episodeType = episodeType;
++    }
++
+     public void setTranscriptUrl(String type, String url) {
+         updateTranscriptPreferredFormat(type, url);
+     }
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
+index 3dda57a..e3fcdd5 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
+@@ -5,6 +5,7 @@ import android.util.Log;
+ 
+ import androidx.core.text.HtmlCompat;
+ 
++import de.danoeh.antennapod.model.feed.FeedItem;
+ import de.danoeh.antennapod.parser.feed.HandlerState;
+ import de.danoeh.antennapod.parser.feed.element.SyndElement;
+ import de.danoeh.antennapod.parser.feed.util.DurationParser;
+@@ -25,6 +26,9 @@ public class Itunes extends Namespace {
+     private static final String SUBTITLE = "subtitle";
+     private static final String SUMMARY = "summary";
+     private static final String NEW_FEED_URL = "new-feed-url";
++    private static final String EPISODE_TYPE = "episodeType";
++    private static final String EPISODE_TYPE_TRAILER = "trailer";
++    private static final String EPISODE_TYPE_BONUS = "bonus";
+ 
+     @Override
+     public SyndElement handleElementStart(String localName, HandlerState state,
+@@ -80,6 +84,15 @@ public class Itunes extends Namespace {
+             }
+         } else if (NEW_FEED_URL.equals(localName) && content.trim().startsWith("http")) {
+             state.redirectUrl = content.trim();
++        } else if (EPISODE_TYPE.equals(localName) && state.getCurrentItem() != null) {
++            String episodeType = content.trim();
++            if (EPISODE_TYPE_TRAILER.equalsIgnoreCase(episodeType)) {
++                state.getCurrentItem().setEpisodeType(FeedItem.EpisodeType.TRAILER);
++            } else if (EPISODE_TYPE_BONUS.equalsIgnoreCase(episodeType)) {
++                state.getCurrentItem().setEpisodeType(FeedItem.EpisodeType.BONUS);
++            } else {
++                state.getCurrentItem().setEpisodeType(FeedItem.EpisodeType.FULL);
++            }
+         }
+     }
+ }
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBUpgrader.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBUpgrader.java
+index b0b7009..b64052e 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBUpgrader.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/DBUpgrader.java
+@@ -355,6 +355,11 @@ class DBUpgrader {
+             db.execSQL("DELETE FROM " + PodDBAdapter.TABLE_NAME_FAVORITES + " WHERE " + PodDBAdapter.KEY_FEEDITEM
+                     + " NOT IN (SELECT " + PodDBAdapter.KEY_ID + " FROM " + PodDBAdapter.TABLE_NAME_FEED_ITEMS + ")");
+         }
++        if (oldVersion < 3130000) {
++            db.execSQL("ALTER TABLE " + PodDBAdapter.TABLE_NAME_FEED_ITEMS
++                    + " ADD COLUMN " + PodDBAdapter.KEY_EPISODE_TYPE
++                    + " INTEGER DEFAULT " + FeedItem.EpisodeType.FULL.code);
++        }
+     }
+ 
+ }
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java
+index 4c78ca6..1d783d2 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/PodDBAdapter.java
+@@ -55,7 +55,7 @@ public class PodDBAdapter {
+ 
+     private static final String TAG = "PodDBAdapter";
+     public static final String DATABASE_NAME = "Antennapod.db";
+-    public static final int VERSION = 3110000;
++    public static final int VERSION = 3130000;
+ 
+     /**
+      * Maximum number of arguments for IN-operator.
+@@ -128,6 +128,7 @@ public class PodDBAdapter {
+     public static final String KEY_STATE = "state";
+     public static final String KEY_PODCASTINDEX_TRANSCRIPT_URL = "podcastindex_transcript_url";
+     public static final String KEY_PODCASTINDEX_TRANSCRIPT_TYPE = "podcastindex_transcript_type";
++    public static final String KEY_EPISODE_TYPE = "episode_type";
+ 
+     // Table names
+     public static final String TABLE_NAME_FEEDS = "Feeds";
+@@ -193,7 +194,8 @@ public class PodDBAdapter {
+             + KEY_PODCASTINDEX_CHAPTER_URL + " TEXT,"
+             + KEY_PODCASTINDEX_TRANSCRIPT_TYPE + " TEXT,"
+             + KEY_PODCASTINDEX_TRANSCRIPT_URL + " TEXT,"
+-            + KEY_SOCIAL_INTERACT_URL + " TEXT)";
++            + KEY_SOCIAL_INTERACT_URL + " TEXT,"
++            + KEY_EPISODE_TYPE + " INTEGER DEFAULT " + FeedItem.EpisodeType.FULL.code + ")";
+ 
+     private static final String CREATE_TABLE_FEED_MEDIA = "CREATE TABLE "
+             + TABLE_NAME_FEED_MEDIA + " (" + TABLE_PRIMARY_KEY + KEY_DURATION
+@@ -287,6 +289,7 @@ public class PodDBAdapter {
+             + TABLE_NAME_FEED_ITEMS + "." + KEY_SOCIAL_INTERACT_URL + ", "
+             + TABLE_NAME_FEED_ITEMS + "." + KEY_PODCASTINDEX_TRANSCRIPT_TYPE + ", "
+             + TABLE_NAME_FEED_ITEMS + "." + KEY_PODCASTINDEX_TRANSCRIPT_URL + ", "
++            + TABLE_NAME_FEED_ITEMS + "." + KEY_EPISODE_TYPE + ", "
+             + TABLE_NAME_FEED_ITEMS + "." + KEY_ID + " IN (SELECT " + TABLE_NAME_FAVORITES + "." + KEY_FEEDITEM
+             + " FROM " + TABLE_NAME_FAVORITES + ") AS " + SELECT_KEY_IS_FAVORITE + ", "
+             + TABLE_NAME_FEED_ITEMS + "." + KEY_ID + " IN (SELECT " + TABLE_NAME_QUEUE + "." + KEY_FEEDITEM
+@@ -725,6 +728,7 @@ public class PodDBAdapter {
+         values.put(KEY_IMAGE_URL, item.getImageUrl());
+         values.put(KEY_PODCASTINDEX_CHAPTER_URL, item.getPodcastIndexChapterUrl());
+         values.put(KEY_SOCIAL_INTERACT_URL, item.getSocialInteractUrl());
++        values.put(KEY_EPISODE_TYPE, item.getEpisodeType().code);
+ 
+         // We only store one transcript url, we prefer JSON if it exists
+         String type = item.getTranscriptType();
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/mapper/FeedItemCursor.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/mapper/FeedItemCursor.java
+index b5ea4b2..c1ec9da 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/mapper/FeedItemCursor.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/mapper/FeedItemCursor.java
+@@ -29,6 +29,7 @@ public class FeedItemCursor extends CursorWrapper {
+     private final int indexMediaId;
+     private final int indexPodcastIndexTranscriptType;
+     private final int indexPodcastIndexTranscriptUrl;
++    private final int indexEpisodeType;
+     private final int indexIsFavorite;
+     private final int indexIsInQueue;
+ 
+@@ -51,6 +52,7 @@ public class FeedItemCursor extends CursorWrapper {
+         indexSocialInteractUrl = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_SOCIAL_INTERACT_URL);
+         indexPodcastIndexTranscriptType = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_PODCASTINDEX_TRANSCRIPT_TYPE);
+         indexPodcastIndexTranscriptUrl = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_PODCASTINDEX_TRANSCRIPT_URL);
++        indexEpisodeType = cursor.getColumnIndexOrThrow(PodDBAdapter.KEY_EPISODE_TYPE);
+         indexIsFavorite = cursor.getColumnIndexOrThrow(PodDBAdapter.SELECT_KEY_IS_FAVORITE);
+         indexIsInQueue = cursor.getColumnIndexOrThrow(PodDBAdapter.SELECT_KEY_IS_IN_QUEUE);
+     }
+@@ -75,7 +77,8 @@ public class FeedItemCursor extends CursorWrapper {
+                 getString(indexPodcastIndexChapterUrl),
+                 getString(indexPodcastIndexTranscriptType),
+                 getString(indexPodcastIndexTranscriptUrl),
+-                getString(indexSocialInteractUrl));
++                getString(indexSocialInteractUrl),
++                FeedItem.EpisodeType.fromCode(getInt(indexEpisodeType)));
+         if (!isNull(indexMediaId)) {
+             item.setMedia(feedMediaCursor.getFeedMedia());
+         }

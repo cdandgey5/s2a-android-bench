@@ -117,12 +117,13 @@ def _run_warm_commands(repo: RepoConfig, src: Path, guh: Path, home: Path, logs:
     return results
 
 
-def warm(key: str, extra_commits: list[str] | None = None, keep_scratch: bool = False) -> dict:
+def warm(key: str, extra_commits: list[str] | None = None, keep_scratch: bool = False, include_tasks: bool = True) -> dict:
     repo = load_repo(key)
     plat = get_platform()
     mirror = ensure_mirror(repo, fetch=True)
     commits = [repo.build.cache_commit]
-    for c in task_base_commits(repo) + [repo.build.setup_commit] + list(extra_commits or []):
+    from_tasks = task_base_commits(repo) + [repo.build.setup_commit] if include_tasks else []
+    for c in from_tasks + list(extra_commits or []):
         if c not in commits:
             commits.append(c)
     scratch = paths.work_dir() / "warm" / repo.key / stamp()
@@ -134,9 +135,7 @@ def warm(key: str, extra_commits: list[str] | None = None, keep_scratch: bool = 
     for n, c in enumerate(commits):
         src = scratch / f"src-{n}"
         extract_commit(repo, c, src)
-        wrappers[c] = gradle.wrapper_version(src)
-        if len(set(wrappers.values())) > 1:
-            raise WarmError(f"Gradle wrapper differs between warm commits: {wrappers}")
+        wrappers[c] = gradle.wrapper_version(src)  # several versions share one cache (D-046; verify checks each)
         runs.append({"commit": c, "results": _run_warm_commands(repo, src, guh, home, logs, f"c{n}-{c[:8]}")})
         left = plat.rmtree_robust(src)
         if left:
@@ -170,7 +169,7 @@ def warm(key: str, extra_commits: list[str] | None = None, keep_scratch: bool = 
         plat.inherit_acl(d)
     granted = sandbox.apply_cache_grants([repo.key])
     log.info("sandbox read grants re-applied: %s", granted)
-    rec = fingerprint(repo, commits=commits, wrapper=next(iter(wrappers.values())))
+    rec = fingerprint(repo, commits=commits, wrapper=",".join(sorted(set(wrappers.values()))))
     rec.update({"warm_runs": runs, "warm_minutes": round((time.monotonic() - t0) / 60, 1), "robolectric_jars": [j.name for j in jars],
                 "mirror": str(mirror), "scratch": str(scratch)})
     lock = load_env_lock()

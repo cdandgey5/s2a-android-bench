@@ -1,0 +1,140 @@
+diff --git a/app/src/test/java/org/wikipedia/savedpages/SavedPageRevisionCheckerTest.kt b/app/src/test/java/org/wikipedia/savedpages/SavedPageRevisionCheckerTest.kt
+new file mode 100644
+index 0000000..8d81f17
+--- /dev/null
++++ b/app/src/test/java/org/wikipedia/savedpages/SavedPageRevisionCheckerTest.kt
+@@ -0,0 +1,134 @@
++package org.wikipedia.savedpages
++
++import io.mockk.coEvery
++import io.mockk.mockk
++import io.mockk.unmockkAll
++import kotlinx.coroutines.runBlocking
++import org.junit.After
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Before
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.wikipedia.dataclient.WikiSite
++import org.wikipedia.dataclient.page.PageSummary
++import org.wikipedia.json.JsonUtil
++import org.wikipedia.page.Namespace
++import org.wikipedia.page.PageTitle
++import org.wikipedia.readinglist.database.ReadingListPage
++import org.wikipedia.readinglist.db.ReadingListPageDao
++import org.wikipedia.test.TestFileUtil
++
++@RunWith(RobolectricTestRunner::class)
++class SavedPageRevisionCheckerTest {
++    private val wikiSite = WikiSite.forLanguageCode("en")
++    private val title = PageTitle("Fermat's_Last_Theorem", wikiSite)
++    private val readingListPageDao = mockk<ReadingListPageDao>(relaxed = true)
++    private val persistedPages = mutableListOf<ReadingListPage>()
++    private var enqueueCount = 0
++
++    private val checker = SavedPageRevisionChecker(readingListPageDao) { enqueueCount++ }
++
++    @Before
++    fun setUp() {
++        coEvery { readingListPageDao.updateReadingListPage(any()) } answers {
++            persistedPages.add(firstArg())
++        }
++        coEvery { readingListPageDao.updateReadingListPages(any()) } answers {
++            persistedPages.addAll(firstArg<List<ReadingListPage>>())
++        }
++    }
++
++    @After
++    fun tearDown() {
++        unmockkAll()
++    }
++
++    @Test
++    fun `an offline copy saved at an older revision is outdated`() {
++        assertTrue(savedPage(revId = 100).isOutdated(200))
++    }
++
++    @Test
++    fun `an offline copy with an unknown revision is not outdated`() {
++        assertFalse(savedPage(revId = 0).isOutdated(200))
++    }
++
++    @Test
++    fun `a copy that is not saved offline is not outdated`() {
++        assertFalse(savedPage(revId = 100, offline = false).isOutdated(200))
++    }
++
++    @Test
++    fun `a copy that has not finished saving is not outdated`() {
++        assertFalse(savedPage(revId = 100, status = ReadingListPage.STATUS_QUEUE_FOR_SAVE).isOutdated(200))
++    }
++
++    @Test
++    fun `an offline copy at the same or a newer revision is not outdated`() {
++        assertFalse(savedPage(revId = 200).isOutdated(200))
++        assertFalse(savedPage(revId = 300).isOutdated(200))
++    }
++
++    @Test
++    fun `only the outdated copy is queued for a forced save and the sync is triggered once`() {
++        val outdated = savedPage(listId = 1, revId = 100)
++        val current = savedPage(listId = 2, revId = 200)
++        val onlineOnly = savedPage(listId = 3, revId = 100, offline = false)
++        coEvery { readingListPageDao.getAllPageOccurrences(title) } returns listOf(outdated, current, onlineOnly)
++
++        runBlocking { checker.checkForUpdates(title, 200) }
++
++        assertEquals(setOf(1L), persistedPages.filter { it.status == ReadingListPage.STATUS_QUEUE_FOR_FORCED_SAVE }.map { it.listId }.toSet())
++        assertEquals(ReadingListPage.STATUS_SAVED, current.status)
++        assertEquals(ReadingListPage.STATUS_SAVED, onlineOnly.status)
++        assertEquals(1, enqueueCount)
++    }
++
++    @Test
++    fun `nothing is written or queued when no copy is outdated`() {
++        coEvery { readingListPageDao.getAllPageOccurrences(title) } returns listOf(
++            savedPage(listId = 1, revId = 0),
++            savedPage(listId = 2, revId = 200),
++            savedPage(listId = 3, revId = 300),
++            savedPage(listId = 4, revId = 100, offline = false),
++            savedPage(listId = 5, revId = 100, status = ReadingListPage.STATUS_QUEUE_FOR_SAVE)
++        )
++
++        runBlocking { checker.checkForUpdates(title, 200) }
++
++        assertTrue(persistedPages.isEmpty())
++        assertEquals(0, enqueueCount)
++    }
++
++    @Test
++    fun `saving a page records the revision of the downloaded summary`() {
++        val summary = JsonUtil.decodeFromString<PageSummary>(TestFileUtil.readRawFile("rb_page_summary_valid.json"))!!
++        val page = savedPage(revId = 0).apply {
++            displayTitle = "Old title"
++            description = "old description"
++        }
++
++        page.applySummary(summary)
++
++        assertEquals(832091465L, page.revId)
++        assertEquals("Fermat's Last Theorem", page.displayTitle)
++        assertEquals("theorem in number theory", page.description)
++    }
++
++    private fun savedPage(listId: Long = 1, revId: Long, offline: Boolean = true,
++                          status: Long = ReadingListPage.STATUS_SAVED): ReadingListPage {
++        return ReadingListPage(
++            wiki = wikiSite,
++            namespace = Namespace.MAIN,
++            displayTitle = "Fermat's Last Theorem",
++            apiTitle = "Fermat's_Last_Theorem",
++            listId = listId,
++            offline = offline,
++            status = status,
++            revId = revId
++        )
++    }
++}

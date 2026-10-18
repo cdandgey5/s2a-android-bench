@@ -1,0 +1,221 @@
+diff --git a/storage/importexport/src/test/java/de/danoeh/antennapod/storage/importexport/OpmlTagsTest.java b/storage/importexport/src/test/java/de/danoeh/antennapod/storage/importexport/OpmlTagsTest.java
+new file mode 100644
+index 0000000..01a0cc9
+--- /dev/null
++++ b/storage/importexport/src/test/java/de/danoeh/antennapod/storage/importexport/OpmlTagsTest.java
+@@ -0,0 +1,215 @@
++package de.danoeh.antennapod.storage.importexport;
++
++import de.danoeh.antennapod.model.feed.Feed;
++import de.danoeh.antennapod.model.feed.FeedPreferences;
++import de.danoeh.antennapod.model.feed.VolumeAdaptionSetting;
++import org.junit.Test;
++import org.junit.runner.RunWith;
++import org.robolectric.RobolectricTestRunner;
++import org.xmlpull.v1.XmlPullParser;
++import org.xmlpull.v1.XmlPullParserFactory;
++
++import java.io.StringReader;
++import java.io.StringWriter;
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.Collections;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Set;
++
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertTrue;
++
++/**
++ * Tests that folders in OPML files are mapped to feed tags when reading and writing.
++ */
++@RunWith(RobolectricTestRunner.class)
++public class OpmlTagsTest {
++    private static final String HEADER = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
++            + "<opml version=\"2.0\">"
++            + "<head><title>Test</title></head>"
++            + "<body>";
++    private static final String FOOTER = "</body></opml>";
++
++    @Test
++    public void testReadFeedInFolderGetsFolderAsTag() throws Exception {
++        List<OpmlElement> result = read("<outline text=\"Tech\">"
++                + "<outline title=\"Feed 1\" xmlUrl=\"https://example.com/feed1.xml\"/>"
++                + "</outline>");
++        assertEquals(1, result.size());
++        assertEquals("https://example.com/feed1.xml", result.get(0).getXmlUrl());
++        assertEquals(setOf("Tech"), result.get(0).getTags());
++    }
++
++    @Test
++    public void testReadTopLevelFeedsHaveNoTags() throws Exception {
++        List<OpmlElement> result = read("<outline title=\"Top 1\" xmlUrl=\"https://example.com/top1.xml\"/>"
++                + "<outline text=\"Tech\">"
++                + "<outline title=\"Feed 1\" xmlUrl=\"https://example.com/feed1.xml\"/>"
++                + "</outline>"
++                + "<outline title=\"Top 2\" xmlUrl=\"https://example.com/top2.xml\"/>");
++        assertEquals(3, result.size());
++        assertTrue(find(result, "https://example.com/top1.xml").getTags().isEmpty());
++        assertEquals(setOf("Tech"), find(result, "https://example.com/feed1.xml").getTags());
++        assertTrue(find(result, "https://example.com/top2.xml").getTags().isEmpty());
++    }
++
++    @Test
++    public void testReadNestedFoldersGiveAllEnclosingFoldersAsTags() throws Exception {
++        List<OpmlElement> result = read("<outline text=\"News\">"
++                + "<outline text=\"Local\">"
++                + "<outline title=\"Local Feed\" xmlUrl=\"https://example.com/local.xml\"/>"
++                + "</outline>"
++                + "<outline title=\"World Feed\" xmlUrl=\"https://example.com/world.xml\"/>"
++                + "</outline>");
++        assertEquals(2, result.size());
++        assertEquals(setOf("News", "Local"), find(result, "https://example.com/local.xml").getTags());
++        assertEquals(setOf("News"), find(result, "https://example.com/world.xml").getTags());
++    }
++
++    @Test
++    public void testReadSameFeedInTwoFoldersIsReturnedOnceWithBothTags() throws Exception {
++        List<OpmlElement> result = read("<outline text=\"News\">"
++                + "<outline title=\"Feed A\" xmlUrl=\"https://example.com/a.xml\"/>"
++                + "<outline title=\"Feed B\" xmlUrl=\"https://example.com/b.xml\"/>"
++                + "</outline>"
++                + "<outline text=\"Tech\">"
++                + "<outline title=\"Feed C\" xmlUrl=\"https://example.com/c.xml\"/>"
++                + "<outline title=\"Feed A\" xmlUrl=\"https://example.com/a.xml\"/>"
++                + "</outline>");
++        assertEquals(3, result.size());
++        assertEquals("https://example.com/a.xml", result.get(0).getXmlUrl());
++        assertEquals("https://example.com/b.xml", result.get(1).getXmlUrl());
++        assertEquals("https://example.com/c.xml", result.get(2).getXmlUrl());
++        assertEquals(setOf("News", "Tech"), result.get(0).getTags());
++        assertEquals(setOf("News"), result.get(1).getTags());
++        assertEquals(setOf("Tech"), result.get(2).getTags());
++    }
++
++    @Test
++    public void testWriteRoundTripIgnoresRootTag() throws Exception {
++        Feed feed = createFeed("News Feed", "https://example.com/news.xml",
++                FeedPreferences.TAG_ROOT, "News");
++        String xml = write(Collections.singletonList(feed));
++
++        List<OpmlElement> result = new OpmlReader().readDocument(new StringReader(xml));
++        assertEquals(1, result.size());
++        assertEquals("News Feed", result.get(0).getText());
++        assertEquals("https://example.com/news.xml", result.get(0).getXmlUrl());
++        assertEquals(setOf("News"), result.get(0).getTags());
++    }
++
++    @Test
++    public void testWriteFeedWithTwoTagsIsInBothFolders() throws Exception {
++        Feed feed = createFeed("Feed", "https://example.com/feed.xml", "News", "Tech");
++        String xml = write(Collections.singletonList(feed));
++
++        List<String> outlines = feedOutlines(xml);
++        assertEquals(2, outlines.size());
++        assertEquals(setOf("News/https://example.com/feed.xml", "Tech/https://example.com/feed.xml"),
++                new HashSet<>(outlines));
++
++        List<OpmlElement> result = new OpmlReader().readDocument(new StringReader(xml));
++        assertEquals(1, result.size());
++        assertEquals(setOf("News", "Tech"), result.get(0).getTags());
++    }
++
++    @Test
++    public void testWriteFeedsWithoutTagsStayAtTopLevel() throws Exception {
++        Feed nullPreferences = new Feed(0, null, "Null Preferences", null, null, null, null, null, null, null,
++                null, null, "https://example.com/null.xml", 0);
++        Feed noTags = createFeed("No Tags", "https://example.com/none.xml");
++        Feed rootOnly = createFeed("Root Only", "https://example.com/root.xml", FeedPreferences.TAG_ROOT);
++        Feed tagged = createFeed("Tagged", "https://example.com/tagged.xml", "News");
++        String xml = write(Arrays.asList(nullPreferences, noTags, rootOnly, tagged));
++
++        List<String> outlines = feedOutlines(xml);
++        assertEquals(4, outlines.size());
++        assertTrue(outlines.contains("/https://example.com/null.xml"));
++        assertTrue(outlines.contains("/https://example.com/none.xml"));
++        assertTrue(outlines.contains("/https://example.com/root.xml"));
++        assertTrue(outlines.contains("News/https://example.com/tagged.xml"));
++
++        List<OpmlElement> result = new OpmlReader().readDocument(new StringReader(xml));
++        assertEquals(4, result.size());
++        assertTrue(find(result, "https://example.com/null.xml").getTags().isEmpty());
++        assertTrue(find(result, "https://example.com/none.xml").getTags().isEmpty());
++        assertTrue(find(result, "https://example.com/root.xml").getTags().isEmpty());
++        assertEquals(setOf("News"), find(result, "https://example.com/tagged.xml").getTags());
++    }
++
++    @Test
++    public void testWriteTopLevelFeedsFirstThenFoldersAlphabetically() throws Exception {
++        Feed inBeta = createFeed("In Beta", "https://example.com/beta.xml", "Beta");
++        Feed untagged1 = createFeed("Untagged 1", "https://example.com/untagged1.xml");
++        Feed inAlpha = createFeed("In alpha", "https://example.com/alpha.xml", "alpha");
++        Feed untagged2 = createFeed("Untagged 2", "https://example.com/untagged2.xml");
++        String xml = write(Arrays.asList(inBeta, untagged1, inAlpha, untagged2));
++
++        assertEquals(Arrays.asList(
++                "/https://example.com/untagged1.xml",
++                "/https://example.com/untagged2.xml",
++                "alpha/https://example.com/alpha.xml",
++                "Beta/https://example.com/beta.xml"), feedOutlines(xml));
++    }
++
++    private static List<OpmlElement> read(String body) throws Exception {
++        return new OpmlReader().readDocument(new StringReader(HEADER + body + FOOTER));
++    }
++
++    private static String write(List<Feed> feeds) throws Exception {
++        StringWriter writer = new StringWriter();
++        OpmlWriter.writeDocument(feeds, writer);
++        return writer.toString();
++    }
++
++    private static Feed createFeed(String title, String downloadUrl, String... tags) {
++        Feed feed = new Feed(0, null, title, null, null, null, null, null, null, null, null, null, downloadUrl, 0);
++        FeedPreferences preferences = new FeedPreferences(0, FeedPreferences.AutoDownloadSetting.GLOBAL,
++                FeedPreferences.AutoDeleteAction.GLOBAL, VolumeAdaptionSetting.OFF,
++                FeedPreferences.NewEpisodesAction.GLOBAL, null, null);
++        preferences.getTags().addAll(Arrays.asList(tags));
++        feed.setPreferences(preferences);
++        return feed;
++    }
++
++    private static OpmlElement find(List<OpmlElement> elements, String xmlUrl) {
++        for (OpmlElement element : elements) {
++            if (xmlUrl.equals(element.getXmlUrl())) {
++                return element;
++            }
++        }
++        throw new AssertionError("No element with xmlUrl " + xmlUrl);
++    }
++
++    private static Set<String> setOf(String... values) {
++        return new HashSet<>(Arrays.asList(values));
++    }
++
++    /**
++     * Returns one entry per feed outline in document order, formatted as "parent/xmlUrl", where parent is
++     * the text of the directly enclosing outline, or empty if the feed is a direct child of the body.
++     */
++    private static List<String> feedOutlines(String xml) throws Exception {
++        XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
++        factory.setNamespaceAware(true);
++        XmlPullParser parser = factory.newPullParser();
++        parser.setInput(new StringReader(xml));
++        List<String> openOutlines = new ArrayList<>();
++        List<String> result = new ArrayList<>();
++        for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
++            if (event == XmlPullParser.START_TAG && "outline".equals(parser.getName())) {
++                String xmlUrl = parser.getAttributeValue(null, "xmlUrl");
++                if (xmlUrl != null) {
++                    String parent = openOutlines.isEmpty() ? "" : openOutlines.get(openOutlines.size() - 1);
++                    result.add(parent + "/" + xmlUrl);
++                }
++                openOutlines.add(parser.getAttributeValue(null, "text"));
++            } else if (event == XmlPullParser.END_TAG && "outline".equals(parser.getName())) {
++                openOutlines.remove(openOutlines.size() - 1);
++            }
++        }
++        return result;
++    }
++}

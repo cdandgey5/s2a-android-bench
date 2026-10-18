@@ -1,0 +1,37 @@
+id: antennapod-0007
+repo: antennapod
+base_commit: 6ccf20cb0bc1d4f4974d9e72008c9e67199863ad
+source: mined
+category: bugfix
+upstream:
+  issue_url: https://github.com/AntennaPod/AntennaPod/issues/8752
+  pr_url: https://github.com/AntennaPod/AntennaPod/pull/8771
+  fix_commit: 541d8cc2eeec3a64d802c8f98bcdc9100dc50515
+  fix_date: '2026-09-22'
+  issue_created: '2026-09-13'
+tags:
+  new_surface: true
+  files_touched: 2
+  files_bucket: 2-5
+  modules: 2
+  lang: java
+  ui: none
+  test_kind: robolectric
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :net:common
+  test: de.danoeh.antennapod.net.common.UrlCheckerTest
+pass_to_pass:
+- module: :app
+- module: :net:common
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation: null

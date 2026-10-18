@@ -1,0 +1,84 @@
+diff --git a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java
+index 0284c43bd..2570111f8 100644
+--- a/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java
++++ b/parser/media/src/test/java/de/danoeh/antennapod/parser/media/vorbis/VorbisCommentMetadataReaderTest.java
+@@ -46,4 +46,13 @@ public class VorbisCommentMetadataReaderTest {
+         assertEquals("Ünïcödé tëst — “smart quotes” ½ ≠ ⅓ · Ελληνικά · 日本語 · 한국어 · العربية 📝",
+                 reader.getDescription());
+     }
++
++    @Test
++    public void testRealFileFfmpegSynopsis() throws IOException, VorbisCommentReaderException {
++        InputStream inputStream = getClass().getClassLoader()
++                .getResource("ffmpeg-synopsis.ogg").openStream();
++        VorbisCommentMetadataReader reader = new VorbisCommentMetadataReader(inputStream);
++        reader.readInputStream();
++        assertEquals("This is the synopsis", reader.getDescription());
++    }
+ }
+diff --git a/parser/media/src/test/resources/ffmpeg-synopsis.ogg b/parser/media/src/test/resources/ffmpeg-synopsis.ogg
+new file mode 100644
+index 0000000000000000000000000000000000000000..41301029c2934ddde04fb2f05d5ca18ac96efed6
+GIT binary patch
+literal 4519
+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
+
+literal 0
+HcmV?d00001
+

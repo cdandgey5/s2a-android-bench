@@ -115,6 +115,15 @@ def junit_dir(repo: RepoConfig, src: Path, module: str) -> Path:
     return module_dir(src, module) / Path(repo.tests.junit_dir) / repo.tests.task_for(module)
 
 
+def wrapper_dist_name(src: Path) -> str:
+    """`gradle-9.8.1-bin` for the checkout's wrapper: the folder name under wrapper/dists."""
+    props = (src / "gradle" / "wrapper" / "gradle-wrapper.properties").read_text(encoding="utf-8")
+    m = re.search(r"distributionUrl=.*/(gradle-[0-9][0-9A-Za-z.\-]*?-(?:bin|all))\.zip", props)
+    if not m:
+        raise ValueError("no Gradle wrapper distributionUrl")
+    return m.group(1)
+
+
 def wrapper_version(src: Path) -> str:
     props = (src / "gradle" / "wrapper" / "gradle-wrapper.properties").read_text(encoding="utf-8")
     m = re.search(r"distributionUrl=.*gradle-([0-9][0-9A-Za-z.\-]*?)-(bin|all)\.zip", props)

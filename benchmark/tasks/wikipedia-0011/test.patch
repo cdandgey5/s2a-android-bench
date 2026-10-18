@@ -1,0 +1,75 @@
+diff --git a/app/src/test/java/org/wikipedia/readinglist/ReadingListTitleValidatorTest.kt b/app/src/test/java/org/wikipedia/readinglist/ReadingListTitleValidatorTest.kt
+new file mode 100644
+index 0000000..f96a3ce
+--- /dev/null
++++ b/app/src/test/java/org/wikipedia/readinglist/ReadingListTitleValidatorTest.kt
+@@ -0,0 +1,69 @@
++package org.wikipedia.readinglist
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++import org.wikipedia.readinglist.ReadingListTitleValidator.Result
++import java.util.Locale
++
++class ReadingListTitleValidatorTest {
++    @Test
++    fun testBlankTitleIsEmpty() {
++        assertTrue(ReadingListTitleValidator.validate("  ", emptyList()) is Result.Empty)
++        assertTrue(ReadingListTitleValidator.validate("", listOf("Road trip")) is Result.Empty)
++    }
++
++    @Test
++    fun testValidTitleIsTrimmed() {
++        val result = ReadingListTitleValidator.validate(" Road trip ", listOf("Recipes"))
++        assertTrue(result is Result.Valid)
++        assertEquals("Road trip", (result as Result.Valid).title)
++    }
++
++    @Test
++    fun testDuplicateIgnoresCase() {
++        assertTrue(ReadingListTitleValidator.validate("road TRIP", listOf("Road trip")) is Result.Duplicate)
++    }
++
++    @Test
++    fun testDuplicateIgnoresCaseRegardlessOfDefaultLocale() {
++        val defaultLocale = Locale.getDefault()
++        try {
++            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
++            assertTrue(ReadingListTitleValidator.validate("road TRIP", listOf("Road trip")) is Result.Duplicate)
++        } finally {
++            Locale.setDefault(defaultLocale)
++        }
++    }
++
++    @Test
++    fun testDuplicateIgnoresUnicodeNormalization() {
++        assertTrue(ReadingListTitleValidator.validate("Cafe\u0301", listOf("Caf\u00e9")) is Result.Duplicate)
++        assertTrue(ReadingListTitleValidator.validate("Caf\u00e9", listOf("Cafe\u0301")) is Result.Duplicate)
++    }
++
++    @Test
++    fun testDuplicateIgnoresWhitespaceAroundExistingTitle() {
++        assertTrue(ReadingListTitleValidator.validate("Road trip", listOf(" Road trip ")) is Result.Duplicate)
++    }
++
++    @Test
++    fun testTitleAtMaxLengthIsValid() {
++        val title = "a".repeat(ReadingListTitleValidator.MAX_LENGTH)
++        val result = ReadingListTitleValidator.validate(title, emptyList())
++        assertTrue(result is Result.Valid)
++        assertEquals(title, (result as Result.Valid).title)
++    }
++
++    @Test
++    fun testTitleAtMaxLengthAfterTrimmingIsValid() {
++        val title = "a".repeat(ReadingListTitleValidator.MAX_LENGTH)
++        assertTrue(ReadingListTitleValidator.validate(" $title ", emptyList()) is Result.Valid)
++    }
++
++    @Test
++    fun testTitleOverMaxLengthIsTooLong() {
++        val title = "a".repeat(ReadingListTitleValidator.MAX_LENGTH + 1)
++        assertTrue(ReadingListTitleValidator.validate(title, emptyList()) is Result.TooLong)
++    }
++}

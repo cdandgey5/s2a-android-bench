@@ -26,6 +26,8 @@ from abb.log import get_logger
 
 log = get_logger("abb.mine")
 LINK = re.compile(r"\b(?:fix(?:es|ed)?|close[sd]?|resolve[sd]?)\s*:?\s*#(\d+)", re.I)
+PHAB = re.compile(r"phabricator\.wikimedia\.org/(T\d{4,7})\b")
+PHAB_BASE = "https://phabricator.wikimedia.org/"
 TEMPLATE_NOISE = [  # (pattern, flags): DOTALL only where a match may span lines
     (r"<!--.*?-->", re.S),
     (r"^#+\s*(?:Checklist|Checklist for reviewers|Before submitting)\s*\n(?:\s*- \[[ xX]\] [^\n]*\n?)*", re.M),
@@ -49,6 +51,40 @@ def _git(m: Path, args: list[str]) -> str:
     if r.exit_code != 0:
         raise RuntimeError(f"git {' '.join(args[:3])} failed: {r.stderr()[-500:]}")
     return r.stdout()
+
+
+def _phab_task(tid: str) -> dict:
+    """A public Phabricator task page -> {title, body, createdAt, url, labels} (anonymous Conduit
+    needs a session, the HTML page does not)."""
+    import html
+    import urllib.request
+    from datetime import datetime
+
+    url = PHAB_BASE + tid
+    req = urllib.request.Request(url, headers={"User-Agent": "abb-benchmark-miner (research; one request per task)"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        page = r.read().decode("utf-8", errors="replace")
+    t = re.search(r"<title>(.*?)</title>", page, re.S)
+    title = re.sub(rf"^\W*{tid}\s+", "", html.unescape(t.group(1)).strip()) if t else tid
+    i = page.find(">Description<")
+    m = re.search(r'class="phabricator-remarkup">(.*?)</div>\s*</div>', page[i:i + 20000], re.S) if i >= 0 else None
+    body = ""
+    if m:
+        body = re.sub(r"<br\s*/?>|</p>|</li>|</h\d>", "\n", m.group(1))
+        body = re.sub(r"<li[^>]*>", "- ", body)
+        body = html.unescape(re.sub(r"<[^>]+>", "", body))
+        body = re.sub(r"[ \t]+", " ", body)
+        body = re.sub(r"\n\s*\n+", "\n\n", body).strip()
+    # the first timeline date is the creation; Phabricator drops the year for dates in the current year
+    d = re.search(r"\b([A-Z][a-z]{2} \d{1,2})(?: (\d{4}))?, \d{1,2}:\d{2} [AP]M", page)
+    if not d:
+        raise OSError(f"{tid}: no creation date on the task page")
+    today = datetime.now().date()
+    when = datetime.strptime(f"{d.group(1)} {d.group(2) or today.year}", "%b %d %Y").date()
+    if not d.group(2) and when > today:
+        when = when.replace(year=when.year - 1)
+    created = when.isoformat()
+    return {"title": title, "body": body, "createdAt": created, "url": url, "labels": []}
 
 
 def clean_issue(body: str) -> str:
@@ -86,8 +122,11 @@ def mine(key: str, since: str, *, max_files: int = 8, limit: int = 200, allow_pr
         files = [f["path"] for f in pr.get("files") or []]
         tests = [f for f in files if _is_test(repo, f)]
         non_test = [f for f in files if not _is_test(repo, f)]
-        issues = [i["number"] for i in pr.get("closingIssuesReferences") or []]
-        issues += [int(n) for n in LINK.findall((pr.get("body") or "") + " " + pr["title"]) if int(n) not in issues]
+        if repo.issue_tracker == "phabricator":
+            issues = list(dict.fromkeys(PHAB.findall((pr.get("body") or "") + " " + pr["title"])))
+        else:
+            issues = [i["number"] for i in pr.get("closingIssuesReferences") or []]
+            issues += [int(n) for n in LINK.findall((pr.get("body") or "") + " " + pr["title"]) if int(n) not in issues]
         reason = None
         if not issues:
             reason = "no linked issue"
@@ -108,7 +147,14 @@ def mine(key: str, since: str, *, max_files: int = 8, limit: int = 200, allow_pr
             rows.append({"pr": pr["number"], "title": pr["title"], "skip": f"git: {e}"[:120]})
             continue
         test_patch, gold_patch = split_patch(diff, repo.tests.test_dirs)
-        issue = _gh(["issue", "view", str(issues[0]), "-R", repo.owner_repo, "--json", "title,body,createdAt,url,labels"])
+        if repo.issue_tracker == "phabricator":
+            try:
+                issue = _phab_task(issues[0])
+            except OSError as e:
+                rows.append({"pr": pr["number"], "title": pr["title"], "skip": f"phabricator {issues[0]}: {e}"[:120]})
+                continue
+        else:
+            issue = _gh(["issue", "view", str(issues[0]), "-R", repo.owner_repo, "--json", "title,body,createdAt,url,labels"])
         fix_date = pr["mergedAt"][:10]
         created = issue["createdAt"][:10]
         post = fix_date >= CUTOFF and created >= CUTOFF
@@ -215,7 +261,7 @@ def promote(key: str, pr: int) -> str:
     data = yaml.safe_load((dst / "task.yaml").read_text(encoding="utf-8"))
     data["id"] = tid
     (dst / "task.yaml").write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8", newline="\n")
-    if any(x in repo.license.upper() for x in ("GPL",)):
+    if repo.license:  # every derived task carries its upstream license (phase-7 step 6)
         (dst / "LICENSE-NOTE.md").write_text(
             "# License note\n\n`test.patch` and `gold.patch` in this directory are derived from\n"
             f"{repo.display_name} ({repo.url}), commit {data['base_commit']}, which is licensed under {repo.license}.\n"

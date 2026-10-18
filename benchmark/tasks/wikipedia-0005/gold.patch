@@ -1,0 +1,92 @@
+diff --git a/app/src/main/java/org/wikipedia/dataclient/Service.kt b/app/src/main/java/org/wikipedia/dataclient/Service.kt
+index 94af773446..1f537694ef 100644
+--- a/app/src/main/java/org/wikipedia/dataclient/Service.kt
++++ b/app/src/main/java/org/wikipedia/dataclient/Service.kt
+@@ -362,9 +362,8 @@ interface Service {
+     // ------- Notifications -------
+ 
+     @Headers("Cache-Control: no-cache")
+-    @GET(MW_API_PREFIX + "action=query&meta=notifications&notformat=model&notlimit=max")
++    @GET(MW_API_PREFIX + "action=query&meta=notifications&notformat=model&notlimit=max&notwikis=*")
+     suspend fun getAllNotifications(
+-        @Query("notwikis") wikiList: String?,
+         @Query("notfilter") filter: String?,
+         @Query("notcontinue") continueStr: String?
+     ): MwQueryResponse
+diff --git a/app/src/main/java/org/wikipedia/notifications/NotificationPollBroadcastReceiver.kt b/app/src/main/java/org/wikipedia/notifications/NotificationPollBroadcastReceiver.kt
+index 2a5688b0fb..fe39dd2752 100644
+--- a/app/src/main/java/org/wikipedia/notifications/NotificationPollBroadcastReceiver.kt
++++ b/app/src/main/java/org/wikipedia/notifications/NotificationPollBroadcastReceiver.kt
+@@ -171,7 +171,7 @@ class NotificationPollBroadcastReceiver : BroadcastReceiver() {
+                         // Record that there is an incoming notification to track/compare further actions on it.
+                         NotificationPresenter.showNotification(context, n,
+                             dbWikiNameMap.getOrElse(n.wiki) { n.wiki },
+-                            dbWikiSiteMap.getValue(n.wiki).languageCode)
++                            (dbWikiSiteMap.getOrElse(n.wiki) { WikipediaApp.instance.wikiSite }).languageCode)
+                     }
+                 }
+             }
+diff --git a/app/src/main/java/org/wikipedia/notifications/NotificationRepository.kt b/app/src/main/java/org/wikipedia/notifications/NotificationRepository.kt
+index a35937fed4..bf569dabac 100644
+--- a/app/src/main/java/org/wikipedia/notifications/NotificationRepository.kt
++++ b/app/src/main/java/org/wikipedia/notifications/NotificationRepository.kt
+@@ -20,9 +20,9 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
+             .mapNotNull { (key, wiki) -> wiki.source?.let { key to WikiSite(it.base) } }.toMap()
+     }
+ 
+-    suspend fun fetchAndSave(wikiList: String?, filter: String?, continueStr: String? = null): String? {
++    suspend fun fetchAndSave(filter: String?, continueStr: String? = null): String? {
+         var newContinueStr: String? = null
+-        val response = ServiceFactory.get(WikipediaApp.instance.wikiSite).getAllNotifications(wikiList, filter, continueStr)
++        val response = ServiceFactory.get(WikipediaApp.instance.wikiSite).getAllNotifications(filter, continueStr)
+         response.query?.notifications?.let {
+             notificationDao.insertNotifications(it.list.orEmpty())
+             newContinueStr = it.continueStr
+diff --git a/app/src/main/java/org/wikipedia/notifications/NotificationViewModel.kt b/app/src/main/java/org/wikipedia/notifications/NotificationViewModel.kt
+index e054e68ad9..5f0ce92dea 100644
+--- a/app/src/main/java/org/wikipedia/notifications/NotificationViewModel.kt
++++ b/app/src/main/java/org/wikipedia/notifications/NotificationViewModel.kt
+@@ -111,13 +111,6 @@ class NotificationViewModel : ViewModel() {
+         return notificationContainerList
+     }
+ 
+-    private fun delimitedWikiList(): String {
+-        return dbNameMap.keys.union(NotificationFilterActivity.allWikisList().map {
+-            val defaultLangCode = WikipediaApp.instance.languageState.getDefaultLanguageCode(it) ?: it
+-            "${defaultLangCode.replace("-", "_")}wiki"
+-        }).joinToString("|")
+-    }
+-
+     fun excludedFiltersCount(): Int {
+         val excludedWikiCodes = Prefs.notificationExcludedWikiCodes
+         val excludedTypeCodes = Prefs.notificationExcludedTypeCodes
+@@ -133,7 +126,7 @@ class NotificationViewModel : ViewModel() {
+ 
+         viewModelScope.launch(handler) {
+             if (WikipediaApp.instance.isOnline) {
+-                currentContinueStr = notificationRepository.fetchAndSave(delimitedWikiList(), "read|!read", currentContinueStr)
++                currentContinueStr = notificationRepository.fetchAndSave("read|!read", currentContinueStr)
+             }
+             filterAndPostNotifications()
+         }
+diff --git a/app/src/main/java/org/wikipedia/notifications/PollNotificationWorker.kt b/app/src/main/java/org/wikipedia/notifications/PollNotificationWorker.kt
+index 108a70e75a..b8a911f221 100644
+--- a/app/src/main/java/org/wikipedia/notifications/PollNotificationWorker.kt
++++ b/app/src/main/java/org/wikipedia/notifications/PollNotificationWorker.kt
+@@ -44,7 +44,6 @@ class PollNotificationWorker(
+         val dbWikiNameMap = mutableMapOf<String, String>()
+         val wikiMap = ServiceFactory.get(WikipediaApp.instance.wikiSite).unreadNotificationWikis()
+             .query!!.unreadNotificationWikis.orEmpty()
+-        val foreignWikis = wikiMap.keys.toList()
+         for ((dbName, wiki) in wikiMap) {
+             if (wiki.source != null) {
+                 dbWikiSiteMap[dbName] = WikiSite(wiki.source.base)
+@@ -53,7 +52,7 @@ class PollNotificationWorker(
+         }
+ 
+         ServiceFactory.get(WikipediaApp.instance.wikiSite)
+-            .getAllNotifications(if (foreignWikis.isEmpty()) "*" else foreignWikis.joinToString("|"), "!read", null)
++            .getAllNotifications("!read", null)
+             .query?.notifications?.list?.let {
+                 NotificationPollBroadcastReceiver.onNotificationsComplete(appContext, it, dbWikiSiteMap, dbWikiNameMap)
+             }

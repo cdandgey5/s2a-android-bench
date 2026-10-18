@@ -1,0 +1,254 @@
+diff --git a/model/src/test/java/de/danoeh/antennapod/model/feed/FeedItemEpisodeTypeTest.java b/model/src/test/java/de/danoeh/antennapod/model/feed/FeedItemEpisodeTypeTest.java
+new file mode 100644
+index 0000000..afa55d3
+--- /dev/null
++++ b/model/src/test/java/de/danoeh/antennapod/model/feed/FeedItemEpisodeTypeTest.java
+@@ -0,0 +1,35 @@
++package de.danoeh.antennapod.model.feed;
++
++import org.junit.Test;
++
++import static de.danoeh.antennapod.model.feed.FeedItemMother.anyFeedItemWithImage;
++import static org.junit.Assert.assertEquals;
++
++public class FeedItemEpisodeTypeTest {
++
++    @Test
++    public void testDefaultIsFull() {
++        assertEquals(FeedItem.EpisodeType.FULL, new FeedItem().getEpisodeType());
++    }
++
++    @Test
++    public void testSetEpisodeType() {
++        FeedItem item = new FeedItem();
++        item.setEpisodeType(FeedItem.EpisodeType.BONUS);
++        assertEquals(FeedItem.EpisodeType.BONUS, item.getEpisodeType());
++    }
++
++    @Test
++    public void testUpdateFromOther_episodeTypeChanged() {
++        FeedItem original = anyFeedItemWithImage();
++        FeedItem changedFeedItem = anyFeedItemWithImage();
++        changedFeedItem.setEpisodeType(FeedItem.EpisodeType.TRAILER);
++        original.updateFromOther(changedFeedItem);
++        assertEquals(FeedItem.EpisodeType.TRAILER, original.getEpisodeType());
++
++        FeedItem changedAgain = anyFeedItemWithImage();
++        changedAgain.setEpisodeType(FeedItem.EpisodeType.BONUS);
++        original.updateFromOther(changedAgain);
++        assertEquals(FeedItem.EpisodeType.BONUS, original.getEpisodeType());
++    }
++}
+diff --git a/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/namespace/ItunesEpisodeTypeTest.java b/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/namespace/ItunesEpisodeTypeTest.java
+new file mode 100644
+index 0000000..2c6ec6b
+--- /dev/null
++++ b/parser/feed/src/test/java/de/danoeh/antennapod/parser/feed/element/namespace/ItunesEpisodeTypeTest.java
+@@ -0,0 +1,65 @@
++package de.danoeh.antennapod.parser.feed.element.namespace;
++
++import org.junit.Before;
++import org.junit.Test;
++import org.junit.runner.RunWith;
++import org.robolectric.RobolectricTestRunner;
++
++import java.io.File;
++
++import de.danoeh.antennapod.model.feed.Feed;
++import de.danoeh.antennapod.model.feed.FeedItem;
++
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertNotNull;
++
++/**
++ * Tests for parsing itunes:episodeType of RSS items.
++ */
++@RunWith(RobolectricTestRunner.class)
++public class ItunesEpisodeTypeTest {
++    private Feed feed;
++
++    @Before
++    public void setUp() throws Exception {
++        File feedFile = FeedParserTestHelper.getFeedFile("feed-rss-testItunesEpisodeType.xml");
++        feed = FeedParserTestHelper.runFeedParser(feedFile);
++        assertEquals(5, feed.getItems().size());
++    }
++
++    @Test
++    public void testTrailer() {
++        assertEquals(FeedItem.EpisodeType.TRAILER, findItem("trailer").getEpisodeType());
++    }
++
++    @Test
++    public void testBonusIgnoresCaseAndWhitespace() {
++        assertEquals(FeedItem.EpisodeType.BONUS, findItem("bonus").getEpisodeType());
++    }
++
++    @Test
++    public void testFull() {
++        assertEquals(FeedItem.EpisodeType.FULL, findItem("full").getEpisodeType());
++    }
++
++    @Test
++    public void testMissingIsFull() {
++        assertEquals(FeedItem.EpisodeType.FULL, findItem("missing").getEpisodeType());
++    }
++
++    @Test
++    public void testUnknownValueIsFull() {
++        assertEquals(FeedItem.EpisodeType.FULL, findItem("unknown").getEpisodeType());
++    }
++
++    private FeedItem findItem(String title) {
++        FeedItem found = null;
++        for (FeedItem item : feed.getItems()) {
++            if (title.equals(item.getTitle())) {
++                found = item;
++            }
++        }
++        assertNotNull(found);
++        return found;
++    }
++}
+diff --git a/parser/feed/src/test/resources/feed-rss-testItunesEpisodeType.xml b/parser/feed/src/test/resources/feed-rss-testItunesEpisodeType.xml
+new file mode 100644
+index 0000000..113beda
+--- /dev/null
++++ b/parser/feed/src/test/resources/feed-rss-testItunesEpisodeType.xml
+@@ -0,0 +1,32 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
++    <channel>
++        <title>title</title>
++        <link>http://example.com</link>
++        <description>This is the description</description>
++        <item>
++            <title>trailer</title>
++            <guid>http://example.com/item-trailer</guid>
++            <itunes:episodeType>trailer</itunes:episodeType>
++        </item>
++        <item>
++            <title>bonus</title>
++            <guid>http://example.com/item-bonus</guid>
++            <itunes:episodeType> Bonus </itunes:episodeType>
++        </item>
++        <item>
++            <title>full</title>
++            <guid>http://example.com/item-full</guid>
++            <itunes:episodeType>full</itunes:episodeType>
++        </item>
++        <item>
++            <title>missing</title>
++            <guid>http://example.com/item-missing</guid>
++        </item>
++        <item>
++            <title>unknown</title>
++            <guid>http://example.com/item-unknown</guid>
++            <itunes:episodeType>teaser</itunes:episodeType>
++        </item>
++    </channel>
++</rss>
+diff --git a/storage/database/src/test/java/de/danoeh/antennapod/storage/database/EpisodeTypeStorageTest.java b/storage/database/src/test/java/de/danoeh/antennapod/storage/database/EpisodeTypeStorageTest.java
+new file mode 100644
+index 0000000..32c1e4d
+--- /dev/null
++++ b/storage/database/src/test/java/de/danoeh/antennapod/storage/database/EpisodeTypeStorageTest.java
+@@ -0,0 +1,98 @@
++package de.danoeh.antennapod.storage.database;
++
++import android.content.Context;
++import de.danoeh.antennapod.model.feed.Feed;
++import de.danoeh.antennapod.model.feed.FeedItem;
++import de.danoeh.antennapod.model.feed.FeedItemFilter;
++import de.danoeh.antennapod.model.feed.FeedMedia;
++import de.danoeh.antennapod.model.feed.SortOrder;
++import de.danoeh.antennapod.net.sync.serviceinterface.SynchronizationQueue;
++import de.danoeh.antennapod.net.sync.serviceinterface.SynchronizationQueueStub;
++import de.danoeh.antennapod.storage.preferences.UserPreferences;
++import org.junit.Before;
++import org.junit.Test;
++import org.junit.runner.RunWith;
++import org.robolectric.RobolectricTestRunner;
++import org.robolectric.RuntimeEnvironment;
++
++import java.util.ArrayList;
++import java.util.List;
++
++import static org.junit.Assert.assertEquals;
++
++@RunWith(RobolectricTestRunner.class)
++public class EpisodeTypeStorageTest {
++    private Context context;
++
++    @Before
++    public void setUp() {
++        context = RuntimeEnvironment.getApplication();
++        UserPreferences.init(context);
++        PodDBAdapter.init(context);
++        PodDBAdapter.deleteDatabase();
++        PodDBAdapter adapter = PodDBAdapter.getInstance();
++        adapter.open();
++        adapter.close();
++        SynchronizationQueue.setInstance(new SynchronizationQueueStub());
++    }
++
++    @Test
++    public void testEpisodeTypeSurvivesSaveAndReload() {
++        Feed feed = createFeed();
++        feed.getItems().add(createItem("item-0", "Item 0", FeedItem.EpisodeType.TRAILER, feed));
++        feed.getItems().add(createItem("item-1", "Item 1", FeedItem.EpisodeType.BONUS, feed));
++        feed.getItems().add(createItem("item-2", "Item 2", FeedItem.EpisodeType.FULL, feed));
++        Feed savedFeed = FeedDatabaseWriter.updateFeed(context, feed, false);
++
++        List<FeedItem> storedItems = loadItems(savedFeed);
++        assertEquals(3, storedItems.size());
++        assertEquals("item-0", storedItems.get(0).getItemIdentifier());
++        assertEquals(FeedItem.EpisodeType.TRAILER, storedItems.get(0).getEpisodeType());
++        assertEquals("item-1", storedItems.get(1).getItemIdentifier());
++        assertEquals(FeedItem.EpisodeType.BONUS, storedItems.get(1).getEpisodeType());
++        assertEquals("item-2", storedItems.get(2).getItemIdentifier());
++        assertEquals(FeedItem.EpisodeType.FULL, storedItems.get(2).getEpisodeType());
++    }
++
++    @Test
++    public void testEpisodeTypeUpdatedOnFeedRefresh() {
++        Feed feed = createFeed();
++        feed.getItems().add(createItem("item-0", "Item 0", FeedItem.EpisodeType.TRAILER, feed));
++        feed = FeedDatabaseWriter.updateFeed(context, feed, false);
++
++        List<FeedItem> storedItems = loadItems(feed);
++        assertEquals(1, storedItems.size());
++        assertEquals(FeedItem.EpisodeType.TRAILER, storedItems.get(0).getEpisodeType());
++
++        Feed refreshedFeed = createFeed();
++        refreshedFeed.setId(feed.getId());
++        refreshedFeed.getItems().add(createItem("item-0", "Item 0", FeedItem.EpisodeType.BONUS, refreshedFeed));
++        FeedDatabaseWriter.updateFeed(context, refreshedFeed, false);
++
++        storedItems = loadItems(feed);
++        assertEquals(1, storedItems.size());
++        assertEquals("item-0", storedItems.get(0).getItemIdentifier());
++        assertEquals(FeedItem.EpisodeType.BONUS, storedItems.get(0).getEpisodeType());
++    }
++
++    private List<FeedItem> loadItems(Feed feed) {
++        return DBReader.getFeedItemList(feed, FeedItemFilter.unfiltered(),
++                SortOrder.EPISODE_TITLE_A_Z, 0, Integer.MAX_VALUE);
++    }
++
++    private Feed createFeed() {
++        Feed feed = new Feed("url", null, null);
++        feed.setItems(new ArrayList<>());
++        return feed;
++    }
++
++    private FeedItem createItem(String identifier, String title, FeedItem.EpisodeType episodeType, Feed feed) {
++        FeedItem item = new FeedItem();
++        item.setItemIdentifier(identifier);
++        item.setTitle(title);
++        item.setEpisodeType(episodeType);
++        item.setMedia(new FeedMedia(item, "url-" + title, 2, "mime"));
++        item.setFeed(feed);
++        return item;
++    }
++}

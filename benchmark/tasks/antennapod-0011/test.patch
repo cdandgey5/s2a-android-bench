@@ -1,0 +1,191 @@
+diff --git a/storage/database/src/test/java/de/danoeh/antennapod/storage/database/NavDrawerDataTest.java b/storage/database/src/test/java/de/danoeh/antennapod/storage/database/NavDrawerDataTest.java
+new file mode 100644
+index 0000000..28aa09b
+--- /dev/null
++++ b/storage/database/src/test/java/de/danoeh/antennapod/storage/database/NavDrawerDataTest.java
+@@ -0,0 +1,185 @@
++package de.danoeh.antennapod.storage.database;
++
++import de.danoeh.antennapod.model.feed.Feed;
++import de.danoeh.antennapod.model.feed.FeedPreferences;
++import de.danoeh.antennapod.model.feed.VolumeAdaptionSetting;
++import org.junit.Test;
++
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.Collections;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertTrue;
++
++/**
++ * Test class for the tag grouping of {@link NavDrawerData}.
++ */
++public class NavDrawerDataTest {
++
++    @Test
++    public void testGroupFeedsByTagSortsFoldersIgnoringCase() {
++        List<Feed> feeds = Arrays.asList(
++                feed(1, "beta"), feed(2, "Delta"), feed(3, "gamma"), feed(4, "Alpha"));
++        List<NavDrawerData.TagItem> tags = NavDrawerData.groupFeedsByTag(feeds, new HashMap<>());
++        assertEquals(Arrays.asList("Alpha", "beta", "Delta", "gamma"), titles(tags));
++    }
++
++    @Test
++    public void testGroupFeedsByTagSumsCounters() {
++        List<Feed> feeds = Arrays.asList(feed(3, "News"), feed(1, "News"), feed(2, "News"), feed(4, "Tech"));
++        Map<Long, Integer> counters = new HashMap<>();
++        counters.put(1L, 3);
++        counters.put(3L, 4);
++        counters.put(5L, 100);
++        List<NavDrawerData.TagItem> tags = NavDrawerData.groupFeedsByTag(feeds, counters);
++        assertEquals(Arrays.asList("News", "Tech"), titles(tags));
++        assertEquals(Arrays.asList(3L, 1L, 2L), feedIds(tags.get(0)));
++        assertEquals(7, tags.get(0).getCounter());
++        assertEquals(Collections.singletonList(4L), feedIds(tags.get(1)));
++        assertEquals(0, tags.get(1).getCounter());
++    }
++
++    @Test
++    public void testGroupFeedsByTagFeedInSeveralTags() {
++        List<Feed> feeds = Arrays.asList(feed(1, "A", "B"), feed(2, "B"));
++        Map<Long, Integer> counters = new HashMap<>();
++        counters.put(1L, 5);
++        counters.put(2L, 2);
++        List<NavDrawerData.TagItem> tags = NavDrawerData.groupFeedsByTag(feeds, counters);
++        assertEquals(Arrays.asList("A", "B"), titles(tags));
++        assertEquals(Collections.singletonList(1L), feedIds(tags.get(0)));
++        assertEquals(5, tags.get(0).getCounter());
++        assertEquals(Arrays.asList(1L, 2L), feedIds(tags.get(1)));
++        assertEquals(7, tags.get(1).getCounter());
++    }
++
++    @Test
++    public void testGroupFeedsByTagUntaggedFolderFirst() {
++        List<Feed> feeds = Arrays.asList(feed(2, "zeta"), feed(1), feed(4, "Alpha"), feed(3, FeedPreferences.TAG_ROOT));
++        Map<Long, Integer> counters = new HashMap<>();
++        counters.put(1L, 6);
++        counters.put(2L, 1);
++        counters.put(3L, 2);
++        counters.put(4L, 8);
++        List<NavDrawerData.TagItem> tags = NavDrawerData.groupFeedsByTag(feeds, counters);
++        assertEquals(Arrays.asList(FeedPreferences.TAG_UNTAGGED, FeedPreferences.TAG_ROOT, "Alpha", "zeta"),
++                titles(tags));
++        assertEquals(Arrays.asList(1L, 3L), feedIds(tags.get(0)));
++        assertEquals(0, tags.get(0).getCounter());
++    }
++
++    @Test
++    public void testGroupFeedsByTagRootFolder() {
++        List<Feed> feeds = Arrays.asList(feed(1, FeedPreferences.TAG_ROOT, "Alpha"), feed(2, "Alpha"),
++                feed(3, FeedPreferences.TAG_ROOT));
++        Map<Long, Integer> counters = new HashMap<>();
++        counters.put(1L, 4);
++        counters.put(3L, 5);
++        List<NavDrawerData.TagItem> tags = NavDrawerData.groupFeedsByTag(feeds, counters);
++        assertEquals(Arrays.asList(FeedPreferences.TAG_UNTAGGED, FeedPreferences.TAG_ROOT, "Alpha"), titles(tags));
++        assertEquals(Collections.singletonList(3L), feedIds(tags.get(0)));
++        assertEquals(Arrays.asList(1L, 3L), feedIds(tags.get(1)));
++        assertEquals(9, tags.get(1).getCounter());
++        assertEquals(Arrays.asList(1L, 2L), feedIds(tags.get(2)));
++        assertEquals(4, tags.get(2).getCounter());
++    }
++
++    @Test
++    public void testGroupFeedsByTagNoUntaggedFolderWhenAllTagged() {
++        List<Feed> feeds = Arrays.asList(feed(1, "Alpha"), feed(2, FeedPreferences.TAG_ROOT, "beta"));
++        List<NavDrawerData.TagItem> tags = NavDrawerData.groupFeedsByTag(feeds, new HashMap<>());
++        assertEquals(Arrays.asList(FeedPreferences.TAG_ROOT, "Alpha", "beta"), titles(tags));
++    }
++
++    @Test
++    public void testGroupFeedsByTagEmpty() {
++        List<NavDrawerData.TagItem> tags = NavDrawerData.groupFeedsByTag(new ArrayList<>(), new HashMap<>());
++        assertTrue(tags.isEmpty());
++    }
++
++    @Test
++    public void testBuildTagListRootFirstWithAllFeeds() {
++        List<Feed> feeds = Arrays.asList(feed(3, "beta"), feed(1), feed(2, FeedPreferences.TAG_ROOT, "Alpha"));
++        List<NavDrawerData.TagItem> tags = NavDrawerData.buildTagList(feeds);
++        assertEquals(FeedPreferences.TAG_ROOT, tags.get(0).getTitle());
++        assertEquals(Arrays.asList(3L, 1L, 2L), feedIds(tags.get(0)));
++        assertEquals(0, tags.get(0).getCounter());
++    }
++
++    @Test
++    public void testBuildTagListSortsFoldersIgnoringCase() {
++        List<Feed> feeds = Arrays.asList(feed(1, "beta"), feed(2, FeedPreferences.TAG_ROOT, "Delta"),
++                feed(3, "gamma"), feed(4, "Alpha", FeedPreferences.TAG_ROOT));
++        List<NavDrawerData.TagItem> tags = NavDrawerData.buildTagList(feeds);
++        assertEquals(Arrays.asList(FeedPreferences.TAG_ROOT, "Alpha", "beta", "Delta", "gamma"), titles(tags));
++        for (NavDrawerData.TagItem tag : tags) {
++            assertEquals(0, tag.getCounter());
++        }
++    }
++
++    @Test
++    public void testBuildTagListFeedInSeveralTags() {
++        List<Feed> feeds = Arrays.asList(feed(2, "B"), feed(1, "A", "B"));
++        List<NavDrawerData.TagItem> tags = NavDrawerData.buildTagList(feeds);
++        assertEquals(Arrays.asList(FeedPreferences.TAG_ROOT, "A", "B"), titles(tags));
++        assertEquals(Collections.singletonList(1L), feedIds(tags.get(1)));
++        assertEquals(Arrays.asList(2L, 1L), feedIds(tags.get(2)));
++    }
++
++    @Test
++    public void testBuildTagListUntaggedLast() {
++        List<Feed> feeds = Arrays.asList(feed(4, FeedPreferences.TAG_ROOT), feed(1, "zeta"), feed(2),
++                feed(3, FeedPreferences.TAG_ROOT, "Alpha"));
++        List<NavDrawerData.TagItem> tags = NavDrawerData.buildTagList(feeds);
++        assertEquals(Arrays.asList(FeedPreferences.TAG_ROOT, "Alpha", "zeta", FeedPreferences.TAG_UNTAGGED),
++                titles(tags));
++        assertEquals(Arrays.asList(4L, 2L), feedIds(tags.get(3)));
++        assertEquals(0, tags.get(3).getCounter());
++    }
++
++    @Test
++    public void testBuildTagListNoUntaggedEntryWhenAllTagged() {
++        List<Feed> feeds = Arrays.asList(feed(1, "Alpha"), feed(2, FeedPreferences.TAG_ROOT, "beta"));
++        List<NavDrawerData.TagItem> tags = NavDrawerData.buildTagList(feeds);
++        assertEquals(Arrays.asList(FeedPreferences.TAG_ROOT, "Alpha", "beta"), titles(tags));
++    }
++
++    @Test
++    public void testBuildTagListEmpty() {
++        List<NavDrawerData.TagItem> tags = NavDrawerData.buildTagList(new ArrayList<>());
++        assertEquals(Collections.singletonList(FeedPreferences.TAG_ROOT), titles(tags));
++        assertTrue(tags.get(0).getFeeds().isEmpty());
++        assertEquals(0, tags.get(0).getCounter());
++    }
++
++    private static Feed feed(long id, String... tags) {
++        Feed feed = new Feed("http://example.com/feed" + id, null, "Feed " + id);
++        FeedPreferences preferences = new FeedPreferences(id, FeedPreferences.AutoDownloadSetting.GLOBAL,
++                FeedPreferences.AutoDeleteAction.GLOBAL, VolumeAdaptionSetting.OFF,
++                FeedPreferences.NewEpisodesAction.GLOBAL, null, null);
++        preferences.getTags().addAll(Arrays.asList(tags));
++        feed.setPreferences(preferences);
++        feed.setId(id);
++        return feed;
++    }
++
++    private static List<String> titles(List<NavDrawerData.TagItem> tags) {
++        List<String> titles = new ArrayList<>();
++        for (NavDrawerData.TagItem tag : tags) {
++            titles.add(tag.getTitle());
++        }
++        return titles;
++    }
++
++    private static List<Long> feedIds(NavDrawerData.TagItem tag) {
++        List<Long> ids = new ArrayList<>();
++        for (Feed feed : tag.getFeeds()) {
++            ids.add(feed.getId());
++        }
++        return ids;
++    }
++}

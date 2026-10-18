@@ -125,9 +125,13 @@ class Workspace:
         pristine = gradle_pristine(self.repo)
         for rel in sb.process.seed_gradle_home:  # wrapper/dists
             src = pristine / rel
+            dst = guh / rel
+            if rel.replace("\\", "/").rstrip("/") == "wrapper/dists":  # only this checkout's distribution (D-046)
+                name = gradle.wrapper_dist_name(self.dirs.work)
+                src, dst = src / name, dst / name
             if not src.exists():
                 raise WorkspaceError(f"{src} missing: run `abb env warm {self.repo.key}`")
-            shutil.copytree(src, guh / rel, ignore=shutil.ignore_patterns("*.lck"))
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("*.lck"))
         if sb.process.seed_transforms if seed_transforms is None else seed_transforms:
             for t in (pristine / "caches").glob("*/transforms"):
                 shutil.copytree(t, guh / t.relative_to(pristine), ignore=shutil.ignore_patterns("*.lock"))

@@ -1,0 +1,37 @@
+id: antennapod-0011
+repo: antennapod
+base_commit: 3d105d598dfa582c6cb22ba40b56d11780366890
+source: authored
+category: refactor
+upstream:
+  issue_url: null
+  pr_url: null
+  fix_commit: null
+  fix_date: null
+  issue_created: null
+tags:
+  new_surface: true
+  files_touched: 2
+  files_bucket: 2-5
+  modules: 1
+  lang: java
+  ui: none
+  test_kind: junit
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :storage:database
+  test: de.danoeh.antennapod.storage.database.NavDrawerDataTest
+pass_to_pass:
+- module: :storage:database
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+hidden_tests: authored
+validation: null

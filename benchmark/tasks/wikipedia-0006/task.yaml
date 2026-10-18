@@ -1,0 +1,35 @@
+id: wikipedia-0006
+repo: wikipedia
+base_commit: a26078813eb63c63c8505b02acb9a294366c095b
+source: mined
+category: feature
+upstream:
+  issue_url: https://phabricator.wikimedia.org/T418641
+  pr_url: https://github.com/wikimedia/apps-android-wikipedia/pull/6544
+  fix_commit: 36c559072021469761bc32dd7c7a942df574a1f7
+  fix_date: '2026-04-30'
+  issue_created: '2026-02-27'
+tags:
+  files_touched: 6
+  files_bucket: 6+
+  modules: 1
+  lang: kotlin
+  ui: compose
+  test_kind: junit
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :app
+  test: org.wikipedia.widget.ReadingChallengeWidgetRepositoryTest
+pass_to_pass:
+- module: :app
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation: null

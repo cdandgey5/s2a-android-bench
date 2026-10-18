@@ -1,0 +1,35 @@
+id: wikipedia-0003
+repo: wikipedia
+base_commit: 9687242f9d954b4d248348b5acfb5b7c1b8b01db
+source: mined
+category: bugfix
+upstream:
+  issue_url: https://phabricator.wikimedia.org/T413154
+  pr_url: https://github.com/wikimedia/apps-android-wikipedia/pull/6953
+  fix_commit: 2b0fedb33591440745309c3e329245a90c77cc26
+  fix_date: '2026-10-06'
+  issue_created: '2025-12-19'
+tags:
+  files_touched: 2
+  files_bucket: 2-5
+  modules: 1
+  lang: kotlin
+  ui: none
+  test_kind: junit
+problem_statement: problem.md
+test_patch: test.patch
+gold_patch: gold.patch
+fail_to_pass:
+- module: :app
+  test: org.wikipedia.page.PageTitleTest
+pass_to_pass:
+- module: :app
+limits:
+  timeout_minutes: 45
+needs_emulator: false
+split: dev
+status: draft
+created_with_s2a_sha: f045be1fffcc1d72f085b11ec919abacde8871a7
+drafted_by: agent
+drafted_with_model: claude-opus-5-5
+validation: null

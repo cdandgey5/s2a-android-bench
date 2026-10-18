@@ -1,0 +1,151 @@
+diff --git a/app/src/main/java/org/wikipedia/readinglist/ReadingListPreviewSaveDialogView.kt b/app/src/main/java/org/wikipedia/readinglist/ReadingListPreviewSaveDialogView.kt
+index 340530b..9219386 100644
+--- a/app/src/main/java/org/wikipedia/readinglist/ReadingListPreviewSaveDialogView.kt
++++ b/app/src/main/java/org/wikipedia/readinglist/ReadingListPreviewSaveDialogView.kt
+@@ -76,19 +76,29 @@ class ReadingListPreviewSaveDialogView(context: Context, attrs: AttributeSet? =
+ 
+     private fun validateTitleAndList() {
+         val listTitle = binding.readingListTitle.text.toString()
+-        if (currentReadingLists.any { it.title == listTitle }) {
+-            binding.readingListTitleLayout.error =
+-                context.getString(R.string.reading_list_title_exists, listTitle)
+-            callback.onError()
+-        } else if (listTitle.isEmpty()) {
+-            binding.readingListTitleLayout.error = null
+-            callback.onError()
+-        } else if (savedReadingListPages.isEmpty()) {
+-            binding.readingListTitleLayout.error = null
+-            callback.onError()
+-        } else {
+-            binding.readingListTitleLayout.error = null
+-            callback.onSuccess(listTitle)
++        when (val result = ReadingListTitleValidator.validate(listTitle, currentReadingLists.map { it.title })) {
++            ReadingListTitleValidator.Result.Empty -> {
++                binding.readingListTitleLayout.error = null
++                callback.onError()
++            }
++            ReadingListTitleValidator.Result.Duplicate -> {
++                binding.readingListTitleLayout.error =
++                    context.getString(R.string.reading_list_title_exists, listTitle.trim())
++                callback.onError()
++            }
++            ReadingListTitleValidator.Result.TooLong -> {
++                binding.readingListTitleLayout.error =
++                    context.getString(R.string.reading_list_title_too_long, ReadingListTitleValidator.MAX_LENGTH)
++                callback.onError()
++            }
++            is ReadingListTitleValidator.Result.Valid -> {
++                binding.readingListTitleLayout.error = null
++                if (savedReadingListPages.isEmpty()) {
++                    callback.onError()
++                } else {
++                    callback.onSuccess(result.title)
++                }
++            }
+         }
+     }
+ 
+diff --git a/app/src/main/java/org/wikipedia/readinglist/ReadingListTitleDialog.kt b/app/src/main/java/org/wikipedia/readinglist/ReadingListTitleDialog.kt
+index 51da984..1450d5a 100644
+--- a/app/src/main/java/org/wikipedia/readinglist/ReadingListTitleDialog.kt
++++ b/app/src/main/java/org/wikipedia/readinglist/ReadingListTitleDialog.kt
+@@ -25,20 +25,22 @@ object ReadingListTitleDialog {
+                 }
+ 
+                 override fun onTextChanged(text: CharSequence, dialog: TextInputDialog) {
+-                    text.toString().trim().let {
+-                        when {
+-                            it.isEmpty() -> {
+-                                dialog.setError(null)
+-                                dialog.setPositiveButtonEnabled(false)
+-                            }
+-                            otherTitles.contains(it) -> {
+-                                dialog.setError(dialog.context.getString(R.string.reading_list_title_exists, it))
+-                                dialog.setPositiveButtonEnabled(false)
+-                            }
+-                            else -> {
+-                                dialog.setError(null)
+-                                dialog.setPositiveButtonEnabled(true)
+-                            }
++                    when (ReadingListTitleValidator.validate(text.toString(), otherTitles.filterNotNull())) {
++                        ReadingListTitleValidator.Result.Empty -> {
++                            dialog.setError(null)
++                            dialog.setPositiveButtonEnabled(false)
++                        }
++                        ReadingListTitleValidator.Result.Duplicate -> {
++                            dialog.setError(dialog.context.getString(R.string.reading_list_title_exists, text.toString().trim()))
++                            dialog.setPositiveButtonEnabled(false)
++                        }
++                        ReadingListTitleValidator.Result.TooLong -> {
++                            dialog.setError(dialog.context.getString(R.string.reading_list_title_too_long, ReadingListTitleValidator.MAX_LENGTH))
++                            dialog.setPositiveButtonEnabled(false)
++                        }
++                        is ReadingListTitleValidator.Result.Valid -> {
++                            dialog.setError(null)
++                            dialog.setPositiveButtonEnabled(true)
+                         }
+                     }
+                 }
+diff --git a/app/src/main/java/org/wikipedia/readinglist/ReadingListTitleValidator.kt b/app/src/main/java/org/wikipedia/readinglist/ReadingListTitleValidator.kt
+new file mode 100644
+index 0000000..1c55e8b
+--- /dev/null
++++ b/app/src/main/java/org/wikipedia/readinglist/ReadingListTitleValidator.kt
+@@ -0,0 +1,33 @@
++package org.wikipedia.readinglist
++
++import java.text.Normalizer
++
++object ReadingListTitleValidator {
++    const val MAX_LENGTH = 255
++
++    sealed interface Result {
++        data class Valid(val title: String) : Result
++        data object Empty : Result
++        data object Duplicate : Result
++        data object TooLong : Result
++    }
++
++    fun validate(title: String, existingTitles: Collection<String>): Result {
++        val trimmedTitle = title.trim()
++        if (trimmedTitle.isEmpty()) {
++            return Result.Empty
++        }
++        if (trimmedTitle.length > MAX_LENGTH) {
++            return Result.TooLong
++        }
++        val comparableTitle = toComparableTitle(trimmedTitle)
++        if (existingTitles.any { toComparableTitle(it.trim()) == comparableTitle }) {
++            return Result.Duplicate
++        }
++        return Result.Valid(trimmedTitle)
++    }
++
++    private fun toComparableTitle(title: String): String {
++        return Normalizer.normalize(title, Normalizer.Form.NFC).lowercase()
++    }
++}
+diff --git a/app/src/main/res/values-qq/strings.xml b/app/src/main/res/values-qq/strings.xml
+index c83fae2..6f92a96 100644
+--- a/app/src/main/res/values-qq/strings.xml
++++ b/app/src/main/res/values-qq/strings.xml
+@@ -571,6 +571,7 @@
+   <string name="reading_list_move_to">Menu item label for moving the current article to a collection.</string>
+   <string name="reading_list_create_new">Dialog title for creating a new collection.</string>
+   <string name="reading_list_title_exists">Error text shown when a user attempts to create a new collection with the same title as an existing collection. The \"%s\" symbol is replaced with the title of the existing collection.</string>
++  <string name="reading_list_title_too_long">Error text shown when a user enters a collection name that is longer than allowed. The \"%d\" symbol is replaced with the maximum number of characters.</string>
+   <string name="reading_list_article_added_to_named">Message shown to user when an article is successfully added to a readingList.\n\nThe %1$s symbol is replaced with the name of the article and the second %2$s symbol is replaced with the name of the collection.</string>
+   <string name="reading_list_article_added_to_default_list">Message shown after an article is saved, asking whether to add it to a collection. The \"%s\" symbol is replaced with the article title.</string>
+   <string name="reading_list_article_moved_to_named">Message shown to user when an article gets suffessfully moved to a readingList.\n\nThe %1$s symbol is replaced with the name of the article and the second %2$s symbol is replaced with the name of the collection.</string>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 9a9b878..ae4373d 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -554,6 +554,7 @@
+     <string name="reading_list_move_to">Move to collection</string>
+     <string name="reading_list_create_new">Create new</string>
+     <string name="reading_list_title_exists">Collection \"%s\" already exists.</string>
++    <string name="reading_list_title_too_long">Collection name can\'t be longer than %d characters.</string>
+     <string name="reading_list_article_added_to_named">Added %1$s to %2$s.</string>
+     <string name="reading_list_article_added_to_default_list">Saved %s. Do you want to add it to a collection?</string>
+     <string name="reading_list_article_moved_to_named">Moved %1$s to %2$s.</string>

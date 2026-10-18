@@ -1,0 +1,197 @@
+diff --git a/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlElement.java b/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlElement.java
+index c644ae4..9320f4a 100644
+--- a/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlElement.java
++++ b/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlElement.java
+@@ -1,5 +1,8 @@
+ package de.danoeh.antennapod.storage.importexport;
+ 
++import java.util.HashSet;
++import java.util.Set;
++
+ /**
+  * Represents a single feed in an OPML file.
+  */
+@@ -8,6 +11,7 @@ public class OpmlElement {
+     private String xmlUrl;
+     private String htmlUrl;
+     private String type;
++    private final Set<String> tags = new HashSet<>();
+ 
+     public OpmlElement() {
+ 
+@@ -45,4 +49,11 @@ public class OpmlElement {
+         this.type = type;
+     }
+ 
++    /**
++     * Returns the titles of all folders that contain this feed. Empty if the feed is not in a folder.
++     */
++    public Set<String> getTags() {
++        return tags;
++    }
++
+ }
+diff --git a/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlReader.java b/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlReader.java
+index e5165d6..d723ede 100644
+--- a/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlReader.java
++++ b/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlReader.java
+@@ -11,6 +11,9 @@ import org.xmlpull.v1.XmlPullParserFactory;
+ import java.io.IOException;
+ import java.io.Reader;
+ import java.util.ArrayList;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
+ 
+ /**
+  * Reads OPML documents.
+@@ -22,11 +25,15 @@ public class OpmlReader {
+ 
+     /**
+      * Reads an Opml document and returns a list of all OPML elements it can
+-     * find
++     * find. Feeds inside of folders get the titles of all enclosing folders as tags.
++     * Feeds that occur multiple times are only returned once, with the tags of all occurrences.
+      */
+     public ArrayList<OpmlElement> readDocument(Reader reader)
+             throws XmlPullParserException, IOException {
+         ArrayList<OpmlElement> elementList = new ArrayList<>();
++        Map<String, OpmlElement> elementsByXmlUrl = new HashMap<>();
++        // Title of each outline that is currently open. Null if the outline is not a folder.
++        List<String> openOutlines = new ArrayList<>();
+         XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+         factory.setNamespaceAware(true);
+         XmlPullParser xpp = factory.newPullParser();
+@@ -68,14 +75,33 @@ public class OpmlReader {
+                                 Log.i(TAG, "Opml element has no text attribute.");
+                                 element.setText(element.getXmlUrl());
+                             }
+-                            elementList.add(element);
++                            OpmlElement feedElement = elementsByXmlUrl.get(element.getXmlUrl());
++                            if (feedElement == null) {
++                                feedElement = element;
++                                elementsByXmlUrl.put(element.getXmlUrl(), element);
++                                elementList.add(element);
++                            } else if (BuildConfig.DEBUG) {
++                                Log.d(TAG, "Merging duplicate feed " + element.getXmlUrl());
++                            }
++                            for (String folder : openOutlines) {
++                                if (!TextUtils.isEmpty(folder)) {
++                                    feedElement.getTags().add(folder);
++                                }
++                            }
++                            openOutlines.add(null);
+                         } else {
+                             if (BuildConfig.DEBUG) {
+-                                Log.d(TAG, "Skipping element because of missing xml url");
++                                Log.d(TAG, "Element without xml url, treating it as folder");
+                             }
++                            openOutlines.add(element.getText());
+                         }
+                     }
+                     break;
++                case XmlPullParser.END_TAG:
++                    if (isInOpml && xpp.getName().equals(OpmlSymbols.OUTLINE) && !openOutlines.isEmpty()) {
++                        openOutlines.remove(openOutlines.size() - 1);
++                    }
++                    break;
+                 default:
+                     break;
+             }
+diff --git a/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlWriter.java b/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlWriter.java
+index d06932a..e3f1735 100644
+--- a/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlWriter.java
++++ b/storage/importexport/src/main/java/de/danoeh/antennapod/storage/importexport/OpmlWriter.java
+@@ -8,11 +8,16 @@ import org.xmlpull.v1.XmlSerializer;
+ import java.io.IOException;
+ import java.io.Writer;
+ import java.text.SimpleDateFormat;
++import java.util.ArrayList;
++import java.util.Collections;
+ import java.util.Date;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Locale;
++import java.util.Map;
+ 
+ import de.danoeh.antennapod.model.feed.Feed;
++import de.danoeh.antennapod.model.feed.FeedPreferences;
+ 
+ /** Writes OPML documents. */
+ public class OpmlWriter {
+@@ -24,7 +29,8 @@ public class OpmlWriter {
+ 
+     /**
+      * Takes a list of feeds and a writer and writes those into an OPML
+-     * document.
++     * document. Feeds without tags are written to the top level, followed by
++     * one folder per tag (sorted alphabetically) that contains all feeds with that tag.
+      */
+     public static void writeDocument(List<Feed> feeds, Writer writer)
+             throws IllegalArgumentException, IllegalStateException, IOException {
+@@ -47,19 +53,36 @@ public class OpmlWriter {
+         xs.endTag(null, OpmlSymbols.HEAD);
+ 
+         xs.startTag(null, OpmlSymbols.BODY);
++        Map<String, List<Feed>> feedsByTag = new HashMap<>();
+         for (Feed feed : feeds) {
+             if (feed.getState() != Feed.STATE_SUBSCRIBED) {
+                 continue;
+             }
+-            xs.startTag(null, OpmlSymbols.OUTLINE);
+-            xs.attribute(null, OpmlSymbols.TEXT, feed.getTitle());
+-            xs.attribute(null, OpmlSymbols.TITLE, feed.getTitle());
+-            if (feed.getType() != null) {
+-                xs.attribute(null, OpmlSymbols.TYPE, feed.getType());
++            boolean hasTags = false;
++            if (feed.getPreferences() != null) {
++                for (String tag : feed.getPreferences().getTags()) {
++                    if (FeedPreferences.TAG_ROOT.equals(tag)) {
++                        continue;
++                    }
++                    if (!feedsByTag.containsKey(tag)) {
++                        feedsByTag.put(tag, new ArrayList<>());
++                    }
++                    feedsByTag.get(tag).add(feed);
++                    hasTags = true;
++                }
++            }
++            if (!hasTags) {
++                writeFeed(xs, feed);
+             }
+-            xs.attribute(null, OpmlSymbols.XMLURL, feed.getDownloadUrl());
+-            if (feed.getLink() != null) {
+-                xs.attribute(null, OpmlSymbols.HTMLURL, feed.getLink());
++        }
++
++        List<String> tags = new ArrayList<>(feedsByTag.keySet());
++        Collections.sort(tags, String::compareToIgnoreCase);
++        for (String tag : tags) {
++            xs.startTag(null, OpmlSymbols.OUTLINE);
++            xs.attribute(null, OpmlSymbols.TEXT, tag);
++            for (Feed feed : feedsByTag.get(tag)) {
++                writeFeed(xs, feed);
+             }
+             xs.endTag(null, OpmlSymbols.OUTLINE);
+         }
+@@ -69,6 +92,20 @@ public class OpmlWriter {
+         Log.d(TAG, "Finished writing document");
+     }
+ 
++    private static void writeFeed(XmlSerializer xs, Feed feed) throws IOException {
++        xs.startTag(null, OpmlSymbols.OUTLINE);
++        xs.attribute(null, OpmlSymbols.TEXT, feed.getTitle());
++        xs.attribute(null, OpmlSymbols.TITLE, feed.getTitle());
++        if (feed.getType() != null) {
++            xs.attribute(null, OpmlSymbols.TYPE, feed.getType());
++        }
++        xs.attribute(null, OpmlSymbols.XMLURL, feed.getDownloadUrl());
++        if (feed.getLink() != null) {
++            xs.attribute(null, OpmlSymbols.HTMLURL, feed.getLink());
++        }
++        xs.endTag(null, OpmlSymbols.OUTLINE);
++    }
++
+     private static String formatRfc822Date(Date date) {
+         SimpleDateFormat format = new SimpleDateFormat("dd MMM yy HH:mm:ss Z", Locale.US);
+         return format.format(date);

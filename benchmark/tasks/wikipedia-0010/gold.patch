@@ -1,0 +1,174 @@
+diff --git a/app/src/main/java/org/wikipedia/talk/ArchivedTalkPagesActivity.kt b/app/src/main/java/org/wikipedia/talk/ArchivedTalkPagesActivity.kt
+index 79bee22..1d56b49 100644
+--- a/app/src/main/java/org/wikipedia/talk/ArchivedTalkPagesActivity.kt
++++ b/app/src/main/java/org/wikipedia/talk/ArchivedTalkPagesActivity.kt
+@@ -86,7 +86,7 @@ class ArchivedTalkPagesActivity : BaseActivity() {
+         ViewUtil.getTitleViewFromToolbar(binding.toolbar)?.let {
+             it.contentDescription = title
+             it.movementMethod = LinkMovementMethodExt { _ ->
+-                val entry = HistoryEntry(TalkTopicsActivity.getNonTalkPageTitle(viewModel.pageTitle), HistoryEntry.SOURCE_ARCHIVED_TALK)
++                val entry = HistoryEntry(TalkPageTitleHelper.subjectPageTitle(viewModel.pageTitle), HistoryEntry.SOURCE_ARCHIVED_TALK)
+                 startActivity(PageActivity.newIntentForNewTab(this, entry, entry.title))
+             }
+             FeedbackUtil.setButtonTooltip(it)
+diff --git a/app/src/main/java/org/wikipedia/talk/TalkPageTitleHelper.kt b/app/src/main/java/org/wikipedia/talk/TalkPageTitleHelper.kt
+new file mode 100644
+index 0000000..fe5a43f
+--- /dev/null
++++ b/app/src/main/java/org/wikipedia/talk/TalkPageTitleHelper.kt
+@@ -0,0 +1,26 @@
++package org.wikipedia.talk
++
++import org.wikipedia.page.Namespace
++import org.wikipedia.page.PageTitle
++import org.wikipedia.staticdata.TalkAliasData
++import org.wikipedia.staticdata.UserAliasData
++import org.wikipedia.util.StringUtil
++
++object TalkPageTitleHelper {
++
++    fun subjectPageTitle(talkPageTitle: PageTitle): PageTitle {
++        val subjectTitle = talkPageTitle.copy()
++        if (talkPageTitle.namespace() == Namespace.USER_TALK) {
++            subjectTitle.namespace = UserAliasData.valueFor(talkPageTitle.wikiSite.languageCode)
++        } else if (talkPageTitle.namespace() == Namespace.TALK) {
++            subjectTitle.namespace = ""
++        }
++        return subjectTitle
++    }
++
++    fun linkedTitleHtml(pageTitle: PageTitle, stripHtml: Boolean, href: String = "#"): String {
++        val namespace = pageTitle.namespace.ifEmpty { TalkAliasData.valueFor(pageTitle.wikiSite.languageCode) }
++        val displayText = if (stripHtml) StringUtil.removeHTMLTags(pageTitle.displayText) else pageTitle.displayText
++        return "$namespace: <a href='$href'>${StringUtil.removeNamespace(displayText)}</a>"
++    }
++}
+diff --git a/app/src/main/java/org/wikipedia/talk/TalkReplyActivity.kt b/app/src/main/java/org/wikipedia/talk/TalkReplyActivity.kt
+index 2871bd7..748109f 100644
+--- a/app/src/main/java/org/wikipedia/talk/TalkReplyActivity.kt
++++ b/app/src/main/java/org/wikipedia/talk/TalkReplyActivity.kt
+@@ -40,7 +40,6 @@ import org.wikipedia.page.PageActivity
+ import org.wikipedia.page.PageTitle
+ import org.wikipedia.page.linkpreview.LinkPreviewDialog
+ import org.wikipedia.settings.Prefs
+-import org.wikipedia.staticdata.TalkAliasData
+ import org.wikipedia.talk.db.TalkTemplate
+ import org.wikipedia.talk.template.TalkTemplatesTextInputDialog
+ import org.wikipedia.util.DeviceUtil
+@@ -291,12 +290,12 @@ class TalkReplyActivity : BaseActivity(), UserMentionInputView.Listener, EditPre
+ 
+     private fun setToolbarTitle(pageTitle: PageTitle) {
+         val title = if (viewModel.templateManagementMode) getString(R.string.talk_warn_saved_messages) else
+-        StringUtil.fromHtml(if (viewModel.isNewTopic || viewModel.isFromDiff) pageTitle.namespace.ifEmpty { TalkAliasData.valueFor(pageTitle.wikiSite.languageCode) } + ": " + "<a href='#'>${StringUtil.removeNamespace(pageTitle.displayText)}</a>"
++        StringUtil.fromHtml(if (viewModel.isNewTopic || viewModel.isFromDiff) TalkPageTitleHelper.linkedTitleHtml(pageTitle, stripHtml = false)
+             else intent.getStringExtra(EXTRA_PARENT_SUBJECT).orEmpty()
+         ).trim().ifEmpty { getString(R.string.talk_no_subject) }
+         ViewUtil.getTitleViewFromToolbar(binding.replyToolbar)?.let {
+             it.movementMethod = LinkMovementMethodExt { _ ->
+-                val entry = HistoryEntry(TalkTopicsActivity.getNonTalkPageTitle(pageTitle), HistoryEntry.SOURCE_TALK_TOPIC)
++                val entry = HistoryEntry(TalkPageTitleHelper.subjectPageTitle(pageTitle), HistoryEntry.SOURCE_TALK_TOPIC)
+                 startActivity(PageActivity.newIntentForNewTab(this, entry, entry.title))
+             }
+         }
+diff --git a/app/src/main/java/org/wikipedia/talk/TalkThreadHeaderView.kt b/app/src/main/java/org/wikipedia/talk/TalkThreadHeaderView.kt
+index 421398c..81526c8 100644
+--- a/app/src/main/java/org/wikipedia/talk/TalkThreadHeaderView.kt
++++ b/app/src/main/java/org/wikipedia/talk/TalkThreadHeaderView.kt
+@@ -12,7 +12,6 @@ import org.wikipedia.databinding.ItemTalkThreadHeaderBinding
+ import org.wikipedia.dataclient.discussiontools.ThreadItem
+ import org.wikipedia.page.PageTitle
+ import org.wikipedia.richtext.setHtml
+-import org.wikipedia.staticdata.TalkAliasData
+ import org.wikipedia.util.ResourceUtil
+ import org.wikipedia.util.StringUtil
+ 
+@@ -34,9 +33,8 @@ class TalkThreadHeaderView constructor(context: Context, attrs: AttributeSet? =
+ 
+     fun bind(pageTitle: PageTitle, item: ThreadItem?, subscribed: Boolean, movementMethod: MovementMethod, searchQuery: String? = null) {
+         binding.pageTitleText.movementMethod = movementMethod
+-        val baseTitle = TalkTopicsActivity.getNonTalkPageTitle(pageTitle)
+-        val pageTitleText = StringUtil.fromHtml(pageTitle.namespace.ifEmpty { TalkAliasData.valueFor(pageTitle.wikiSite.languageCode) } +
+-                ": " + "<a href='" + baseTitle.uri + "'>${StringUtil.removeNamespace(StringUtil.removeHTMLTags(pageTitle.displayText))}</a>")
++        val baseTitle = TalkPageTitleHelper.subjectPageTitle(pageTitle)
++        val pageTitleText = StringUtil.fromHtml(TalkPageTitleHelper.linkedTitleHtml(pageTitle, stripHtml = true, href = baseTitle.uri))
+         StringUtil.setHighlightedAndBoldenedText(binding.pageTitleText, pageTitleText, searchQuery)
+ 
+         binding.threadTitleText.isVisible = !TalkTopicActivity.isHeaderTemplate(item)
+diff --git a/app/src/main/java/org/wikipedia/talk/TalkTopicsActivity.kt b/app/src/main/java/org/wikipedia/talk/TalkTopicsActivity.kt
+index b8c5520..97db768 100644
+--- a/app/src/main/java/org/wikipedia/talk/TalkTopicsActivity.kt
++++ b/app/src/main/java/org/wikipedia/talk/TalkTopicsActivity.kt
+@@ -50,7 +50,6 @@ import org.wikipedia.page.edithistory.EditHistoryListActivity
+ import org.wikipedia.settings.Prefs
+ import org.wikipedia.settings.languages.WikipediaLanguagesActivity
+ import org.wikipedia.settings.languages.WikipediaLanguagesFragment
+-import org.wikipedia.staticdata.TalkAliasData
+ import org.wikipedia.staticdata.UserAliasData
+ import org.wikipedia.staticdata.UserTalkAliasData
+ import org.wikipedia.util.FeedbackUtil
+@@ -414,7 +413,7 @@ class TalkTopicsActivity : BaseActivity(), WatchlistExpiryDialog.Callback {
+     }
+ 
+     private fun setToolbarTitle(pageTitle: PageTitle) {
+-        val title = StringUtil.fromHtml(pageTitle.namespace.ifEmpty { TalkAliasData.valueFor(pageTitle.wikiSite.languageCode) } + ": " + "<a href='#'>${StringUtil.removeNamespace(StringUtil.removeHTMLTags(pageTitle.displayText))}</a>")
++        val title = StringUtil.fromHtml(TalkPageTitleHelper.linkedTitleHtml(pageTitle, stripHtml = true))
+         ViewUtil.getTitleViewFromToolbar(binding.toolbar)?.let {
+             it.contentDescription = title
+             it.isVisible = !goToTopic
+@@ -440,7 +439,7 @@ class TalkTopicsActivity : BaseActivity(), WatchlistExpiryDialog.Callback {
+     }
+ 
+     private fun goToPage() {
+-        val entry = HistoryEntry(getNonTalkPageTitle(viewModel.pageTitle), HistoryEntry.SOURCE_TALK_TOPIC)
++        val entry = HistoryEntry(TalkPageTitleHelper.subjectPageTitle(viewModel.pageTitle), HistoryEntry.SOURCE_TALK_TOPIC)
+         startActivity(PageActivity.newIntentForNewTab(this, entry, entry.title))
+     }
+ 
+@@ -567,15 +566,5 @@ class TalkTopicsActivity : BaseActivity(), WatchlistExpiryDialog.Callback {
+                 .putExtra(EXTRA_GO_TO_TOPIC, !pageTitle.fragment.isNullOrEmpty())
+                 .putExtra(Constants.INTENT_EXTRA_INVOKE_SOURCE, invokeSource)
+         }
+-
+-        fun getNonTalkPageTitle(title: PageTitle): PageTitle {
+-            val newTitle = title.copy()
+-            if (title.namespace() == Namespace.USER_TALK) {
+-                newTitle.namespace = UserAliasData.valueFor(title.wikiSite.languageCode)
+-            } else if (title.namespace() == Namespace.TALK) {
+-                newTitle.namespace = ""
+-            }
+-            return newTitle
+-        }
+     }
+ }
+diff --git a/app/src/main/java/org/wikipedia/talk/template/TalkTemplatesFragment.kt b/app/src/main/java/org/wikipedia/talk/template/TalkTemplatesFragment.kt
+index 2de05d4..4b7455f 100644
+--- a/app/src/main/java/org/wikipedia/talk/template/TalkTemplatesFragment.kt
++++ b/app/src/main/java/org/wikipedia/talk/template/TalkTemplatesFragment.kt
+@@ -34,11 +34,10 @@ import org.wikipedia.history.HistoryEntry
+ import org.wikipedia.page.LinkMovementMethodExt
+ import org.wikipedia.page.PageActivity
+ import org.wikipedia.page.PageTitle
+-import org.wikipedia.staticdata.TalkAliasData
++import org.wikipedia.talk.TalkPageTitleHelper
+ import org.wikipedia.talk.TalkReplyActivity
+ import org.wikipedia.talk.TalkReplyActivity.Companion.EXTRA_TEMPLATE_MANAGEMENT
+ import org.wikipedia.talk.TalkReplyActivity.Companion.RESULT_BACK_FROM_TOPIC
+-import org.wikipedia.talk.TalkTopicsActivity
+ import org.wikipedia.talk.db.TalkTemplate
+ import org.wikipedia.util.FeedbackUtil
+ import org.wikipedia.util.Resource
+@@ -183,12 +182,10 @@ class TalkTemplatesFragment : Fragment() {
+ 
+     private fun setToolbarTitle() {
+         val title = if (viewModel.templateManagementMode) getString(R.string.talk_warn_saved_messages) else
+-            StringUtil.fromHtml(viewModel.pageTitle.namespace.ifEmpty { TalkAliasData.valueFor(viewModel.pageTitle.wikiSite.languageCode) } +
+-                ": " + "<a href='#'>${StringUtil.removeNamespace(viewModel.pageTitle.displayText)}</a>"
+-        ).trim().ifEmpty { getString(R.string.talk_no_subject) }
++            StringUtil.fromHtml(TalkPageTitleHelper.linkedTitleHtml(viewModel.pageTitle, stripHtml = false)).trim().ifEmpty { getString(R.string.talk_no_subject) }
+         ViewUtil.getTitleViewFromToolbar(binding.toolbar)?.let {
+             it.movementMethod = LinkMovementMethodExt { _ ->
+-                val entry = HistoryEntry(TalkTopicsActivity.getNonTalkPageTitle(viewModel.pageTitle), HistoryEntry.SOURCE_TALK_TOPIC)
++                val entry = HistoryEntry(TalkPageTitleHelper.subjectPageTitle(viewModel.pageTitle), HistoryEntry.SOURCE_TALK_TOPIC)
+                 startActivity(PageActivity.newIntentForNewTab(requireActivity(), entry, entry.title))
+             }
+         }

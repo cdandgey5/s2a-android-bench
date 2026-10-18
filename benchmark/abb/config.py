@@ -113,6 +113,7 @@ class RepoConfig(_M):
     tests: RepoTests
     workspace: RepoWorkspace
     lint: RepoLint = Field(default_factory=RepoLint)
+    issue_tracker: Literal["github", "phabricator"] = "github"   # where mined tasks' tickets live
 
     @property
     def owner_repo(self) -> str:
@@ -182,6 +183,9 @@ class TaskConfig(_M):
     created_with_s2a_sha: str | None = None
     drafted_by: Literal["agent", "human"] | None = None
     drafted_with_model: str | None = None
+    # who wrote test.patch: the upstream PR, or the benchmark author (mined issue + upstream fix whose PR
+    # has no unit test, and every authored task); reported separately for author bias (D-047)
+    hidden_tests: Literal["upstream", "authored"] = "upstream"
     validation: Validation | None = None
 
 
