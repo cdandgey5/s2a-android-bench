@@ -91,3 +91,45 @@ Gradle run failed and the agents fixed tasks without running a test. They are ke
 | 03:57 | `20261018-0340-dev5-guided-1` plain-guided/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 31 turns, 154 s | 28 | 16,841 | 699,675 | 52,677 | 0.4491 | 0 | **invalid (D-043)**: agent Gradle runs failed; resolved=True; nudges 0; five-hour 0.62 → 0.65, seven-day 0.08 |
 | | **`20261018-0340-dev5-guided-1` total (4 trials, 4 resolved)** | | mean 251 s | **108** | **27,493** | **1,947,923** | **115,781** | **0.9330** (mean 0.2333) | 0 | **invalid (D-043)**; stopped after 4 trials when the cause was found |
 | 04:00 | `20261018-0340-dev5-guided-1` plain-guided/antennapod-0004/t1 | claude-sonnet-5-5 | stopped by the operator (harness killed) | — | — | — | — | unknown (< 0.5) | 0 | **invalid (D-043)**; the stream lived only in the workspace's `agent-out/` and was deleted with the workspace before it was copied: **transcript lost**. `abb run` now salvages `agent-out` streams into the run before it deletes stale workspaces |
+
+Valid runs (after D-043; agent Gradle works):
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 04:29 | `20261018-0429-dev5-plain-1` plain/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 12 turns, 137 s | 16 | 1,984 | 191,196 | 18,295 | 0.1122 | 0 | resolved=True; nudges 0; five-hour 0.81 → 0.82, seven-day 0.10 |
+| 04:33 | `20261018-0429-dev5-plain-1` plain/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 16 turns, 162 s | 20 | 3,012 | 275,298 | 24,587 | 0.1560 | 0 | resolved=True; nudges 0; five-hour 0.83 → 0.84, seven-day 0.10 |
+| 04:37 | `20261018-0429-dev5-plain-1` plain/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 9 turns, 126 s | 12 | 2,128 | 146,386 | 17,438 | 0.1057 | 0 | resolved=True; nudges 0; five-hour 0.84 → 0.85, seven-day 0.10 |
+| 04:40 | `20261018-0429-dev5-plain-1` plain/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 35 turns, 258 s | 28 | 13,478 | 667,886 | 53,699 | 0.4164 | 0 | harness crashed while grading (a `repos/*.yaml` edited mid-run, my error); graded on `--resume`; resolved=True; nudges 0; five-hour 0.86 → 0.91, seven-day 0.11 |
+| 04:47 | `20261018-0429-dev5-plain-1` plain/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 20 turns, 205 s | 32 | 8,543 | 534,667 | 26,397 | 0.2445 | 0 | resolved=True; nudges 0; five-hour 0.93 → 0.94, seven-day 0.11 |
+| 04:52 | `20261018-0429-dev5-plain-1` plain/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 11 turns, 177 s | 16 | 6,292 | 221,729 | 20,406 | 0.1667 | 0 | resolved=True; nudges 0; five-hour 0.95 → 0.96, seven-day 0.11 |
+| | **`20261018-0429-dev5-plain-1` total (6 trials, 6 resolved)** | | mean 178 s | **124** | **35,437** | **2,037,162** | **160,822** | **1.2015** (mean 0.2003) | 0 | |
+| 04:56 | `20261018-0456-dev5-plain-2` plain/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 8 turns, 130 s | 14 | 1,296 | 165,341 | 12,251 | 0.0785 | 0 | resolved=True; nudges 0; five-hour 0.97 → 0.97, seven-day 0.11 |
+| 05:00 | `20261018-0456-dev5-plain-2` plain/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 16 turns, 193 s | 24 | 3,407 | 333,681 | 17,531 | 0.1376 | 0 | resolved=True; nudges 0; five-hour 0.97 → 0.98, seven-day 0.12 |
+| 05:04 | `20261018-0456-dev5-plain-2` plain/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 9 turns, 140 s | 14 | 1,926 | 188,351 | 21,477 | 0.1240 | 0 | resolved=True; nudges 0; five-hour 0.99 → 0.99, seven-day 0.12 |
+| 05:08 | `20261018-0456-dev5-plain-2` plain/antennapod-0003/t1 **attempt 1** (`usage_limited/plain/antennapod-0003/t1-a1`) | claude-sonnet-5-5 | usage_limited, 2 turns, 18 s | 2 | 100 | 15,766 | 9,880 | 0.0421 | 1 | **usage-limit canary** (verified.md): "You've hit your session limit · resets 2am (America/Toronto)"; five-hour 100 %; run stopped, resumed 09:52 UTC |
+| 09:52 | `20261018-0456-dev5-plain-2` plain/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 35 turns, 292 s | 34 | 13,867 | 850,926 | 68,333 | 0.4972 | 0 | attempt 2 after the reset (09:52 UTC); resolved=True; nudges 0; five-hour 0.06 → 0.1, seven-day 0.13 |
+| 09:59 | `20261018-0456-dev5-plain-2` plain/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 14 turns, 298 s | 24 | 8,113 | 409,754 | 26,422 | 0.2278 | 0 | resolved=True; nudges 0; five-hour 0.1 → 0.12, seven-day 0.13 |
+| 10:06 | `20261018-0456-dev5-plain-2` plain/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 11 turns, 167 s | 22 | 5,789 | 321,273 | 21,319 | 0.1753 | 0 | resolved=True; nudges 0; five-hour 0.12 → 0.13, seven-day 0.13 |
+| | **`20261018-0456-dev5-plain-2` total (6 trials, 6 resolved)** | | mean 203 s | **132** | **34,398** | **2,269,326** | **167,333** | **1.2404** (mean 0.2067) | 1 | excludes the cut attempt (0.0421) |
+| 10:10 | `20261018-1010-dev5-guided-1` plain-guided/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 8 turns, 127 s | 10 | 1,411 | 115,134 | 16,478 | 0.0916 | 0 | resolved=True; nudges 0; five-hour 0.14 → 0.15, seven-day 0.13 |
+| 10:13 | `20261018-1010-dev5-guided-1` plain-guided/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 17 turns, 196 s | 24 | 3,770 | 354,272 | 20,433 | 0.1549 | 0 | resolved=True; nudges 0; five-hour 0.16 → 0.16, seven-day 0.14 |
+| 10:18 | `20261018-1010-dev5-guided-1` plain-guided/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 14 turns, 226 s | 22 | 3,182 | 318,569 | 18,270 | 0.1368 | 0 | resolved=True; nudges 0; five-hour 0.17 → 0.18, seven-day 0.14 |
+| 10:23 | `20261018-1010-dev5-guided-1` plain-guided/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 32 turns, 277 s | 36 | 14,417 | 863,779 | 49,201 | 0.4274 | 0 | resolved=True; nudges 0; five-hour 0.18 → 0.21, seven-day 0.14 |
+| 10:29 | `20261018-1010-dev5-guided-1` plain-guided/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 19 turns, 218 s | 22 | 8,702 | 430,649 | 36,358 | 0.2756 | 0 | resolved=True; nudges 0; five-hour 0.22 → 0.24, seven-day 0.14 |
+| 10:35 | `20261018-1010-dev5-guided-1` plain-guided/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 13 turns, 181 s | 18 | 6,919 | 292,839 | 26,470 | 0.2044 | 0 | resolved=True; nudges 0; five-hour 0.24 → 0.25, seven-day 0.14 |
+| | **`20261018-1010-dev5-guided-1` total (6 trials, 6 resolved)** | | mean 204 s | **132** | **38,401** | **2,375,242** | **167,210** | **1.2907** (mean 0.2151) | 0 | |
+
+### Phase 4 throughput and cost (valid runs, 2026-10-18; numbers from the rows above)
+
+| Quantity | Value | How |
+|---|---|---|
+| est. USD per plain trial (dev5, Sonnet 5.5) | **mean 0.20** (plain-1 0.2003, plain-2 0.2067; range 0.08–0.50); **1.20–1.24 per 6-task run** | `abb report` totals; drives PLAN §6 |
+| est. USD per plain-guided trial | mean 0.2151 (0.09–0.43) | `abb report 20261018-1010-dev5-guided-1` |
+| wall clock per trial | plain 178–203 s, guided 204 s (incl. the agent's Gradle runs; grading ~45–80 s more) | report |
+| five-hour window per trial | **~1.3–1.8 pp**: between each trial's first and last API call 10 pp / 6 (plain-1), 8 pp / 6 (guided); whole guided run 0.14 → 0.25 (11 pp / 6, 28 min, building session mostly idle) | `rate_limit_event` `unifiedWindows.five_hour` |
+| trials per five-hour window | **~55–75** if trials are the only use; far fewer while this building session works in the same window (it moved the counter ~0.7 pp/min while it built, 04:00–04:32) | 100 / pp per trial |
+| seven-day per trial | ~0.2 pp (0.10 → 0.14 over 15 trials incl. the building session) | same events |
+| usage-limit behaviour | five-hour 90 % → `allowed_warning`; 100 % → `rejected` + a synthetic 429 message; the cut attempt is kept (`usage_limited/`), the run stops, `--resume` re-runs it after the reset | canary in `reference/verified.md` |
+
+Lower bound note: dev5 is easy for plain on Sonnet (12/12 resolved, 6/6 guided), so the Phase 7 tasks
+(more files, cross-module) will cost more per trial; re-measure on the first Phase 7 dev runs.

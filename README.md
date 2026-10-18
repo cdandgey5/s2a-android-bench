@@ -60,12 +60,14 @@ already works end to end.
 | 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | **passed 2026-10-18** — both repos' unit tests offline as `abb-agent` (AntennaPod 130 s, Wikipedia 347 s), `abb sandbox check` green, invariants 28/1 skipped, throughput probe on Pro ~3 % session per trial (lower bound); D-036…D-038 |
 | 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | **passed 2026-10-18** — dev5 + seed validated 3× (3 mined, 1 reverted, 2 authored; 3 bugfix, 2 feature, 1 refactor), lint clean, S2 approved |
 | 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | **passed 2026-10-18** — 7-row sanity matrix green on 2 tasks (14/14), `abb grade-patch` / `abb grade`, metrics.json; no lint delta (D-039) |
-| 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | in progress (autopilot) |
+| 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | **passed 2026-10-18** — first results table: plain 12/12 (2 trials) and plain-guided 6/6 on dev5 (Sonnet 5.5), est. $0.20–0.22 and ~3.4 min per trial, ~1.3–1.8 % of the Pro five-hour window per trial; audit PASS; usage-limit canary captured; three earlier runs invalid (D-043); MVP cut taken (D-045); D-040…D-045 |
 | 5 | Arm B: GitHub Spec Kit adapter | not started |
 | 6 | S2A orchestrator (`s2a/`) + Arm C wrapper + ablations | not started |
-| 7 | Scale to 40 tasks across 3–5 repos; freeze dev/test split | not started |
+| 7 | Scale to 40 tasks across 3–5 repos; freeze dev/test split (**MVP cut, D-045: 24–30 tasks, 2 repos, 6 authored**) | not started |
 | 8 | Runner: full matrix, parallelism, resumability, budget guard | not started |
 | 9 | Analysis: pass@1 / pass^3, paired bootstrap, cost, failure labelling, charts | not started |
 | 10 | Release: final held-out run, write-up, reproducibility package | not started |
 
 Update this table as phases complete.
+
+**Scope (MVP cut, D-045, 2026-10-18):** two repositories (AntennaPod, Wikipedia; at most 50 % of tasks from either), 24–30 tasks of which 6 authored (detectable difference ~±20 pp), laptop only. The optional arms (`plain-gate`, `speckit-sdd`, `s2a-norepro`) and the Spec Kit arm run 1 trial each; no lint delta (D-039), no convention score, no assisted mode.
