@@ -21,7 +21,7 @@ import yaml
 from importlib import resources
 
 LIMIT_TEXT = re.compile(r"hit your (?:session|weekly|Opus|Sonnet|usage)? ?limit|usage limit reached|rate_limit_error", re.I)
-# Gradle outcomes in the agent's own tool results (environment-health signal, D-043; not a grade)
+# Gradle outcomes in the agent's own tool results (an environment-health signal, nothing more)
 GRADLE_OK = re.compile(r"BUILD SUCCESSFUL")
 GRADLE_FAILED = re.compile(r"BUILD FAILED|FAILURE: Build failed")
 ENV_ERROR = re.compile(r"was not found in any of the following sources|No cached version of .{1,200} available for offline"

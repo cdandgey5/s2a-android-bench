@@ -490,6 +490,10 @@ def install_s2a() -> dict:
            "UV_PYTHON_INSTALL_DIR": str(_expand(tc.python.uv_python_install_dir))}
     _run([_uv(), "tool", "install", "--force", "--reinstall", "--python", py, str(src)], extra_env=env, timeout_s=1800)
     exe = s2a_exe(tc)
+    # uv builds the tool environment elsewhere and moves it in: its files keep the ACLs of where they were
+    # built, so the sandbox user's read grant on tools/ does not reach them until inheritance is reset
+    for p in (_expand(tc.python.uv_tool_dir) / "s2a", exe):
+        get_platform().inherit_acl(p)
     help_out = _run([exe, "--help"], timeout_s=120).stdout()
     if "resume" not in help_out:
         raise ToolError(f"{exe} --help does not list `resume`")

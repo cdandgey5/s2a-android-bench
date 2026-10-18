@@ -93,7 +93,8 @@ def build(ctx: Ctx) -> None:
 
 
 def _keep_records(ctx: Ctx) -> None:
-    """.s2a/map.calls.jsonl + map/transcripts + map/prompts (what the benchmark copies as setup records)."""
+    """.s2a/map.calls.jsonl + map/transcripts + map/prompts: the map's cost and transcripts, kept beside it so
+    whoever caches or shares a map can account for it."""
     out = ctx.s2a_dir / "map"
     for sub in ("transcripts", "prompts"):
         (out / sub).mkdir(parents=True, exist_ok=True)

@@ -270,9 +270,15 @@ def check(*, smoke: bool = True) -> list[tuple[str, bool, str]]:
                           user=user, cwd=work, env=base_env, out=work / "curl-gh-proxy")
         row("net: github.com via proxy refused", r4.exit_code != 0, f"curl exit {r4.exit_code}")
         # ---- tools without a loaded profile
-        for name, argv in (("git", ["git", "--version"]),
-                           ("pwsh", [str(paths.tools_dir() / "pwsh" / "pwsh.exe"), "-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"]),
-                           ("claude.exe", [str(plat.claude_exe()), "--version"])):
+        from abb.config import load_toolchain
+        from abb.harness.tools import s2a_exe
+
+        tool_rows = [("git", ["git", "--version"]),
+                     ("pwsh", [str(paths.tools_dir() / "pwsh" / "pwsh.exe"), "-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"]),
+                     ("claude.exe", [str(plat.claude_exe()), "--version"])]
+        if s2a_exe(load_toolchain()).exists():  # after `abb sandbox install-s2a`
+            tool_rows.append(("s2a.exe", [str(s2a_exe(load_toolchain())), "map", "--print-key", "--profile", "android"]))
+        for name, argv in tool_rows:
             env = {**base_env, "PATH": ";".join([str(paths.tools_dir() / "pwsh"), str(Path(plat.find_exe("git")).parent),
                                                  str(Path(base_env.get("SystemRoot", r"C:\Windows")) / "System32")]),
                    "DISABLE_AUTOUPDATER": "1", "DISABLE_UPDATES": "1"}

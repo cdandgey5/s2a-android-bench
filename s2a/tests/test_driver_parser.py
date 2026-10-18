@@ -93,7 +93,7 @@ def test_resumed_result_is_session_cumulative_and_invocation_cost_subtracts_it()
 
 
 def test_two_results_in_one_process_background_task() -> None:
-    # Phase 4 (dev5-guided-1, antennapod-0001): an auto-backgrounded Bash finished after the first
+    # a real capture: an auto-backgrounded Bash finished after the first
     # result; Claude Code ran one more turn for its notification and wrote a second init/result
     # pair. Turns and usage add up per result; cost and modelUsage are the process's running total.
     t = p("two-results-bg-task")
