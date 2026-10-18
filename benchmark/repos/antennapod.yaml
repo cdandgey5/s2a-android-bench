@@ -26,7 +26,7 @@ toolchain:
 
 build:
   cache_commit: 3d105d598dfa582c6cb22ba40b56d11780366890   # develop on 2026-10-17 (commit date 2026-10-11): the Phase 0 experiment
-  setup_commit: 3d105d598dfa582c6cb22ba40b56d11780366890   # merge-base of the dev-task base commits (the seed only, so far); `abb tasks coverage` re-sets it
+  setup_commit: d05a58b47643592e968e9d1ed55736cc822ac8f2   # git merge-base --octopus of the dev5 base commits (2026-10-18); `abb tasks coverage` re-sets it
   warm_commands:                            # free flavor (F-Droid build, no Play services); root selectors cover every module
     - cmd: "{gradlew} --console=plain --no-daemon assembleFreeDebug"
     - cmd: "{gradlew} --console=plain --no-daemon testFreeDebugUnitTest testDebugUnitTest"

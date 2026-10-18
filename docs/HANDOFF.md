@@ -12,41 +12,36 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `1` — step: `10b — S1b throughput probe, rescheduled by the owner to 21:02 EDT 2026-10-17 (after the Max 5x -> Pro switch at 21:00); Phase 2 work started meanwhile at the owner's request`
-- Last commit: `phase 2: wip — task tooling (lint, tag, mine, validate) + 4 drafted dev5 tasks; phase 1 probe pending` on `main` (`git log -1`)
+- Phase: `2` — step: `6 — hard stop S2: human review of dev5 (benchmark/tasks/TRIAGE.md); meanwhile step 7 (warm the dev5 base commits) runs`
+- Last commit: `phase 1: environments + sandbox …` (`fe3fb66`) + this handoff commit, on `main` (`git log -2`)
 - Working tree: `clean after that commit`
-- Date: `2026-10-17`
+- Date: `2026-10-18`
 
 ## What exists and is verified
 
 | Item | State | Proof |
 |---|---|---|
-| Phase 0 | gate passed (`a4c7c8b`) | `docs/HANDOFF.md` history, README status |
-| `abb env warm` (env.py) | done for both repos: AntennaPod 9.8 min, Wikipedia 11.7 min; gradle-ro / robolectric / gradle-pristine split; fingerprints | `benchmark/env.lock.json`; `uv run abb env fingerprint antennapod` |
-| Workspace (workspace.py) | snapshot (git archive → strip automation → 1 commit tagged `base`), per-trial gradle-home seeded with `wrapper/dists`, symlinks checked out as files like Git for Windows | `abb env verify <repo> --sandbox none` |
-| `abb env verify --sandbox none` (dev mode, harness user, proxy stopped) | AntennaPod 60/60 tests offline in 109 s + seed fail→pass; Wikipedia 367/367 in 308 s | `C:\abb\state\env-verify-*.json` |
-| gradle.py, junit.py, proxy.py | done; proxy tested incl. a real TLS request to api.anthropic.com | `uv run pytest -q` → 46 passed, 10 skipped (integration/sandbox) |
-| Sandbox (S1 done 2026-10-17 23:03Z) | `abb-agent` (SID ...-1006), firewall rule, ACLs; D-036 list grants on ancestors, D-037 revoke + OWNER RIGHTS | `uv run abb sandbox check` all OK (fs denies, github blocked, API via proxy 401, tools without profile, Claude smoke as abb-agent via proxy) |
-| `abb env verify <repo> --sandbox user` | AntennaPod 60/60 offline 126 s (113 s + 29 s copy with transforms), seed fail→pass; Wikipedia 367/367 327 s (312 s + 34 s); `seed_transforms` stays false | `C:\abb\state\env-verify-*.json` |
-| Integration tests | 27 passed, 2 skipped (slot-2 concurrency → Phase 8; no gold class yet) | `$env:ABB_INTEGRATION=1; uv run pytest -q tests\test_workspace.py tests\test_junit.py tests\test_proxy.py tests\platform` |
-
-| Phase 2 tooling (started early) | `abb tasks new|lint|tag|mine|validate|list`; lint = named rules incl. interface rule for classes + member calls; mining post-cutoff; `reverted_from_pr` | `uv run pytest -q tests/test_tasks.py` (14 passed); seed validated 1x end to end |
-| dev5 drafts (agent-drafted, NOT yet human-reviewed) | 0001 legacy iTunes ns (bugfix, #8722), 0002 uppercase SubscribeOnAndroid (bugfix, #8773, ticket rewritten), 0003 FLAC vorbis description (feature, #8747, scoped by a maintainer note), 0004 M4A description (reverted #8745, new surface); 0005 authored refactor: TODO | `uv run abb tasks lint --all` (0 errors on 0000-0004) |
+| Phase 0 | gate passed 2026-10-17 (`a4c7c8b`) | README status |
+| Phase 1 | gate passed 2026-10-18 (`fe3fb66`): `abb sandbox check` all OK as `abb-agent`; `abb env verify <repo> --sandbox user` AntennaPod 60/60 offline 130 s (+ seed fail→pass), Wikipedia 367/367 347 s; invariants 28 passed / 1 skipped (slot 2 → Phase 8); throughput probe recorded | `C:\abb\state\env-verify-*.json`, `C:\abb\state\sandbox-check.json`, `docs/RUNS.md` |
+| Sandbox | `abb-agent` (S1 done 2026-10-17 23:03Z), firewall `abb-agent-block-out`, ACLs; D-036 list grants on ancestors; D-037 revoke finished trials + OWNER RIGHTS | `uv run abb sandbox check` |
+| Caches | warm at the cache commits (fingerprints in `benchmark/env.lock.json`); `seed_transforms: false` (no net gain) | `uv run abb env fingerprint antennapod` |
+| Plan / usage | owner on **Pro** since 21:00 EDT 2026-10-17 (was Max 5x); weekly reset Sundays 15:00; this building session runs on Opus 5.5 extra usage; probe: ~3 % session per trial (lower bound); D-038 stay on Pro, MVP decision at the first results table | `docs/RUNS.md` "S1b throughput estimate" |
+| Phase 2 tooling | `abb tasks new|lint|tag|mine|validate|list`; `mine.reverted_from_pr` | `uv run pytest -q tests/test_tasks.py` (14 passed) |
+| dev5 drafts | 0000 seed, 0001 legacy iTunes ns, 0002 uppercase SubscribeOnAndroid, 0003 FLAC description (feature), 0004 M4A description (reverted, new surface), 0005 comparators refactor (authored, new surface); lint 0 errors; 0005 passed V0/V1/V2 once | `benchmark/tasks/TRIAGE.md`, `uv run abb tasks lint --all` |
 
 ## Open issues / blockers
 
-- **Stop S1b at 21:02 EDT:** owner stops other Claude use, reads the meter (session %, weekly %); then the probe; reading again after. The API's `rate_limit_event` matched the meter (verified.md) and is recorded too.
-- `benchmark/tasks/antennapod-0005/` is an empty leftover folder held open by some process; delete it before creating the authored task 0005.
-- Phase 8 needs one more UAC step: `abb sandbox setup --slots 2` creates `abb-agent2` for parallel trials (D-037).
-- Carry-overs: Phase 4 — `AskUserQuestion` absent from the `-p` tool list (D-005 note); Phase 5 — Spec Kit installs skills by default; Phase 6 — s2a's driver needs its own launcher console for Ctrl+C (D-032).
+- **Stop S2:** the human reviews every task in `benchmark/tasks/TRIAGE.md` and replies `approved` (or `approved, dropped: <ids>`); validation only after that.
+- Phase 8 needs one more UAC step: `abb sandbox setup --slots 2` (D-037).
+- Carry-overs: Phase 4 — `AskUserQuestion` absent from `-p` tools (D-005 note); trials per window on realistic tasks; Phase 5 — Spec Kit installs skills by default; Phase 6 — s2a's driver needs its own launcher console for Ctrl+C (D-032).
 
 ## Decisions waiting on the human
 
-- None blocking. Overturnable autopilot decisions: D-031…D-035 (`docs/DECISIONS.md`).
+- S2 approval of dev5. Overturnable autopilot decisions: D-031…D-038.
 
 ## Exact next action
 
-At 21:02 EDT: owner reading #1, then (in `benchmark/`) `uv run abb ws smoke --sandbox user --proxy --repo antennapod
---prompt-file tasks/antennapod-0000/problem.md --max-turns 200 --max-usd 5 --deadline 2700 --model claude-sonnet-5-5`,
-reading #2, record in `docs/RUNS.md` + `reference/verified.md` with the weeks estimate (Pro), Phase 1 gate + commit.
-Then Phase 2: author 0005 (refactor), S2 review of 0001-0005 + seed, warm their base commits, setup_commit, validate 3x.
+Warm the dev5 base commits (`uv run abb env warm antennapod` picks them up from the tasks), compute
+`setup_commit = git merge-base --octopus <dev5 bases>` into `repos/antennapod.yaml` and warm it,
+then after S2 `approved`: `uv run abb tasks validate --all --runs 3 --keep-going`, fix flaky ones,
+Phase 2 gate (`abb tasks lint --all`, `validate`, `list`, `pytest tests/test_tasks.py`), commit `phase 2: …`.
