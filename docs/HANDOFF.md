@@ -12,9 +12,9 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `7` **passed 2026-10-18** (gate below in README); next in RUN-ALL order: Phase 5 gate run, then Phase 6 bring-up (both already built in the overlap window).
-- Last commit: `phase 7: 25 tasks validated, split frozen …` (`git log -1`)
-- Working tree: clean after the gate commit
+- Phase: `5` gate. First run `20261018-2151-dev5-speckit-1` (6/6 resolved, audit PASS) is **invalid (D-050)**: trigger (b) nudged `speckit-specify` and the agent implemented there on the sdd path. Fixed (artifact calls `structured`; slash-command names stripped). Re-run `dev5-speckit-2` queued in the background to start 01:12 UTC (after the five-hour reset at 01:10; the window was at 0.90 at 22:53 UTC).
+- Last commit: `env.lock: s2a reinstalled (D-050 heuristic)` (`ba8bbb3`) + this handoff
+- Working tree: clean
 - Date: `2026-10-18`
 
 ## What exists and is verified
@@ -41,7 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. Phase 5 gate: in `benchmark/`, `abb run --arm speckit --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-speckit-1 --grade`, then `abb audit <run_id>`, `abb report <run_id>`, RUNS.md row, README, commit `phase 5: …`.
-2. Phase 6 step 13 + gate: `.venv\Scripts\python.exe scripts\s2a_e2e.py --task antennapod-0001 --grade` (one dev task end-to-end as the sandbox user, interrupted during implement, then `s2a resume`); then `abb run --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-s2a-1 --grade`; audit, report, RUNS.md, commit `phase 6: …`.
+1. Phase 5 gate: when `dev5-speckit-2` ends (log `C:\abb\logs\dev5-speckit-2.log`): check that no artifact call was nudged and the sdd path edits code only in `speckit-implement*`; `abb audit <run_id>`, `abb report <run_id>`, artifacts listing, `scripts/runs_rows.py <run_id>` into RUNS.md, README, HANDOFF, commit `phase 5: …`. If the run stops `usage_limit`, `abb run --resume <run_id>` after the reset.
+2. Phase 6 step 13 + gate: `.venv\Scripts\python.exe scripts\s2a_e2e.py --task antennapod-0001 --grade`; then `abb run --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-s2a-1 --grade`; audit, report, RUNS.md, commit `phase 6: …`. Mind the five-hour window: Spec Kit sdd trials used ~7 % each.
 3. Then Phase 8 (`phases/phase-8-runner.md`; needs `abb sandbox setup --slots 2`, one UAC).
-- From now on: test-split tickets and results are not read by whoever tunes S2A; tuning (Phase 6 step 18) runs with `ABB_TUNING=1` (`abb run` / `abb tasks show` refuse `split: test` ids).
+- From now on: test-split tickets and results are not read by whoever tunes S2A; tuning (Phase 6 step 18) runs with `ABB_TUNING=1`.
