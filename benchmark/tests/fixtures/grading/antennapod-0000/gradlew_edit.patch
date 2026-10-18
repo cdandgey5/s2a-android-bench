@@ -1,0 +1,22 @@
+diff --git a/gradlew b/gradlew
+index faf9300..b1213f0 100644
+--- a/gradlew
++++ b/gradlew
+@@ -249,3 +249,5 @@ eval "set -- $(
+     )" '"$@"'
+ 
+ exec "$JAVACMD" "$@"
++
++# edited by the agent
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+index af79f54..eea694d 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+@@ -26,6 +26,7 @@ public class DurationParser {
+     }
+ 
+     private static long toMillis(String seconds) {
++        seconds = seconds.replace(',', '.');  // some feeds use a decimal comma
+         if (seconds.contains(".")) {
+             float value = Float.parseFloat(seconds);
+             float millis = value % 1;

@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `3` — step: `1 (grader, phases/phase-3-grading.md)`; Phase 2 gate passed 2026-10-18
-- Last commit: `phase 2: tasks + validation (dev5) …` on `main` (`git log -1`)
+- Phase: `4` — step: `1 (driver, phases/phase-4-arm-plain.md)`; Phase 3 gate passed 2026-10-18
+- Last commit: `phase 3: grading …` on `main` (`git log -1`)
 - Working tree: `clean after that commit`
 - Date: `2026-10-18`
 
@@ -27,6 +27,7 @@ and folds its open items into this one.
 | Caches | warm at the cache commits (fingerprints in `benchmark/env.lock.json`); `seed_transforms: false` (no net gain) | `uv run abb env fingerprint antennapod` |
 | Plan / usage | owner on **Pro** since 21:00 EDT 2026-10-17 (was Max 5x); weekly reset Sundays 15:00; this building session runs on Opus 5.5 extra usage; probe: ~3 % session per trial (lower bound); D-038 stay on Pro, MVP decision at the first results table | `docs/RUNS.md` "S1b throughput estimate" |
 | Phase 2 | gate passed 2026-10-18: `abb tasks lint --all` 0 errors; dev5 + seed `validated` 3× (env fingerprint `c18a14fc…`); S2 approved (post-S2 fixes to 0002/0003 listed in `tasks/TRIAGE.md`) | `uv run abb tasks list`; task.yaml `validation:` blocks |
+| Phase 3 | gate passed 2026-10-18: sanity matrix 14/14 (antennapod-0000 bugfix + 0005 new-surface refactor x gold/empty/delete-test/compile-break/regression/gradlew-edit/interface-mismatch); `grade-patch 0001 gold` resolved in 38 s; `abb grade <run>` writes grade.json + metrics.json; no lint delta (D-039) | `$env:ABB_INTEGRATION=1; uv run pytest -q tests	est_grading_matrix.py` |
 | Caches | antennapod warm at the 5 dev5 base commits + `setup_commit d05a58b4` (27 min); wikipedia at its cache commit | `benchmark/env.lock.json` |
 
 ## Open issues / blockers
@@ -40,7 +41,8 @@ and folds its open items into this one.
 
 ## Exact next action
 
-Phase 3 step 1 (`phases/phase-3-grading.md`, `specs/grading-protocol.md`): `abb grade` / `abb grade-patch`
-(fresh workspace as the harness user, offline, pristine Gradle home; test-dir + protected-path
-resets; F2P/P2P with the P2P flakiness re-run; `test_compile_failed`), then the 7-row sanity matrix
-on >= 2 dev5 tasks. No hard stop in Phase 3.
+Phase 4 (`phases/phase-4-arm-plain.md`): headless driver (`agent_driver.py`, parser over the five
+smoke fixtures, nudge protocol, probe on unexplained endings), `setup.py` (no-op for plain),
+`abb audit`, the plain / plain-guided / plain-gate arms, a minimal runner + report, then
+`abb run --arm plain --tasks dev5 --trials 1 --model claude-sonnet-5-5 --grade` -> the first
+results table (report it; MVP default applies, RUN-ALL §3). Sequential runs only (one slot, D-037).

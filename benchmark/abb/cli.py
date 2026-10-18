@@ -345,15 +345,55 @@ def run_status(run_id: Optional[str] = typer.Argument(None)) -> None:
 
 
 @app.command("grade")
-def grade(run_id: str) -> None:
-    """Grade a run's trials with the hidden tests (Phase 3)."""
-    _stub(3)
+def grade(run_id: str, arm: Optional[str] = typer.Option(None), task: Optional[str] = typer.Option(None),
+          trial: Optional[int] = typer.Option(None), parallel: int = typer.Option(1),
+          regrade: bool = typer.Option(False, help="re-grade trials that already have grade.json")) -> None:
+    """Grade every <arm>/<task>/t<k>/diff.patch of a run that lacks grade.json; write metrics.json."""
+    import json
+    from concurrent.futures import ThreadPoolExecutor
+
+    from abb import paths
+    from abb.harness import grade as g
+    from abb.harness import metrics
+
+    root = paths.results_dir() / run_id
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8")) if (root / "manifest.json").exists() else {}
+    todo = []
+    for dp in sorted(root.glob("*/*/t*/diff.patch")):
+        tdir = dp.parent
+        a, tid, k = tdir.parent.parent.name, tdir.parent.name, int(tdir.name[1:])
+        if a in ("setup", "usage_limited", "probes") or (arm and a != arm) or (task and tid != task) or (trial and k != trial):
+            continue
+        if (tdir / "grade.json").exists() and not regrade:
+            continue
+        todo.append((tdir, a, tid, k))
+
+    def one(item):
+        tdir, a, tid, k = item
+        r = g.grade(tid, tdir / "diff.patch", out_dir=tdir)
+        metrics.build(tdir, run_id=run_id, arm=a, task_id=tid, trial=k, manifest=manifest)
+        return a, tid, k, r
+
+    with ThreadPoolExecutor(max_workers=max(1, parallel)) as ex:
+        for a, tid, k, r in ex.map(one, todo):
+            typer.echo(f"{a:<14} {tid:<17} t{k}  resolved={r['resolved']!s:<5} build_ok={r['build_ok']!s:<5} "
+                       f"reason={r['reason']} regressions={len(r['regressions'])}")
+    typer.echo(f"graded {len(todo)} trial(s)")
 
 
 @app.command("grade-patch")
-def grade_patch(task_id: str, patch: Path) -> None:
-    """Grade one patch against one task (Phase 3)."""
-    _stub(3)
+def grade_patch(task_id: str, patch: Path, out: Optional[Path] = typer.Option(None)) -> None:
+    """Grade one patch against one task (fresh offline workspace, hidden tests); prints grade.json."""
+    import json
+
+    from abb import paths
+    from abb.harness import grade as g
+
+    pp = patch if patch.is_absolute() else paths.benchmark_dir() / patch
+    r = g.grade(task_id, pp, out_dir=out)
+    typer.echo(json.dumps({k: r[k] for k in ("task_id", "resolved", "build_ok", "reason", "f2p", "p2p", "regressions",
+                                             "flaky_p2p", "flags", "diff_stats", "scope_creep", "interface_candidate",
+                                             "grade_duration_s")}, indent=2))
 
 
 @app.command("report")

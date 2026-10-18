@@ -59,8 +59,8 @@ already works end to end.
 | 0 | Foundations (Windows-native): CLI skeleton, platform layer, pinned toolchain, repo selection experiment | **passed 2026-10-17** — toolchain locked, `abb auth check` → `oauth_token`, 5 smoke fixtures, AntennaPod + Wikipedia chosen (`reference/build-experiments.md`), seed task `antennapod-0000`; findings D-030…D-035 |
 | 1 | Environments + sandbox: warm caches, history-free workspaces, sandbox user + firewall + proxy | **passed 2026-10-18** — both repos' unit tests offline as `abb-agent` (AntennaPod 130 s, Wikipedia 347 s), `abb sandbox check` green, invariants 28/1 skipped, throughput probe on Pro ~3 % session per trial (lower bound); D-036…D-038 |
 | 2 | Tasks & validation: task format, mining, authoring, 3× flakiness validation | **passed 2026-10-18** — dev5 + seed validated 3× (3 mined, 1 reverted, 2 authored; 3 bugfix, 2 feature, 1 refactor), lint clean, S2 approved |
-| 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | in progress (autopilot) |
-| 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | not started |
+| 3 | Grading: hidden-test grading, anti-gaming resets, secondary metrics | **passed 2026-10-18** — 7-row sanity matrix green on 2 tasks (14/14), `abb grade-patch` / `abb grade`, metrics.json; no lint delta (D-039) |
+| 4 | Arm A + controls, driver, setup support, `abb audit`, first results table | in progress (autopilot) |
 | 5 | Arm B: GitHub Spec Kit adapter | not started |
 | 6 | S2A orchestrator (`s2a/`) + Arm C wrapper + ablations | not started |
 | 7 | Scale to 40 tasks across 3–5 repos; freeze dev/test split | not started |

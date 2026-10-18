@@ -1,0 +1,34 @@
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
+index 3dda57a..fe1b3ac 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/namespace/Itunes.java
+@@ -61,7 +61,7 @@ public class Itunes extends Namespace {
+             state.getFeed().setAuthor(contentFromHtml);
+         } else if (DURATION.equals(localName)) {
+             try {
+-                long durationMs = DurationParser.inMillis(content);
++                long durationMs = DurationParser.parseMillis(content);
+                 state.getTempObjects().put(DURATION, (int) durationMs);
+             } catch (NumberFormatException e) {
+                 Log.e(NSTAG, String.format("Duration '%s' could not be parsed", content));
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+index af79f54..c38a114 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+@@ -5,7 +5,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
+ import static java.util.concurrent.TimeUnit.SECONDS;
+ 
+ public class DurationParser {
+-    public static long inMillis(String durationStr) throws NumberFormatException {
++    public static long parseMillis(String durationStr) throws NumberFormatException {
+         String[] parts = durationStr.trim().split(":");
+ 
+         if (parts.length == 1) {
+@@ -26,6 +26,7 @@ public class DurationParser {
+     }
+ 
+     private static long toMillis(String seconds) {
++        seconds = seconds.replace(',', '.');
+         if (seconds.contains(".")) {
+             float value = Float.parseFloat(seconds);
+             float millis = value % 1;

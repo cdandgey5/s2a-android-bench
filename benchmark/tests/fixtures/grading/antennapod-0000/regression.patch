@@ -1,0 +1,23 @@
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+index af79f54..dc225bd 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+@@ -26,12 +26,13 @@ public class DurationParser {
+     }
+ 
+     private static long toMillis(String seconds) {
++        if (seconds.contains(",")) {
++            float value = Float.parseFloat(seconds.replace(',', '.'));
++            return SECONDS.toMillis((long) value) + (long) ((value % 1) * 1000);
++        }
+         if (seconds.contains(".")) {
+-            float value = Float.parseFloat(seconds);
+-            float millis = value % 1;
+-            return SECONDS.toMillis((long) value) + (long) (millis * 1000);
+-        } else {
+-            return SECONDS.toMillis(Long.parseLong(seconds));
++            return SECONDS.toMillis((long) Float.parseFloat(seconds));
+         }
++        return SECONDS.toMillis(Long.parseLong(seconds));
+     }
+ }

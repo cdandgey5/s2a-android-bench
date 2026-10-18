@@ -1,0 +1,20 @@
+diff --git a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+index af79f54..dc81cd3 100644
+--- a/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
++++ b/parser/feed/src/main/java/de/danoeh/antennapod/parser/feed/util/DurationParser.java
+@@ -5,6 +5,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
+ import static java.util.concurrent.TimeUnit.SECONDS;
+ 
+ public class DurationParser {
++    int broken = ;
+     public static long inMillis(String durationStr) throws NumberFormatException {
+         String[] parts = durationStr.trim().split(":");
+ 
+@@ -26,6 +27,7 @@ public class DurationParser {
+     }
+ 
+     private static long toMillis(String seconds) {
++        seconds = seconds.replace(',', '.');  // some feeds use a decimal comma
+         if (seconds.contains(".")) {
+             float value = Float.parseFloat(seconds);
+             float millis = value % 1;

@@ -1,0 +1,129 @@
+diff --git a/gradlew b/gradlew
+index faf9300..b1213f0 100644
+--- a/gradlew
++++ b/gradlew
+@@ -249,3 +249,5 @@ eval "set -- $(
+     )" '"$@"'
+ 
+ exec "$JAVACMD" "$@"
++
++# edited by the agent
+diff --git a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/FeedItemPermutors.java b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/FeedItemPermutors.java
+index d3b3a6e..382c20a 100644
+--- a/storage/database/src/main/java/de/danoeh/antennapod/storage/database/FeedItemPermutors.java
++++ b/storage/database/src/main/java/de/danoeh/antennapod/storage/database/FeedItemPermutors.java
+@@ -29,73 +29,71 @@ public class FeedItemPermutors {
+      */
+     @NonNull
+     public static Permutor<FeedItem> getPermutor(@NonNull SortOrder sortOrder) {
++        if (SortOrder.GLOBAL_DEFAULT.equals(sortOrder)) {
++            sortOrder = UserPreferences.getPrefGlobalSortedOrder();
++        }
+ 
+-        Comparator<FeedItem> comparator = null;
+-        Permutor<FeedItem> permutor = null;
++        switch (sortOrder) {
++            case RANDOM:
++                return Collections::shuffle;
++            case SMART_SHUFFLE_OLD_NEW:
++                return (queue) -> smartShuffle(queue, true);
++            case SMART_SHUFFLE_NEW_OLD:
++                return (queue) -> smartShuffle(queue, false);
++            default:
++                final Comparator<FeedItem> comparator = getComparator(sortOrder);
++                return (queue) -> Collections.sort(queue, comparator);
++        }
++    }
+ 
++    /**
++     * Returns the comparator that defines the given sort order, so that the same order can be
++     * applied wherever FeedItems are sorted.
++     *
++     * @return the comparator, or {@code null} for orders that are not defined by comparing two
++     *         items (random and smart shuffle).
++     */
++    @Nullable
++    public static Comparator<FeedItem> getComparator(@NonNull SortOrder sortOrder) {
+         if (SortOrder.GLOBAL_DEFAULT.equals(sortOrder)) {
+             sortOrder = UserPreferences.getPrefGlobalSortedOrder();
+         }
+ 
+         switch (sortOrder) {
+             case EPISODE_TITLE_A_Z:
+-                comparator = (f1, f2) -> itemTitle(f1).compareTo(itemTitle(f2));
+-                break;
++                return (f1, f2) -> itemTitle(f1).compareTo(itemTitle(f2));
+             case EPISODE_TITLE_Z_A:
+-                comparator = (f1, f2) -> itemTitle(f2).compareTo(itemTitle(f1));
+-                break;
++                return (f1, f2) -> itemTitle(f2).compareTo(itemTitle(f1));
+             case DATE_OLD_NEW:
+-                comparator = (f1, f2) -> pubDate(f1).compareTo(pubDate(f2));
+-                break;
++                return (f1, f2) -> pubDate(f1).compareTo(pubDate(f2));
+             case DATE_NEW_OLD:
+-                comparator = (f1, f2) -> pubDate(f2).compareTo(pubDate(f1));
+-                break;
++                return (f1, f2) -> pubDate(f2).compareTo(pubDate(f1));
+             case DURATION_SHORT_LONG:
+-                comparator = (f1, f2) -> Integer.compare(duration(f1), duration(f2));
+-                break;
++                return (f1, f2) -> Integer.compare(duration(f1), duration(f2));
+             case DURATION_LONG_SHORT:
+-                comparator = (f1, f2) -> Integer.compare(duration(f2), duration(f1));
+-                break;
++                return (f1, f2) -> Integer.compare(duration(f2), duration(f1));
+             case EPISODE_FILENAME_A_Z:
+-                comparator = (f1, f2) -> itemLink(f1).compareTo(itemLink(f2));
+-                break;
++                return (f1, f2) -> itemLink(f1).compareTo(itemLink(f2));
+             case EPISODE_FILENAME_Z_A:
+-                comparator = (f1, f2) -> itemLink(f2).compareTo(itemLink(f1));
+-                break;
++                return (f1, f2) -> itemLink(f2).compareTo(itemLink(f1));
+             case FEED_TITLE_A_Z:
+-                comparator = (f1, f2) -> feedTitle(f1).compareTo(feedTitle(f2));
+-                break;
++                return (f1, f2) -> feedTitle(f1).compareTo(feedTitle(f2));
+             case FEED_TITLE_Z_A:
+-                comparator = (f1, f2) -> feedTitle(f2).compareTo(feedTitle(f1));
+-                break;
+-            case RANDOM:
+-                permutor = Collections::shuffle;
+-                break;
+-            case SMART_SHUFFLE_OLD_NEW:
+-                permutor = (queue) -> smartShuffle(queue, true);
+-                break;
+-            case SMART_SHUFFLE_NEW_OLD:
+-                permutor = (queue) -> smartShuffle(queue, false);
+-                break;
++                return (f1, f2) -> feedTitle(f2).compareTo(feedTitle(f1));
+             case SIZE_SMALL_LARGE:
+-                comparator = (f1, f2) -> Long.compare(size(f1), size(f2));
+-                break;
++                return (f1, f2) -> Long.compare(size(f1), size(f2));
+             case SIZE_LARGE_SMALL:
+-                comparator = (f1, f2) -> Long.compare(size(f2), size(f1));
+-                break;
++                return (f1, f2) -> Long.compare(size(f2), size(f1));
+             case COMPLETION_DATE_NEW_OLD:
+-                comparator = (f1, f2) -> f2.getMedia().getLastPlayedTimeHistory()
++                return (f1, f2) -> f2.getMedia().getLastPlayedTimeHistory()
+                         .compareTo(f1.getMedia().getLastPlayedTimeHistory());
+-                break;
++            case RANDOM:
++            case SMART_SHUFFLE_OLD_NEW:
++            case SMART_SHUFFLE_NEW_OLD:
++                return null;
+             default:
+                 throw new IllegalArgumentException("Permutor not implemented");
+         }
+-
+-        if (comparator != null) {
+-            final Comparator<FeedItem> comparator2 = comparator;
+-            permutor = (queue) -> Collections.sort(queue, comparator2);
+-        }
+-        return permutor;
+     }
+ 
+     // Null-safe accessors
