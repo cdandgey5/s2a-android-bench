@@ -1,10 +1,15 @@
 """`abb` command line (Typer). Command groups arrive phase by phase; stubs say which phase."""
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Optional
 
 import typer
+
+for _s in (sys.stdout, sys.stderr):  # tables and reports are UTF-8 (the Windows console default is cp1252)
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Android Brownfield Bench (abb).")
 
@@ -334,9 +339,40 @@ def tasks_list() -> None:
 
 # ---------------------------------------------------------------------------- run, grading, analysis
 @run_app.callback()
-def run_main(ctx: typer.Context) -> None:
-    if ctx.invoked_subcommand is None:
-        _stub(4)
+def run_main(ctx: typer.Context,
+             arm: Optional[list[str]] = typer.Option(None, "--arm", help="plain | plain-guided | plain-gate (repeatable)"),
+             tasks: str = typer.Option("dev5", help="dev5 | dev | test | comma-separated ids"),
+             trials: int = typer.Option(1), model: str = typer.Option("claude-sonnet-5-5"),
+             label: str = typer.Option("run"), grade: bool = typer.Option(True, "--grade/--no-grade"),
+             sandbox: str = typer.Option("user", help="user | none (dev only; refused for test tasks)"),
+             resume: Optional[str] = typer.Option(None, help="run_id to continue"),
+             allow_env_drift: bool = typer.Option(False), profile: Optional[str] = typer.Option(None)) -> None:
+    """Run arms x tasks x trials sequentially (Phase 4 minimal runner); results under ABB_RESULTS_DIR/<run_id>."""
+    if ctx.invoked_subcommand is not None:
+        return
+    import json
+
+    from abb import paths
+    from abb.config import load_task
+    from abb.harness import run as runmod
+
+    if resume:
+        m = json.loads((paths.results_dir() / resume / "manifest.json").read_text(encoding="utf-8"))
+        arms, ids, trials, model = m["arms"], m["task_ids"], m["trials"], m["limits"]["model"]
+        label, run_id, task_set = m["label"], resume, m["task_set"]
+    else:
+        if not arm:
+            typer.echo("give at least one --arm", err=True)
+            raise typer.Exit(2)
+        arms, ids, run_id, task_set = list(arm), runmod.resolve_tasks(tasks), runmod.new_run_id(label), tasks
+    if sandbox == "none" and any(load_task(t).split == "test" for t in ids):
+        typer.echo("--sandbox none is refused for split: test tasks (D-009)", err=True)
+        raise typer.Exit(2)
+    r = runmod.Runner(run_id=run_id, label=label, arms=arms, tasks=ids, trials=trials, model=model, grade=grade,
+                      sandbox=sandbox, allow_env_drift=allow_env_drift, profile=profile, task_set=task_set)
+    out = r.run()
+    typer.echo(f"run {out['run_id']} finished; aborted_reason={out['aborted_reason']}")
+    typer.echo(f"results: {paths.results_dir() / out['run_id']}")
 
 
 @run_app.command("status")
@@ -398,8 +434,10 @@ def grade_patch(task_id: str, patch: Path, out: Optional[Path] = typer.Option(No
 
 @app.command("report")
 def report(run_id: str) -> None:
-    """Tables, CIs and charts (Phase 4/9)."""
-    _stub(4)
+    """Minimal results table (Phase 4; Phase 9 adds CIs and charts) -> <run>/report/summary.md."""
+    from abb.harness import report as rep
+
+    typer.echo(rep.render(run_id))
 
 
 @app.command("split")
@@ -420,8 +458,15 @@ def labels_agreement(run_id: str) -> None:
 
 @app.command("audit")
 def audit(run_id: str) -> None:
-    """Recompute run.json/calls.jsonl totals from the verbatim transcripts (Phase 4)."""
-    _stub(4)
+    """Recompute run.json/calls.jsonl totals from the verbatim transcripts; fail on mismatch or any token in the run."""
+    import json
+
+    from abb.harness import audit as aud
+
+    r = aud.audit(run_id)
+    typer.echo(json.dumps(r, indent=2))
+    if not r["ok"]:
+        raise typer.Exit(1)
 
 
 @app.command("repro")

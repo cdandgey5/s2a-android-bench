@@ -12,7 +12,7 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `4` — step: `1 (driver, phases/phase-4-arm-plain.md)`; Phase 3 gate passed 2026-10-18
+- Phase: `4` — step: `8 (dev5 x 1 on plain, then plain-guided; long run in the background)`; driver, arms, runner, audit, report built; shakedown `20261018-0317-shakedown` resolved + audit PASS
 - Last commit: `phase 3: grading …` on `main` (`git log -1`)
 - Working tree: `clean after that commit`
 - Date: `2026-10-18`
@@ -41,8 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-Phase 4 (`phases/phase-4-arm-plain.md`): headless driver (`agent_driver.py`, parser over the five
-smoke fixtures, nudge protocol, probe on unexplained endings), `setup.py` (no-op for plain),
-`abb audit`, the plain / plain-guided / plain-gate arms, a minimal runner + report, then
-`abb run --arm plain --tasks dev5 --trials 1 --model claude-sonnet-5-5 --grade` -> the first
-results table (report it; MVP default applies, RUN-ALL §3). Sequential runs only (one slot, D-037).
+If the dev5 runs were interrupted: `uv run abb run --resume <run_id>` (in `benchmark/`; complete trials are skipped;
+run ids are in `docs/RUNS.md` / `C:bbesults`). Then `abb audit <run_id>`, `abb report <run_id>`, record trials per
+session window (from the transcripts' rate_limit_event utilisation) in `docs/RUNS.md`, the Phase 4 gate, and the
+MVP default (RUN-ALL §3) as a D-0xx; then Phase 7.

@@ -1,0 +1,13 @@
+# List prices, USD per million tokens. Used ONLY for cost_usd_imputed (a call that ended without a
+# `result` line) and as a fallback estimate; every reported cost is Claude Code's own
+# `total_cost_usd` ("est. API-equivalent USD": there is no bill under the subscription).
+# Source: platform.claude.com/docs/en/about-claude/pricing, read 2026-10-18. Claude Code writes
+# 1-hour cache entries (usage.cache_creation.ephemeral_1h_input_tokens); 5-minute ones are priced too.
+# Check: smoke-success (Sonnet) 4 in, 89 out, 36,672 cache read, 5,297 1h cache write -> $0.02575,
+# Claude Code reported $0.0258.
+as_of: "2026-10-18"
+source: https://platform.claude.com/docs/en/about-claude/pricing
+models:
+  claude-opus-5-5:   {input: 4.00, output: 20.00, cache_write_5m: 5.00,  cache_write_1h: 8.00, cache_read: 0.20}
+  claude-sonnet-5-5: {input: 2.00, output: 10.00, cache_write_5m: 2.50,  cache_write_1h: 4.00, cache_read: 0.10}
+  claude-haiku-5-5:  {input: 0.10, output: 0.50,  cache_write_5m: 0.125, cache_write_1h: 0.20, cache_read: 0.01}   # prompts <= 100k tokens (background use)

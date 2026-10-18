@@ -131,7 +131,9 @@ Behaviour:
         denial appears in `permission_denials`), or
      b. the last assistant text matches the question heuristic (ends with `?`, or contains one
         of: "should I", "do you want", "which option", "let me know", "please confirm",
-        "would you like", "clarify") — **disabled for calls that return a structured artifact**
+        "would you like", "clarify", and since Phase 4 (D-040) "please tell me", "tell me which",
+        "I'll wait", "I will wait", "waiting for your", "before I proceed/continue") —
+        **disabled for calls that return a structured artifact**
         (S2A read-only stages, whose formats legitimately contain "Unknowns"), or
      c. `is_implementing_call` and the workspace diff is empty.
      Which calls are "implementing" is an arm property: plain → its one call; Spec Kit →
@@ -146,6 +148,10 @@ Behaviour:
      `transcript/<call_name>.nudge<k>.jsonl`, listed in `PhaseCall.nudge_transcript_paths`; its
      turns, tool calls, tokens and cost are **added into the same `PhaseCall`** (same
      `session_id`); the trigger and text go into `PhaseCall.interventions_log`.
+   - **Phase 4 finding (2.1.302, D-040):** `-p` exposes no `AskUserQuestion` tool at all; a model
+     told to ask searches for one (`ToolSearch`), finds none and asks in plain text, ending
+     `success` with no permission denial. Trigger (a) therefore never fires on this version; (b)
+     with the widened phrase list and (c) carry the signal.
    - Decision D-005: `AskUserQuestion` stays available — do **not** pass
      `--permission-prompts none` — so the question signal stays observable.
 4. Map `subtype`/exit code → `PhaseCall.subtype`; the adapter maps to `ExitReason`.

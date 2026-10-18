@@ -1,0 +1,4 @@
+# plain arm: one call, the whole trial budget (D-014). The controls reuse this file.
+turn_cap: null
+calls: [plain]
+gate_retries: 1   # plain-gate only: one harness test run + one resume; S2A allows <= 2 per task (report says so)
