@@ -27,8 +27,8 @@ and folds its open items into this one.
 | `abb env verify --sandbox none` (dev mode, harness user, proxy stopped) | AntennaPod 60/60 tests offline in 109 s + seed fail→pass; Wikipedia 367/367 in 308 s | `C:\abb\state\env-verify-*.json` |
 | gradle.py, junit.py, proxy.py | done; proxy tested incl. a real TLS request to api.anthropic.com | `uv run pytest -q` → 46 passed, 10 skipped (integration/sandbox) |
 | Sandbox (S1 done 2026-10-17 23:03Z) | `abb-agent` (SID ...-1006), firewall rule, ACLs; D-036 list grants on ancestors, D-037 revoke + OWNER RIGHTS | `uv run abb sandbox check` all OK (fs denies, github blocked, API via proxy 401, tools without profile, Claude smoke as abb-agent via proxy) |
-| `abb env verify <repo> --sandbox user` | AntennaPod 60/60 offline 126 s (113 s + 29 s copy with transforms), seed fail→pass; Wikipedia 367/367 327 s (312 s + 34 s); `seed_transforms` stays false | `C:bb\state\env-verify-*.json` |
-| Integration tests | 27 passed, 2 skipped (slot-2 concurrency → Phase 8; no gold class yet) | `$env:ABB_INTEGRATION=1; uv run pytest -q tests	est_workspace.py tests	est_junit.py tests	est_proxy.py tests\platform` |
+| `abb env verify <repo> --sandbox user` | AntennaPod 60/60 offline 126 s (113 s + 29 s copy with transforms), seed fail→pass; Wikipedia 367/367 327 s (312 s + 34 s); `seed_transforms` stays false | `C:\abb\state\env-verify-*.json` |
+| Integration tests | 27 passed, 2 skipped (slot-2 concurrency → Phase 8; no gold class yet) | `$env:ABB_INTEGRATION=1; uv run pytest -q tests\test_workspace.py tests\test_junit.py tests\test_proxy.py tests\platform` |
 
 ## Open issues / blockers
 
