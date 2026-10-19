@@ -26,7 +26,9 @@ def check_budget(ctx: Ctx, before: str) -> None:
 
 
 def after_call(ctx: Ctx, res: CallResult) -> None:
-    """A usage limit, a timeout or the USD cap ends the run (state is saved by the orchestrator)."""
+    """A usage limit, a timeout or the USD cap ends the run (state is saved by the orchestrator). Running out
+    of turns does not: the call's work still goes through its gate (gates cost no turns), and the budget
+    check before the next call ends the run if nothing is left."""
     ctx.save()
     st = res.call.subtype
     if st in SUBTYPE_STOP:
@@ -34,8 +36,6 @@ def after_call(ctx: Ctx, res: CallResult) -> None:
         if st == "timeout" and ctx.driver.budget.seconds_left() > 30 and not ctx.stop.is_set():
             return  # a per-call deadline inside a still-open budget is the stage's own failure
         raise Stop(code, reason, f"{res.call.name} ended {st}")
-    if ctx.driver.budget.turns_left <= 0:
-        raise Stop(4, "max_turns", f"turn budget used up during {res.call.name}")
 
 
 def stage_turns(ctx: Ctx, cfg: StageCfg, used_in_stage: int = 0) -> int:
