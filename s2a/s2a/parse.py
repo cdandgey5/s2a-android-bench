@@ -72,6 +72,9 @@ def locate_candidates(md: str, *, include_new: bool = True) -> list[str]:
             tok, start = m.group(1).rstrip(".:;"), m.start(1)
             if "://" in item[max(0, start - 8):start + 3] or "..." in tok or "…" in tok:
                 continue
+            first = tok.replace("\\", "/").split("/")[0]
+            if "." in first.strip(".") and not re.fullmatch(r"[A-Za-z]:", first):
+                continue   # a host name (`www.itunes.com/...`, `example.com/feed`), not a repository path
             out.append(tok)
             break
     return out

@@ -142,13 +142,17 @@ def artifact_stage(ctx: Ctx, stage: str, *, values: dict[str, str] | None = None
             clean_tree(ctx, stage)
         after_call(ctx, res)
         results: list = []
-        for text in reversed([t for t in res.texts if t.strip()]):
+        texts = [t for t in res.texts if t.strip()]
+        for text in reversed(texts):
             ctx.write(name_file, parse.strip_fence(text))
             results = run_gates(ctx, gates, stage=stage)
             if first_failure(results) is None:
                 st["gates"] = summarize(results)
                 return ctx.read(name_file), results
-        if not res.texts:
+        if texts:   # none passed: keep, and report on, the final answer, not the earliest interim message tried
+            ctx.write(name_file, parse.strip_fence(texts[-1]))
+            results = run_gates(ctx, gates, stage=stage)
+        else:
             results = [("artifact_exists", GateResult(False, "the call returned no message"))]
         last_fail = first_failure(results)
         st["gates"] = summarize(results)

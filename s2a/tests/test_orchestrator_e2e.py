@@ -257,3 +257,22 @@ def test_a_call_that_spends_the_last_turn_still_reaches_its_gate(env) -> None:
     code = orchestrator.execute(ctx, t0)        # the fake spends 2 turns per call: intake + map use all 4
     assert code == 4 and ctx.state.exit_reason == "max_turns"
     assert ctx.state.stages["map"]["status"] == "done"   # the map's gate ran and passed on the last turns
+
+
+def test_a_failed_artifact_is_reported_from_the_final_answer(env) -> None:
+    repo, _ = env
+    good = make_agent()
+    seen: list[str] = []
+
+    def agent(stage, name, prompt, r):
+        if stage == "locate":
+            seen.append(name)
+            return "## Candidates (ranked)\n1. app/src/main/java/a/Nope.java — does not exist\n"
+        return good(stage, name, prompt, r)
+
+    FakeDriver.agent = agent
+    ctx, code = _run(repo)
+    assert code == 3 and seen == ["locate", "locate-2"]
+    assert "Nope.java" in ctx.read("locate.md")
+    assert "listed_paths_exist" in ctx.state.stages["locate"]["gates"] and \
+        ctx.state.stages["locate"]["gates"]["listed_paths_exist"]["ok"] is False

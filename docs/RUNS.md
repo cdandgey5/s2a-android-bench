@@ -201,3 +201,37 @@ Bring-up runs (D-051): `0224` stopped in the map setup (max_turns before the gat
 | 08:19 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0004/t1 | claude-sonnet-5-5 | agent_error, 15 turns, 97 s | 12 | 6,450 | 196,553 | 44,963 | 0.2640 | 0 | resolved=False; nudges 0; five-hour 0.56 → 0.58, seven-day 0.26; bring-up (D-052) |
 | 09:00 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 31 turns, 535 s | 48 | 26,839 | 699,542 | 166,225 | 1.0033 | 0 | resolved=True; nudges 0; five-hour 0.83 → 0.81, seven-day 0.28; bring-up (D-052) |
 | | **`20261019-0337-dev5-s2a-1` total (18 trials, 8 resolved)** | | mean 443 s | **940** | **377,632** | **14,111,845** | **2,382,734** | **14.7203** | 0 | incl. one-time setup; bring-up (D-052) |
+
+## 2026-10-19 — Phase 6 gate run (s2a, s2a-nomap, s2a-noverify on dev5)
+
+`20261019-1112-dev5-s2a-2` (s2a `ed8f6f9`, D-052 fixes), 18 trials through `scripts/run_paced.py`; one usage-limit pause (s2a-noverify/antennapod-0003 attempt 1 kept under `usage_limited/`), resumed after the 16:10 reset; audit PASS. Resolved: **s2a 6/6, s2a-nomap 5/6, s2a-noverify 4/6**. The three failures are s2a stopping on its own gates (exit 3): nomap/0004 plan named new files without `(new)` after its retry; noverify/0002 locate read a host name as a path and noverify/0003 locate's retry was misreported (both parser/reporting bugs, fixed after the run, D-053). The map setup is reused (produced at est. $0.4454 in `20261019-0238-s2a-e2e`). Bring-up results (one trial per task), not the tuned framework.
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 11:12 | `20261019-1112-dev5-s2a-2` s2a/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 27 turns, 404 s | 40 | 11,336 | 461,333 | 150,685 | 0.7623 | 0 | resolved=True; nudges 0; five-hour 0.04 → 0.05, seven-day 0.3 |
+| 11:53 | `20261019-1112-dev5-s2a-2` s2a/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 42 turns, 461 s | 60 | 15,798 | 843,590 | 156,643 | 0.8690 | 0 | resolved=True; nudges 0; five-hour 0.18 → 0.18, seven-day 0.31 |
+| 12:42 | `20261019-1112-dev5-s2a-2` s2a/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 37 turns, 456 s | 58 | 14,191 | 816,545 | 136,506 | 0.7697 | 0 | resolved=True; nudges 0; five-hour 0.42 → 0.43, seven-day 0.33 |
+| 13:19 | `20261019-1112-dev5-s2a-2` s2a/antennapod-0003/t1 | claude-sonnet-5-5 | timeout, 93 turns, 1118 s | 120 | 48,836 | 2,052,602 | 340,478 | 2.0558 | 0 | resolved=True; nudges 0; five-hour 0.73 → 0.73, seven-day 0.35 |
+| 16:16 | `20261019-1112-dev5-s2a-2` s2a/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 61 turns, 957 s | 88 | 36,386 | 1,417,566 | 271,270 | 1.5909 | 0 | resolved=True; nudges 0; five-hour 0.23 → 0.29, seven-day 0.39 |
+| 17:29 | `20261019-1112-dev5-s2a-2` s2a/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 34 turns, 542 s | 54 | 26,139 | 806,721 | 167,767 | 1.0132 | 0 | resolved=True; nudges 0; five-hour 0.6 → 0.64, seven-day 0.41 |
+| 11:26 | `20261019-1112-dev5-s2a-2` s2a-nomap/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 35 turns, 399 s | 50 | 12,868 | 593,147 | 97,937 | 0.5798 | 0 | resolved=True; nudges 0; five-hour 0.08 → 0.09, seven-day 0.31 |
+| 12:09 | `20261019-1112-dev5-s2a-2` s2a-nomap/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 46 turns, 551 s | 64 | 19,060 | 829,434 | 148,413 | 0.8673 | 0 | resolved=True; nudges 0; five-hour 0.27 → 0.27, seven-day 0.32 |
+| 12:57 | `20261019-1112-dev5-s2a-2` s2a-nomap/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 45 turns, 657 s | 70 | 18,106 | 902,065 | 138,739 | 0.8264 | 0 | resolved=True; nudges 0; five-hour 0.5 → 0.51, seven-day 0.33 |
+| 14:06 | `20261019-1112-dev5-s2a-2` s2a-nomap/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 60 turns, 753 s | 70 | 35,678 | 1,001,535 | 201,044 | 1.2612 | 0 | resolved=True; nudges 0; five-hour 0.91 → 0.96, seven-day 0.37 |
+| 16:46 | `20261019-1112-dev5-s2a-2` s2a-nomap/antennapod-0004/t1 | claude-sonnet-5-5 | agent_error, 21 turns, 334 s | 36 | 19,422 | 473,109 | 114,854 | 0.7010 | 0 | resolved=False; nudges 0; five-hour 0.3 → 0.35, seven-day 0.39 |
+| 17:48 | `20261019-1112-dev5-s2a-2` s2a-nomap/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 38 turns, 702 s | 58 | 23,823 | 845,839 | 135,148 | 0.8635 | 0 | resolved=True; nudges 0; five-hour 0.7 → 0.72, seven-day 0.42 |
+| 11:40 | `20261019-1112-dev5-s2a-2` s2a-noverify/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 23 turns, 343 s | 36 | 10,547 | 445,576 | 105,538 | 0.5723 | 0 | resolved=True; nudges 0; five-hour 0.12 → 0.11, seven-day 0.31 |
+| 12:28 | `20261019-1112-dev5-s2a-2` s2a-noverify/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 37 turns, 408 s | 50 | 17,102 | 714,458 | 131,825 | 0.7699 | 0 | resolved=True; nudges 0; five-hour 0.35 → 0.33, seven-day 0.32 |
+| 13:16 | `20261019-1112-dev5-s2a-2` s2a-noverify/antennapod-0002/t1 | claude-sonnet-5-5 | agent_error, 14 turns, 123 s | 22 | 6,272 | 341,585 | 54,241 | 0.3139 | 0 | resolved=False; nudges 0; five-hour 0.52 → 0.54, seven-day 0.33 |
+| 16:12 | `20261019-1112-dev5-s2a-2` s2a-noverify/antennapod-0003/t1 | claude-sonnet-5-5 | agent_error, 18 turns, 137 s | 22 | 11,149 | 374,409 | 96,144 | 0.5336 | 0 | resolved=False; nudges 0; five-hour 0 → 0.03, seven-day 0.37 |
+| 16:56 | `20261019-1112-dev5-s2a-2` s2a-noverify/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 72 turns, 985 s | 102 | 39,612 | 1,625,851 | 279,731 | 1.6778 | 0 | resolved=True; nudges 0; five-hour 0.48 → 0.45, seven-day 0.4 |
+| 18:09 | `20261019-1112-dev5-s2a-2` s2a-noverify/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 35 turns, 480 s | 56 | 24,688 | 909,597 | 158,006 | 0.9700 | 0 | resolved=True; nudges 0; five-hour 0.78 → 0.77, seven-day 0.42 |
+| | **`20261019-1112-dev5-s2a-2` total (18 trials, 15 resolved)** | | mean 545 s | **1,056** | **391,013** | **15,454,962** | **2,884,969** | **16.9976** | 0 | incl. one-time setup |
+
+Stage costs (mean per trial; turns · est. USD; `fix` includes trials where it did not run):
+
+| arm | intake | locate | reproduce | spec | plan | implement | verify | fix | report | total |
+|---|---|---|---|---|---|---|---|---|---|---|
+| s2a (mean of 6) | 1.0 t · $0.058 | 8.8 t · $0.156 | 10.0 t · $0.208 | 1.0 t · $0.074 | 2.0 t · $0.146 | 17.8 t · $0.304 | 6.0 t · $0.162 | 1.5 t · $0.029 | 0.8 t · $0.040 | 49.0 t · $1.177 |
+| s2a-nomap (mean of 6) | 1.0 t · $0.048 | 9.5 t · $0.143 | 11.5 t · $0.197 | 1.3 t · $0.068 | 3.0 t · $0.118 | 9.5 t · $0.134 | 3.5 t · $0.090 | 0.7 t · $0.010 | 0.8 t · $0.041 | 40.8 t · $0.850 |
+| s2a-noverify (mean of 6) | 1.0 t · $0.058 | 11.7 t · $0.245 | 8.5 t · $0.174 | 0.7 t · $0.048 | 1.5 t · $0.085 | 9.2 t · $0.162 | — | — | 0.7 t · $0.033 | 33.2 t · $0.806 |

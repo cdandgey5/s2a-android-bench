@@ -30,3 +30,7 @@ the audit trail.
 - locate candidates skip URLs, elided paths and files marked new; a retry gets at least 5 turns of the total budget.
 - Without a map, task discovery reads tasks that have no description; the compile task follows the test task's name.
 - Gate messages quote Gradle's error lines from stdout and stderr; per-task call counters are kept out of `stages`.
+
+### 2026-10-19 — after the Phase 6 gate run (D-053)
+- dev5 × 1 (`20261019-1112-dev5-s2a-2`, s2a `ed8f6f9`): s2a 6/6, s2a-nomap 5/6, s2a-noverify 4/6 resolved.
+- locate candidates skip host names; a failed read-only artifact is reported from the final answer.

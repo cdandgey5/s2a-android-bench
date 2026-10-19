@@ -79,3 +79,11 @@ def test_compile_task_follows_the_test_task() -> None:
     assert compile_task_for("testFreeDebugUnitTest") == "compileFreeDebugUnitTestSources"
     assert compile_task_for("testDebugUnitTest") == "compileDebugUnitTestSources"
     assert compile_task_for("test") == "testClasses" and compile_task_for(None) is None
+
+
+def test_locate_candidates_skip_host_names() -> None:
+    md = ("## Candidates (ranked)\n"
+          "1. SUBSCRIBEONANDROID.COM/example.com — the failing input; see `net/common/src/main/java/a/UrlChecker.java`\n"
+          "2. `www.itunes.com/DTDs/Podcast-1.0.dtd` — the legacy namespace\n"
+          "3. `.github/workflows/ci.yml` — CI\n")
+    assert parse.locate_candidates(md) == ["net/common/src/main/java/a/UrlChecker.java", ".github/workflows/ci.yml"]
