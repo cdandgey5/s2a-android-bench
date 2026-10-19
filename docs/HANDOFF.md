@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `5` **passed 2026-10-19** (run `20261019-0112-dev5-speckit-2`: 6/6, audit PASS; first run invalid, D-050). Next: Phase 6 step 13 (s2a end-to-end + resume) and the Phase 6 gate runs.
-- Last commit: `phase 5: …` (`git log -1`)
+- Phase: `6` gate runs. Step 13 done: e2e `20261019-0310-s2a-e2e` (antennapod-0001) ran every stage, was interrupted in implement, `s2a resume` finished it, ACCEPT, resolved; reproduction gate failed-then-passed; map commands = Phase 0's for all 37 modules. Bring-up fixes D-051. Now running: `dev5-s2a-1` (arms s2a, s2a-nomap, s2a-noverify; 18 trials) through `scripts/run_paced.py`, which resumes after each usage-limit reset; log `C:\abb\logs\dev5-s2a-1.log`.
+- Last commit: `phase 6: RUNS.md rows for the s2a e2e bring-up runs …` + this handoff
 - Working tree: clean
 - Date: `2026-10-19`
 
@@ -41,8 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. Phase 6 step 13 + gate: in `benchmark/`, `.venv\Scripts\python.exe scripts\s2a_e2e.py --task antennapod-0001 --grade` (one dev task end-to-end as the sandbox user, interrupted during implement, then `s2a resume`; results under `<results>/<run_id>/e2e/`). Fix what breaks (bring-up), reinstall (`abb sandbox install-s2a`), repeat.
-2. Then `abb run --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-s2a-1 --grade`; audit, report, `scripts/runs_rows.py` into RUNS.md, README, commit `phase 6: …`. Mind the five-hour window (Spec Kit sdd trials used 6–10 % each).
-3. Then Phase 8 (`phases/phase-8-runner.md`; needs `abb sandbox setup --slots 2`, one UAC).
-- From now on: test-split tickets and results are not read by whoever tunes S2A; tuning (Phase 6 step 18) runs with `ABB_TUNING=1`.
-- Known cosmetic: "Task was destroyed but it is pending" from `EgressProxy.stop` at run end (a kept-alive connection outlives `wait_closed`'s 5 s).
+1. When `dev5-s2a-1` ends (or the pacing wrapper gives up): `abb audit <run_id>`, `abb report <run_id>` (arm sections; setup section shows the `s2a map` cost, absent for s2a-nomap), artifacts under `<run>\s2a*\*\t1\artifacts`, `scripts/runs_rows.py <run_id>` into RUNS.md (compare stage costs), README, HANDOFF, commit `phase 6: s2a orchestrator + arm`. If the run is still paused on the usage limit: `.venv\Scripts\abb.exe run --resume <run_id>` after the reset.
+2. Then Phase 8 (`phases/phase-8-runner.md`; needs `abb sandbox setup --slots 2`, one UAC).
+- From now on: test-split tickets and results are not read by whoever tunes S2A; tuning (Phase 6 step 18, after Phase 8) runs with `ABB_TUNING=1`.
+- Known cosmetic: "Task was destroyed but it is pending" from `EgressProxy.stop` at run end.
