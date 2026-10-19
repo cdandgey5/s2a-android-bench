@@ -448,6 +448,19 @@ class WindowsPlatform:
                         cwd=Path.cwd(), timeout_s=120)
         return r.stdout().strip().endswith("yes")
 
+    def ac_standby_timeout_s(self) -> int | None:
+        """`powercfg /q SCHEME_CURRENT SUB_SLEEP STANDBYIDLE`: the AC sleep timeout in seconds (None if unknown)."""
+        import re as _re
+        from abb.harness.platform.base import run_capture
+
+        try:
+            r = run_capture(self, ["powercfg", "/q", "SCHEME_CURRENT", "SUB_SLEEP", "STANDBYIDLE"], cwd=Path.cwd(),
+                            timeout_s=30)
+            m = _re.search(r"Current AC Power Setting Index:\s*0x([0-9a-fA-F]+)", r.stdout())
+            return int(m.group(1), 16) if m else None
+        except Exception:  # noqa: BLE001 - a warning only
+            return None
+
     def user_exists(self, user: str) -> bool:
         import win32security
 

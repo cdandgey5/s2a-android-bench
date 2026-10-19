@@ -1,14 +1,15 @@
 <#
   The ONE elevated step of the plan (docs/DAY-0.md §5, specs/environments.md §5).
-  Started by `abb sandbox setup` through a UAC prompt; never run it by hand unless that command
-  tells you to. Reads its parameters from a JSON file (no secrets in it); the sandbox user's
+  Started by `abb sandbox setup [--slots N]` through a UAC prompt; never run it by hand unless that command
+  tells you to. Reads its parameters from a JSON file (no secrets in it); each sandbox user's
   password is read from Windows Credential Manager (service "abb") through the harness venv's
   keyring module and never appears on any command line.
 
-  Steps: create/refresh the local user (ADSI: password never expires, cannot be changed, member of
-  Users only), reset ACL inheritance at ABB_HOME and the code checkout, apply the static denies and
-  read+execute grants from config/sandbox.yaml, deny writes to C:\Users\<user>, add the outbound
-  firewall block rule applied to that principal, enable long paths. Writes a JSON result file.
+  Steps: reset ACL inheritance at ABB_HOME and the code checkout (once), then for every slot user
+  (abb-agent, abb-agent2, ...; D-037): create/refresh the local user (ADSI: password never expires,
+  cannot be changed, member of Users only), apply the static denies and read+execute grants from
+  config/sandbox.yaml, deny writes to C:\Users\<user>, add the outbound firewall block rule applied
+  to that principal; enable long paths. Writes a JSON result file.
 #>
 param([Parameter(Mandatory = $true)][string]$ParamsFile)
 $ErrorActionPreference = 'Stop'
@@ -22,67 +23,77 @@ function Icacls([string[]]$a) {
     if ($LASTEXITCODE -ne 0) { throw "icacls $($a -join ' ') -> $LASTEXITCODE $out" }
 }
 
-$user = $P.user
-$pw = & $P.venv_python -I -c "import keyring,sys; sys.stdout.write(keyring.get_password('abb', '$user') or '')"
-if (-not $pw) { throw "no password for $user in Credential Manager; run 'abb sandbox setup' (non-elevated) again" }
-
-Step 'user' {
-    $computer = [ADSI]"WinNT://$env:COMPUTERNAME,computer"
-    $existing = $null
-    try { $existing = [ADSI]"WinNT://$env:COMPUTERNAME/$user,user"; $null = $existing.Name } catch { $existing = $null }
-    if ($existing -and $existing.Path) {
-        $existing.SetPassword($pw)
-        $u = $existing
-    } else {
-        $u = $computer.Create('User', $user)
-        $u.SetPassword($pw)
-        $u.SetInfo()
-        $u.Put('Description', 'abb benchmark sandbox user (no network; reads ABB_HOME\tools only)')
-    }
-    # ADS_UF_DONT_EXPIRE_PASSWD | ADS_UF_PASSWD_CANT_CHANGE | ADS_UF_NORMAL_ACCOUNT
-    $u.Put('UserFlags', 0x10000 -bor 0x40 -bor 0x200)
-    $u.SetInfo()
-    # BUILTIN\Users resolved from its SID, so a localized group name works too
-    $usersName = (New-Object Security.Principal.SecurityIdentifier('S-1-5-32-545')).Translate([Security.Principal.NTAccount]).Value.Split('\')[-1]
-    $users = [ADSI]"WinNT://$env:COMPUTERNAME/$usersName,group"
-    $isMember = @($users.Invoke('Members') | ForEach-Object { $_.GetType().InvokeMember('Name', 'GetProperty', $null, $_, $null) }) -contains $user
-    if (-not $isMember) { $users.Add("WinNT://$env:COMPUTERNAME/$user,user") }
-}
-Remove-Variable pw
-$sid = (New-Object Security.Principal.NTAccount("$env:COMPUTERNAME\$user")).Translate([Security.Principal.SecurityIdentifier]).Value
+# one entry per slot; params files from before slots carry only `user`/`firewall_rule`/`deny_write_dirs`
+$slots = if ($P.users) { @($P.users) } else { @([pscustomobject]@{ user = $P.user; firewall_rule = $P.firewall_rule; deny_write_dirs = $P.deny_write_dirs }) }
 
 Step 'inheritance' {
     foreach ($root in $P.reset_inheritance) {
         Icacls @($root, '/inheritance:r', '/grant:r', "$($P.harness_user):(OI)(CI)F", '/grant:r', '*S-1-5-18:(OI)(CI)F', '/grant:r', '*S-1-5-32-544:(OI)(CI)F')
     }
 }
-Step 'deny' {
-    foreach ($d in $P.deny) {
-        if (Test-Path -LiteralPath $d -PathType Container) { Icacls @($d, '/deny', "*${sid}:(OI)(CI)F") }
-        elseif (Test-Path -LiteralPath $d) { Icacls @($d, '/deny', "*${sid}:F") }
+
+$sids = [ordered]@{}
+foreach ($slot in $slots) {
+    $user = $slot.user
+    $pw = & $P.venv_python -I -c "import keyring,sys; sys.stdout.write(keyring.get_password('abb', '$user') or '')"
+    if (-not $pw) { $steps["user:$user"] = "FAILED: no password for $user in Credential Manager; run 'abb sandbox setup' (non-elevated) again"; continue }
+
+    Step "user:$user" {
+        $computer = [ADSI]"WinNT://$env:COMPUTERNAME,computer"
+        $existing = $null
+        try { $existing = [ADSI]"WinNT://$env:COMPUTERNAME/$user,user"; $null = $existing.Name } catch { $existing = $null }
+        if ($existing -and $existing.Path) {
+            $existing.SetPassword($pw)
+            $u = $existing
+        } else {
+            $u = $computer.Create('User', $user)
+            $u.SetPassword($pw)
+            $u.SetInfo()
+            $u.Put('Description', 'abb benchmark sandbox user (no network; reads ABB_HOME\tools only)')
+        }
+        # ADS_UF_DONT_EXPIRE_PASSWD | ADS_UF_PASSWD_CANT_CHANGE | ADS_UF_NORMAL_ACCOUNT
+        $u.Put('UserFlags', 0x10000 -bor 0x40 -bor 0x200)
+        $u.SetInfo()
+        # BUILTIN\Users resolved from its SID, so a localized group name works too
+        $usersName = (New-Object Security.Principal.SecurityIdentifier('S-1-5-32-545')).Translate([Security.Principal.NTAccount]).Value.Split('\')[-1]
+        $users = [ADSI]"WinNT://$env:COMPUTERNAME/$usersName,group"
+        $isMember = @($users.Invoke('Members') | ForEach-Object { $_.GetType().InvokeMember('Name', 'GetProperty', $null, $_, $null) }) -contains $user
+        if (-not $isMember) { $users.Add("WinNT://$env:COMPUTERNAME/$user,user") }
     }
-}
-Step 'rx' {
-    foreach ($d in $P.rx) {
-        if (Test-Path -LiteralPath $d -PathType Container) { Icacls @($d, '/grant:r', "*${sid}:(OI)(CI)RX") }
-        elseif (Test-Path -LiteralPath $d) { Icacls @($d, '/grant:r', "*${sid}:RX") }
+    Remove-Variable pw
+    if ($steps["user:$user"] -ne 'ok') { continue }
+    $sid = (New-Object Security.Principal.NTAccount("$env:COMPUTERNAME\$user")).Translate([Security.Principal.SecurityIdentifier]).Value
+    $sids[$user] = $sid
+
+    Step "deny:$user" {
+        foreach ($d in $P.deny) {
+            if (Test-Path -LiteralPath $d -PathType Container) { Icacls @($d, '/deny', "*${sid}:(OI)(CI)F") }
+            elseif (Test-Path -LiteralPath $d) { Icacls @($d, '/deny', "*${sid}:F") }
+        }
     }
-}
-Step 'profile_deny_write' {
-    foreach ($d in $P.deny_write_dirs) {
-        if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
-        Icacls @($d, '/deny', "*${sid}:(OI)(CI)(W,WA,WD,AD,DC)")
+    Step "rx:$user" {
+        foreach ($d in $P.rx) {
+            if (Test-Path -LiteralPath $d -PathType Container) { Icacls @($d, '/grant:r', "*${sid}:(OI)(CI)RX") }
+            elseif (Test-Path -LiteralPath $d) { Icacls @($d, '/grant:r', "*${sid}:RX") }
+        }
     }
-}
-Step 'firewall' {
-    Get-NetFirewallRule -DisplayName $P.firewall_rule -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-    New-NetFirewallRule -DisplayName $P.firewall_rule -Direction Outbound -Action Block -Profile Any `
-        -LocalUser "O:LSD:(A;;CC;;;$sid)" -Description 'abb: block all outbound traffic of the sandbox user (loopback stays open for the proxy)' | Out-Null
+    Step "profile_deny_write:$user" {
+        foreach ($d in $slot.deny_write_dirs) {
+            if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
+            Icacls @($d, '/deny', "*${sid}:(OI)(CI)(W,WA,WD,AD,DC)")
+        }
+    }
+    Step "firewall:$user" {
+        Get-NetFirewallRule -DisplayName $slot.firewall_rule -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+        New-NetFirewallRule -DisplayName $slot.firewall_rule -Direction Outbound -Action Block -Profile Any `
+            -LocalUser "O:LSD:(A;;CC;;;$sid)" -Description "abb: block all outbound traffic of sandbox user $user (loopback stays open for the proxy)" | Out-Null
+    }
 }
 Step 'long_paths' {
     Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1 -Type DWord
 }
 
-$result = [ordered]@{ finished_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'); user = $user; sid = $sid; steps = $steps }
+$first = $slots[0].user
+$result = [ordered]@{ finished_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'); user = $first; sid = $sids[$first]; sids = $sids; steps = $steps }
 $result | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $P.result_path -Encoding utf8
 if ($steps.Values | Where-Object { $_ -ne 'ok' }) { exit 1 } else { exit 0 }

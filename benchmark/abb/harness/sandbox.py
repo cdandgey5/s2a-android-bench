@@ -34,6 +34,31 @@ def _expand(p: str, repo_key: str | None = None) -> Path:
     return q if q.is_absolute() else paths.abb_home() / q
 
 
+def slot_user(k: int) -> str:
+    """D-037: parallel slot k runs as its own user: abb-agent, abb-agent2, abb-agent3, ..."""
+    base = load_sandbox().modes["user"].run_as
+    assert base
+    return base if k == 1 else f"{base}{k}"
+
+
+def slot_users(n: int) -> list[str]:
+    return [slot_user(k) for k in range(1, n + 1)]
+
+
+def existing_slot_users() -> list[str]:
+    """The slot users that exist, in slot order (stops at the first missing one)."""
+    plat, out, k = get_platform(), [], 1
+    while plat.user_exists(slot_user(k)):
+        out.append(slot_user(k))
+        k += 1
+    return out
+
+
+def _per_user(value: str, user: str) -> str:
+    base = load_sandbox().modes["user"].run_as or ""
+    return value.replace(base, user) if base and base in value else f"{value}-{user}"
+
+
 def template_dir() -> Path:
     return paths.abb_home() / "sandbox" / "claude-config.template"
 
@@ -46,7 +71,7 @@ def _new_password() -> str:
             return pw
 
 
-def setup_params(repos: list[str]) -> dict:
+def setup_params(repos: list[str], slots: int = 1) -> dict:
     sb = load_sandbox()
     m = sb.modes["user"]
     acl = m.acl
@@ -66,7 +91,10 @@ def setup_params(repos: list[str]) -> dict:
             rx += [str(_expand(d, r)) for r in repos]
         else:
             rx.append(str(_expand(d)))
+    users = [{"user": u, "firewall_rule": m.firewall_rule if u == m.run_as else _per_user(m.firewall_rule or "", u),
+              "deny_write_dirs": [str(Path(_per_user(d, u))) for d in acl.deny_write_dirs]} for u in slot_users(slots)]
     return {
+        "users": users,
         "user": m.run_as,
         "harness_user": plat.harness_principal(),
         "venv_python": sys.executable,
@@ -95,7 +123,8 @@ def apply_list_grants() -> list[str]:
     done = []
     for p in dict.fromkeys(targets):
         p.mkdir(parents=True, exist_ok=True)
-        plat.grant(p, m.run_as, "list")
+        for u in existing_slot_users() or [m.run_as]:
+            plat.grant(p, u, "list")
         done.append(str(p))
     return done
 
@@ -106,14 +135,13 @@ def apply_cache_grants(repos: list[str]) -> list[str]:
     replaces a cache, because the replacement directory has none of the old grants (D-043)."""
     plat = get_platform()
     params = setup_params(repos)
-    user = params["user"]
-    if not plat.user_exists(user):
-        return []
+    users = existing_slot_users()
     caches = paths.caches_dir().resolve()
     done = []
     for p in map(Path, params["rx"]):
         if p.exists() and caches in p.resolve().parents:
-            plat.grant(p, user, "rx")
+            for u in users:
+                plat.grant(p, u, "rx")
             done.append(str(p))
     return done
 
@@ -155,15 +183,14 @@ def check_fs(user: str) -> list[tuple[str, bool, str]]:
     return rows
 
 
-def prepare(repos: list[str]) -> dict:
+def prepare(repos: list[str], slots: int = 1) -> dict:
     """Everything that needs no admin rights. Idempotent."""
     import keyring
 
-    sb = load_sandbox()
-    user = sb.modes["user"].run_as
-    if not keyring.get_password("abb", user):
-        keyring.set_password("abb", user, _new_password())
-        log.info("generated a password for %s and stored it in Credential Manager (service 'abb')", user)
+    for user in slot_users(slots):
+        if not keyring.get_password("abb", user):
+            keyring.set_password("abb", user, _new_password())
+            log.info("generated a password for %s and stored it in Credential Manager (service 'abb')", user)
     for d in (paths.results_dir(), paths.work_dir(), paths.state_dir(), paths.caches_dir() / "repos"):
         d.mkdir(parents=True, exist_ok=True)
     src = paths.benchmark_dir() / "sandbox" / "claude-config.template"
@@ -175,15 +202,15 @@ def prepare(repos: list[str]) -> dict:
         (paths.abb_home() / "env.lock.json").write_text("{}\n", encoding="utf-8")
     apply_list_grants()
     apply_cache_grants(repos)
-    params = setup_params(repos)
+    params = setup_params(repos, slots)
     pf = paths.state_dir() / "sandbox-setup-params.json"
     pf.write_text(json.dumps(params, indent=2), encoding="utf-8")
     return {"params_file": str(pf), **params}
 
 
-def setup(repos: list[str] | None = None) -> dict:
+def setup(repos: list[str] | None = None, slots: int = 1) -> dict:
     repos = list(repos or CHOSEN_REPOS)
-    params = prepare(repos)
+    params = prepare(repos, slots)
     plat = get_platform()
     script = paths.benchmark_dir() / "scripts" / "sandbox-setup.ps1"
     pwsh = paths.tools_dir() / "pwsh" / "pwsh.exe"
@@ -195,6 +222,9 @@ def setup(repos: list[str] | None = None) -> dict:
                                     "-ParamsFile", params["params_file"]])
     result = json.loads(rp.read_text(encoding="utf-8-sig")) if rp.exists() else {"steps": {}, "error": "no result file"}
     result["exit_code"] = code
+    if code == 0:   # slot users created just now get the non-admin grants too (D-036 list, D-043 caches)
+        result["list_grants"] = len(apply_list_grants())
+        result["cache_grants"] = len(apply_cache_grants(repos))
     return result
 
 
@@ -285,6 +315,29 @@ def check(*, smoke: bool = True) -> list[tuple[str, bool, str]]:
             rr = _as_user_run(argv if name != "git" else [str(plat.find_exe("git")), "--version"], user=user, cwd=work,
                               env=env, out=work / f"tool-{name}")
             row(f"tool without profile: {name}", rr.exit_code == 0, rr.stdout().strip()[:80] or rr.stderr().strip()[-120:])
+        # ---- the other parallel slots (D-037): the same boundary for every slot user
+        for k, su in enumerate(existing_slot_users()[1:], start=2):
+            row(f"slot {k}: user exists + password", plat.as_user_available(su), su)
+            if not plat.as_user_available(su):
+                continue
+            rule = _per_user(sb.modes["user"].firewall_rule or "", su)
+            row(f"slot {k}: firewall rule", plat.firewall_rule_present(rule), rule)
+            sbefore = _profile_hash(su)
+            for name, ok, detail in check_fs(su):
+                row(f"slot {k}: {name}", ok, detail)
+            plat.grant(work, su, "modify")
+            rs = _as_user_run([str(curl), "-sS", "-o", "NUL", "-w", "%{http_code}", "--max-time", "15",
+                               "https://github.com"], user=su, cwd=work, env=base_env, out=work / f"curl-gh-{k}")
+            row(f"slot {k}: net: github.com fails", rs.exit_code not in (0, None), f"curl exit {rs.exit_code}")
+            rp = _as_user_run([str(curl), "-sS", "--ssl-no-revoke", "-o", "NUL", "-w", "%{http_code}", "--max-time", "20",
+                               "-x", f"http://{sb.modes['user'].proxy.listen}", "https://api.anthropic.com/v1/models"],
+                              user=su, cwd=work, env=base_env, out=work / f"curl-api-{k}")
+            okp = rp.exit_code == 0 and rp.stdout().strip().isdigit() and rp.stdout().strip() != "000"
+            row(f"slot {k}: net: api.anthropic.com via proxy", okp, f"HTTP {rp.stdout().strip()}")
+            rc = _as_user_run([str(plat.claude_exe()), "--version"], user=su, cwd=work,
+                              env={**base_env, "DISABLE_AUTOUPDATER": "1", "DISABLE_UPDATES": "1"}, out=work / f"claude-{k}")
+            row(f"slot {k}: tool without profile: claude.exe", rc.exit_code == 0, rc.stdout().strip()[:80])
+            row(f"slot {k}: C:/Users/{su} unchanged", sbefore == _profile_hash(su), su)
         # ---- the Claude smoke test as the sandbox user through the proxy
         if smoke:
             s = run_smoke("Print the current directory and exit.", model="claude-sonnet-5-5", max_turns=3, max_usd=1.0,

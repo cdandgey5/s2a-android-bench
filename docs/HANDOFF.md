@@ -41,7 +41,19 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. Phase 8 (`phases/phase-8-runner.md`): build the runner (full matrix, parallelism, resumability, budget guard). It needs **one UAC step from the owner**: `abb sandbox setup --slots 2` (D-037) — ask when the code is ready, never run it unasked.
-2. Then Phase 6 step 18 (tuning on `split: dev` only, `ABB_TUNING=1`, ≥ 2 trials per change, before/after in `s2a/CHANGELOG.md`, verifier calibration) + Phase 9 (analysis; hard stop S4 manual labels).
-3. Then Phase 10 (hard stops S5: PREREG, freeze, auth_mode, fresh token; S6: held-out batches).
-- Known cosmetic: "Task was destroyed but it is pending" from `EgressProxy.stop` at run end.
+Phase 8 is in progress (usage limit reached mid-build, 2026-10-19). Done and committed as WIP:
+`abb/harness/scheduler.py` (worker pool, job order, budget/abort/pause/probe), `costmeter.py`, `manifest.py`,
+`run.py` rewritten on top of them (slot users per worker, setup lock, Outcome per trial, scheduler probe,
+audit at the end, `status()`, `abort()`, `dry_run()`), sandbox slots (`abb sandbox setup --slots N`, the
+elevated script loops over slot users, `sandbox check` covers every slot), `Workspace(run_as=...)` + peak memory,
+platform `ac_standby_timeout_s`. Existing tests pass (138); none of the new code has run against a real trial yet.
+
+Still to do, in order:
+1. CLI: `abb run` options `--parallel`, `--max-usd`, `--dry-run`, `--allow-no-canary`, `--max-pause-h` (pass to Runner;
+   on `--resume` keep the manifest's values unless given); `abb run status <id>` -> `run.status()`, `abb run abort <id>` -> `run.abort()`.
+2. `config/cost_estimates.yaml` (`per_trial_usd`: plain 0.21, plain-guided 0.22, speckit 0.72, s2a 1.18, s2a-nomap 0.85, s2a-noverify 0.81).
+3. `tests/test_scheduler.py` (fake run_job/clock/sleep/probe): order, resume rule (`complete`), retry-once on harness_error,
+   budget stop, abort file, usage-limit pause -> probe -> resume, pause_at.
+4. `abb report` refuses headline numbers when `manifest.audit_ok` is false.
+5. Ask the owner for the UAC step: `abb sandbox setup --slots 2`, then `abb sandbox check`.
+6. Gate runs (phases/phase-8-runner.md), RUNS.md, README, commit `phase 8: runner`.

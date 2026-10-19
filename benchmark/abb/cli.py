@@ -226,16 +226,18 @@ def env_prune(include_smoke: bool = typer.Option(False, help="also delete work/s
 
 
 @sandbox_app.command("setup")
-def sandbox_setup(prepare_only: bool = typer.Option(False, help="only the non-elevated part (no UAC prompt)")) -> None:
-    """Create/refresh the sandbox user, ACLs, firewall rule (ONE UAC prompt). Idempotent."""
+def sandbox_setup(prepare_only: bool = typer.Option(False, help="only the non-elevated part (no UAC prompt)"),
+                  slots: int = typer.Option(1, help="parallel slots: one sandbox user each (abb-agent, abb-agent2, ...; D-037)")
+                  ) -> None:
+    """Create/refresh the sandbox users, ACLs, firewall rules (ONE UAC prompt). Idempotent."""
     import json
 
     from abb.harness import sandbox
 
     if prepare_only:
-        typer.echo(json.dumps(sandbox.prepare(list(sandbox.CHOSEN_REPOS)), indent=2))
+        typer.echo(json.dumps(sandbox.prepare(list(sandbox.CHOSEN_REPOS), slots), indent=2))
         return
-    res = sandbox.setup()
+    res = sandbox.setup(slots=slots)
     typer.echo(json.dumps(res, indent=2))
     if res.get("exit_code") != 0:
         raise typer.Exit(1)

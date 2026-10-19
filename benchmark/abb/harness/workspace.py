@@ -70,10 +70,14 @@ def apply_trial_acls(dirs: TrialDirs, user: str) -> None:
 
 
 class Workspace:
-    def __init__(self, repo: RepoConfig, trial_dir: Path, sandbox: Literal["user", "none"] = "none") -> None:
+    def __init__(self, repo: RepoConfig, trial_dir: Path, sandbox: Literal["user", "none"] = "none",
+                 run_as: str | None = None) -> None:
         self.repo = repo
         self.dirs = TrialDirs(Path(trial_dir))
         self.sandbox = sandbox
+        # the slot user that runs this trial (D-037: one per parallel slot); default the configured abb-agent
+        self.run_as = run_as or load_sandbox().modes["user"].run_as
+        self.peak_memory_mb = 0          # highest Job Object peak of any process run as the agent
         self.plat = get_platform()
         self.base: str | None = None
 
@@ -137,7 +141,7 @@ class Workspace:
                 shutil.copytree(t, guh / t.relative_to(pristine), ignore=shutil.ignore_patterns("*.lock"))
 
     def _apply_acls(self) -> None:
-        apply_trial_acls(self.dirs, load_sandbox().modes["user"].run_as)
+        apply_trial_acls(self.dirs, self.run_as)
 
     # ------------------------------------------------------------------ running things
     def agent_env(self, token: str | None, *, proxy: bool = True) -> dict[str, str]:
@@ -146,13 +150,16 @@ class Workspace:
     def exec(self, argv: list[str], *, env: dict[str, str], timeout_s: int, out_dir: Path, cwd: Path | None = None,
              as_agent: bool = False, stdin_text: str | None = None, memory_mb: int | None = None) -> ProcResult:
         sb = load_sandbox()
-        user = sb.modes["user"].run_as if as_agent else None
+        user = self.run_as if as_agent else None
         if as_agent and not Path(out_dir).resolve().is_relative_to(self.dirs.agent_out.resolve()):
             raise WorkspaceError(f"out_dir {out_dir} must be under {self.dirs.agent_out} (the only dir the sandbox user may write)")
         spec = ProcSpec(argv=argv, cwd=cwd or self.dirs.work, env=env, stdin_text=stdin_text, timeout_s=timeout_s,
                         memory_mb=memory_mb or sb.process.memory_mb, as_user=user, out_dir=out_dir,
                         interrupt=sb.process.interrupt, stop_file=self.dirs.stop_file, grace_s=sb.process.grace_s)
-        return self.plat.wait(self.plat.run(spec))
+        r = self.plat.wait(self.plat.run(spec))
+        if as_agent and r.peak_memory_mb:
+            self.peak_memory_mb = max(self.peak_memory_mb, r.peak_memory_mb)
+        return r
 
     def put(self, src: Path, dst_rel: str) -> None:
         dst = self.dirs.work / dst_rel
@@ -181,7 +188,7 @@ class Workspace:
         """End of trial (D-037): remove the sandbox user's grants on this trial before it runs anything else."""
         if self.sandbox != "user":
             return
-        user = load_sandbox().modes["user"].run_as
+        user = self.run_as
         for d in (self.dirs.work, self.dirs.home, self.dirs.gradle_home, self.dirs.claude_config, self.dirs.agent_out,
                   self.dirs.claude_config / "settings.json", self.dirs.root):
             if d.exists():
