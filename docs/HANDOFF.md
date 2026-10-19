@@ -12,10 +12,10 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `5` gate. First run `20261018-2151-dev5-speckit-1` (6/6 resolved, audit PASS) is **invalid (D-050)**: trigger (b) nudged `speckit-specify` and the agent implemented there on the sdd path. Fixed (artifact calls `structured`; slash-command names stripped). Re-run `dev5-speckit-2` queued in the background to start 01:12 UTC (after the five-hour reset at 01:10; the window was at 0.90 at 22:53 UTC).
-- Last commit: `env.lock: s2a reinstalled (D-050 heuristic)` (`ba8bbb3`) + this handoff
+- Phase: `5` **passed 2026-10-19** (run `20261019-0112-dev5-speckit-2`: 6/6, audit PASS; first run invalid, D-050). Next: Phase 6 step 13 (s2a end-to-end + resume) and the Phase 6 gate runs.
+- Last commit: `phase 5: …` (`git log -1`)
 - Working tree: clean
-- Date: `2026-10-18`
+- Date: `2026-10-19`
 
 ## What exists and is verified
 
@@ -23,7 +23,7 @@ and folds its open items into this one.
 |---|---|---|
 | Phases 0-4 | gates passed 2026-10-17/18 | README status, `docs/RUNS.md` |
 | Phase 7 | **gate passed**: 25 tasks validated 3x, lint 0 errors, setup-leak 0, env verify OK (AntennaPod 60/60 + 13 seed tasks, Wikipedia 367/367 + 12); split frozen seed 20261101 (dev 10 incl. pinned dev5, test 15); `tasks/TASKSET.sha256` = `split.yaml: taskset_sha256` = 2eeddcff...; coverage short on UI and Compose (COVERAGE-NOTES.md) | `uv run abb tasks list`, `tasks/split.yaml` |
-| Phase 5 | Spec Kit arm (`abb/arms/speckit`, D-048), one-time setup cache (`abb/harness/setup.py`), 15 unit tests; no dev5 run yet | `uv run pytest -q tests/test_speckit_arm.py` |
+| Phase 5 | **gate passed**: speckit 6/6 on dev5 (`20261019-0112-dev5-speckit-2`), audit PASS; arm D-048 + D-050; 17 unit tests | `uv run abb report 20261019-0112-dev5-speckit-2` |
 | Phase 6 | `s2a/` package: 45 tests (fake Claude + Gradle), `s2a --help`; Arm C wrapper `abb/arms/s2a` (+ nomap/noverify/norepro, D-049), 19 tests; `abb sandbox install-s2a` done (sha `fa49cca`), `abb sandbox check --no-smoke` all OK incl. `s2a.exe` as the sandbox user | `cd s2a; uv run pytest -q`; `cd benchmark; uv run pytest -q` (136 pass) |
 | Sandbox / caches | as before (D-036, D-037, D-043, D-044); fingerprints changed at the Phase 7 re-warm | `uv run abb sandbox check`, `benchmark/env.lock.json` |
 | Plan / usage | owner on **Pro**; weekly reset Sundays 15:00 local (reset today); this session shares the five-hour window | `docs/RUNS.md` |
@@ -41,7 +41,8 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. Phase 5 gate: when `dev5-speckit-2` ends (log `C:\abb\logs\dev5-speckit-2.log`): check that no artifact call was nudged and the sdd path edits code only in `speckit-implement*`; `abb audit <run_id>`, `abb report <run_id>`, artifacts listing, `scripts/runs_rows.py <run_id>` into RUNS.md, README, HANDOFF, commit `phase 5: …`. If the run stops `usage_limit`, `abb run --resume <run_id>` after the reset.
-2. Phase 6 step 13 + gate: `.venv\Scripts\python.exe scripts\s2a_e2e.py --task antennapod-0001 --grade`; then `abb run --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-s2a-1 --grade`; audit, report, RUNS.md, commit `phase 6: …`. Mind the five-hour window: Spec Kit sdd trials used ~7 % each.
+1. Phase 6 step 13 + gate: in `benchmark/`, `.venv\Scripts\python.exe scripts\s2a_e2e.py --task antennapod-0001 --grade` (one dev task end-to-end as the sandbox user, interrupted during implement, then `s2a resume`; results under `<results>/<run_id>/e2e/`). Fix what breaks (bring-up), reinstall (`abb sandbox install-s2a`), repeat.
+2. Then `abb run --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev5 --trials 1 --model claude-sonnet-5-5 --label dev5-s2a-1 --grade`; audit, report, `scripts/runs_rows.py` into RUNS.md, README, commit `phase 6: …`. Mind the five-hour window (Spec Kit sdd trials used 6–10 % each).
 3. Then Phase 8 (`phases/phase-8-runner.md`; needs `abb sandbox setup --slots 2`, one UAC).
 - From now on: test-split tickets and results are not read by whoever tunes S2A; tuning (Phase 6 step 18) runs with `ABB_TUNING=1`.
+- Known cosmetic: "Task was destroyed but it is pending" from `EgressProxy.stop` at run end (a kept-alive connection outlives `wait_closed`'s 5 s).

@@ -148,3 +148,15 @@ Rows from `<results>/<run_id>/` (`scripts/runs_rows.py`). **Run `20261018-2151-d
 | 22:24 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 47 turns, 826 s | 94 | 25,328 | 3,415,501 | 105,578 | 1.0173 | 0 | resolved=True; nudges 1; five-hour 0.77 → 0.84, seven-day 0.1; **invalid (D-050)** for the sdd path |
 | 22:40 | `20261018-2151-dev5-speckit-1` speckit/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 52 turns, 759 s | 72 | 26,002 | 2,440,081 | 94,193 | 0.8809 | 0 | resolved=True; nudges 1; five-hour 0.84 → 0.9, seven-day 0.11; **invalid (D-050)** for the sdd path |
 | | **`20261018-2151-dev5-speckit-1` total (6 trials, 6 resolved)** | | mean 529 s | **322** | **104,829** | **10,258,962** | **463,830** | **3.9301** | 0 | incl. one-time setup; **invalid (D-050)** for the sdd path |
+
+Valid Phase 5 gate run (D-050 fixed; no nudge on any call; code edits only in `bug-fix` / `implement` / `implement-2`). The constitution setup is reused from `20261018-2151` (produced at est. $0.2144, no nudge).
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 01:12 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 15 turns, 234 s | 24 | 4,984 | 426,427 | 53,840 | 0.3079 | 0 | resolved=True; nudges 0; five-hour 0 → 0.02, seven-day 0.12 |
+| 01:17 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 20 turns, 250 s | 28 | 7,096 | 549,298 | 37,813 | 0.2772 | 0 | resolved=True; nudges 0; five-hour 0.02 → 0.04, seven-day 0.12 |
+| 01:23 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 18 turns, 280 s | 30 | 6,722 | 585,280 | 34,481 | 0.2637 | 0 | resolved=True; nudges 0; five-hour 0.04 → 0.06, seven-day 0.12 |
+| 01:29 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 80 turns, 1161 s | 84 | 46,240 | 4,341,996 | 143,779 | 1.4719 | 0 | resolved=True; nudges 0; five-hour 0.06 → 0.16, seven-day 0.13 |
+| 01:50 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 53 turns, 1006 s | 94 | 32,938 | 4,057,721 | 117,019 | 1.2034 | 0 | resolved=True; nudges 0; five-hour 0.16 → 0.24, seven-day 0.14 |
+| 02:09 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 41 turns, 703 s | 64 | 21,530 | 2,190,466 | 86,591 | 0.7808 | 0 | resolved=True; nudges 0; five-hour 0.25 → 0.3, seven-day 0.14 |
+| | **`20261019-0112-dev5-speckit-2` total (6 trials, 6 resolved)** | | mean 606 s | **324** | **119,510** | **12,151,188** | **473,523** | **4.3050** | 0 | incl. one-time setup |
