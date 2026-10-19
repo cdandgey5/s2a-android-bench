@@ -160,3 +160,18 @@ Valid Phase 5 gate run (D-050 fixed; no nudge on any call; code edits only in `b
 | 01:50 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0004/t1 | claude-sonnet-5-5 | completed, 53 turns, 1006 s | 94 | 32,938 | 4,057,721 | 117,019 | 1.2034 | 0 | resolved=True; nudges 0; five-hour 0.16 → 0.24, seven-day 0.14 |
 | 02:09 | `20261019-0112-dev5-speckit-2` speckit/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 41 turns, 703 s | 64 | 21,530 | 2,190,466 | 86,591 | 0.7808 | 0 | resolved=True; nudges 0; five-hour 0.25 → 0.3, seven-day 0.14 |
 | | **`20261019-0112-dev5-speckit-2` total (6 trials, 6 resolved)** | | mean 606 s | **324** | **119,510** | **12,151,188** | **473,523** | **4.3050** | 0 | incl. one-time setup |
+
+## 2026-10-19 — Phase 6 bring-up (s2a end-to-end on antennapod-0001, `scripts/s2a_e2e.py`)
+
+Bring-up runs (D-051): `0224` stopped in the map setup (max_turns before the gate; fixed), `0238` stopped at the plan gate (no retry for read-only stages; fixed), `0310` ran every stage, was interrupted in implement, resumed, ACCEPT, resolved. The map setup cached for later runs is the one from `0238` (est. $0.4454).
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 02:35 | `20261019-0224-s2a-e2e` setup s2a-map/antennapod | claude-sonnet-5-5 | max_turns, 27 turns | 46 | 24,520 | 1,193,934 | 62,895 | 0.6163 | 0 | one-time setup (reported separately); five-hour 0.38 → 0.44, seven-day 0.16 |
+| 02:24 | `20261019-0224-s2a-e2e` s2a e2e antennapod-0001 | claude-sonnet-5-5 | first None, resume None, 0 turns, 0 calls | 0 | 0 | 0 | 0 | 0.0000 | 0 | resolved=None; verdict None; five-hour —, seven-day — |
+| | **`20261019-0224-s2a-e2e` total (1 trials, 0 resolved)** | | mean 0 s | **46** | **24,520** | **1,193,934** | **62,895** | **0.6163** | 0 | incl. one-time setup |
+| 02:55 | `20261019-0238-s2a-e2e` setup s2a-map/antennapod | claude-sonnet-5-5 | success, 22 turns | 38 | 15,195 | 877,529 | 51,414 | 0.4454 | 0 | one-time setup (reported separately); five-hour 0.46 → 0.49, seven-day 0.16 |
+| 02:38 | `20261019-0238-s2a-e2e` s2a e2e antennapod-0001 | claude-sonnet-5-5 | first [3, 'gate_failed'], resume None, 29 turns, 6 calls | 44 | 13,488 | 655,015 | 127,043 | 0.7086 | 0 | resolved=False; verdict None; five-hour 0.49 → 0.53, seven-day 0.17 |
+| | **`20261019-0238-s2a-e2e` total (1 trials, 0 resolved)** | | mean 0 s | **82** | **28,683** | **1,532,544** | **178,457** | **1.1541** | 0 | incl. one-time setup |
+| 03:10 | `20261019-0310-s2a-e2e` s2a e2e antennapod-0001 | claude-sonnet-5-5 | first [4, 'timeout'], resume [0, 'completed'], 53 turns, 12 calls | 82 | 22,443 | 1,196,413 | 203,631 | 1.1588 | 0 | resolved=True; verdict ACCEPT; five-hour 0.66 → 0.68, seven-day 0.18 |
+| | **`20261019-0310-s2a-e2e` total (1 trials, 1 resolved)** | | mean 0 s | **82** | **22,443** | **1,196,413** | **203,631** | **1.1588** | 0 | incl. one-time setup |

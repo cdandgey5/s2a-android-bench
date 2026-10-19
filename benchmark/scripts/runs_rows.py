@@ -73,6 +73,23 @@ def main() -> None:
                     f"five-hour {five}, seven-day {seven}" + (f"; {a.note}" if a.note else "") + " |")
         for k, v in enumerate((i, o, cr, cw, usd)):
             tot[k] += v
+    e2e = root / "e2e"
+    if (e2e / "summary.json").exists():   # scripts/s2a_e2e.py: one task, s2a's own calls.jsonl
+        sm = json.loads((e2e / "summary.json").read_text(encoding="utf-8"))
+        cf = e2e / "artifacts" / "calls.jsonl"
+        calls = [json.loads(x) for x in cf.read_text(encoding="utf-8").splitlines() if x.strip()] if cf.exists() else []
+        i, o, cr, cw, usd = tokens(calls)
+        five, seven = windows(e2e)
+        first, res = sm.get("first") or {}, sm.get("resume") or {}
+        n += 1
+        ok += bool((sm.get("grade") or {}).get("resolved"))
+        rows.append(f"| {a.run_id[9:11]}:{a.run_id[11:13]} | `{a.run_id}` s2a e2e {sm.get('task')} | {model} | "
+                    f"first {first.get('state_exit')}, resume {res.get('state_exit')}, {sum(c.get('num_turns') or 0 for c in calls)} "
+                    f"turns, {len(calls)} calls | {i:,} | {o:,} | {cr:,} | {cw:,} | {usd:.4f} | 0 | "
+                    f"resolved={(sm.get('grade') or {}).get('resolved')}; verdict {res.get('verdict')}; five-hour {five}, "
+                    f"seven-day {seven}" + (f"; {a.note}" if a.note else "") + " |")
+        for k, v in enumerate((i, o, cr, cw, usd)):
+            tot[k] += v
     rows.append(f"| | **`{a.run_id}` total ({n} trials, {ok} resolved)** | | mean {secs / max(n, 1):.0f} s | "
                 f"**{tot[0]:,}** | **{tot[1]:,}** | **{tot[2]:,}** | **{tot[3]:,}** | **{tot[4]:.4f}** | 0 | "
                 f"incl. one-time setup" + (f"; {a.note}" if a.note else "") + " |")
