@@ -13,7 +13,7 @@ from s2a import gitutil, render
 from s2a.context import Ctx
 from s2a.gates import first_failure, run_gates, summarize
 from s2a.profile import prompt_text
-from s2a.stages.base import Stop, after_call, base_values, call_name, check_budget, stage_turns
+from s2a.stages.base import Stop, after_call, base_values, call_name, can_retry, check_budget, stage_turns
 
 
 def prompt_hash(ctx: Ctx) -> str:
@@ -65,6 +65,8 @@ def build(ctx: Ctx) -> None:
     st = ctx.state.stage("map")
     used, last = st.get("turns_used", 0), None
     for attempt in range(1 + cfg.retry):
+        if attempt and not can_retry(ctx, cfg, used):
+            break
         check_budget(ctx, "map")
         p = prompt if attempt == 0 else (prompt + f"\n\n## Previous attempt\nThe map did not pass `{last[0]}`: "
                                          f"{last[1].message}\nFix .s2a/map.md and .s2a/map.json.")

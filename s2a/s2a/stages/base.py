@@ -38,6 +38,14 @@ def after_call(ctx: Ctx, res: CallResult) -> None:
         raise Stop(code, reason, f"{res.call.name} ended {st}")
 
 
+MIN_RETRY_TURNS = 5
+
+
+def can_retry(ctx: Ctx, cfg: StageCfg, used_in_stage: int) -> bool:
+    """D-051: a retry is started only with at least MIN_RETRY_TURNS of the stage's cap (and the total) left."""
+    return min(cfg.turns - used_in_stage, ctx.driver.budget.turns_left) >= MIN_RETRY_TURNS
+
+
 def stage_turns(ctx: Ctx, cfg: StageCfg, used_in_stage: int = 0) -> int:
     return max(1, min(cfg.turns - used_in_stage, ctx.driver.budget.turns_left))
 
@@ -109,6 +117,8 @@ def artifact_stage(ctx: Ctx, stage: str, *, values: dict[str, str] | None = None
     st = ctx.state.stage(stage)
     used = st.get("turns_used", 0)
     for attempt in range(1 + cfg.retry):
+        if attempt and not can_retry(ctx, cfg, used):
+            break
         check_budget(ctx, stage)
         p = prompt if attempt == 0 else (prompt + "\n\n## Previous attempt\nYour previous answer did not pass the check "
                                          f"`{last_fail[0]}`: {last_fail[1].message}\nReturn the artifact again, fixed, "

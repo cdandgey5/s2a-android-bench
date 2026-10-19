@@ -17,3 +17,9 @@ the audit trail.
   `show`.
 - 44 unit tests with fake Claude and fake Gradle (stage order, gates, resume, fix loop,
   reproduction gate failing then passing, weakened-test detection).
+
+### 2026-10-19 — bring-up fixes from the first real runs (D-051)
+- A call's work reaches its gate even when the call spent the last turns.
+- intake, locate, spec and plan retry once on a gate failure; no retry with fewer than 5 stage turns left.
+- The reproduction gate reports the end of the Gradle output when the tests produced no results.
+- Interrupted calls are recorded; slash-command names are not questions (D-050).

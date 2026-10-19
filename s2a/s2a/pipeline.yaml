@@ -23,6 +23,7 @@ stages:
     turns: 5
     tools: read_only              # artifact returned as final message; orchestrator writes ticket.md
     gate: [artifact_exists, ticket_type_parses, ticket_size_parses]
+    retry: 1                      # D-051: one fresh retry with the failed check appended
 
   - name: map
     session: fresh
@@ -41,6 +42,7 @@ stages:
     turns: 15
     tools: read_only
     gate: [artifact_exists, listed_paths_exist, min_candidates:1]
+    retry: 1                      # D-051: one fresh retry with the failed check appended
 
   - name: reproduce                # bug: failing tests; refactor: characterization tests; feature: acceptance skeleton
     session: fresh
@@ -58,6 +60,7 @@ stages:
     turns: 15
     tools: read_only
     gate: [artifact_exists, min_criteria:1, every_criterion_has_verification, unchanged_behaviour_present_for_bugs, criteria_ids_unique]
+    retry: 1                      # D-051: one fresh retry with the failed check appended
     pause_in_interactive: true
 
   - name: plan
@@ -65,6 +68,7 @@ stages:
     turns: 15
     tools: read_only
     gate: [artifact_exists, plan_json_valid, every_criterion_covered, modules_and_tasks_known, paths_exist_or_new, one_fixes_repro_task_for_bugs]
+    retry: 1                      # D-051: one fresh retry with the failed check appended
     pause_in_interactive: true
 
   - name: implement

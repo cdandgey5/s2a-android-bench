@@ -204,3 +204,54 @@ def test_weakened_test_fails_the_task(env) -> None:
     gates = ctx.state.stages["implement"]["gates"]
     assert any("no_weakened_tests" in g and not g["no_weakened_tests"]["ok"] for g in gates.values())
     assert code == 0 or code == 2  # verify still runs (the fake verifier accepts); the task failure is in the report
+
+
+def test_plan_gate_failure_gets_one_retry_with_the_failed_check(env) -> None:
+    repo, _ = env
+    base = make_agent()
+    seen: list[str] = []
+
+    def agent(stage, name, prompt, r):
+        if stage == "plan":
+            seen.append(prompt)
+            text = plan_md()
+            if len(seen) == 1:   # first answer names a file that neither exists nor is marked (new)
+                text = text.replace('"files": ["app/src/main/java/a/Speed.java"]',
+                                    '"files": ["app/src/main/java/a/Speed.java", "app/src/test/resources/speed.xml"]')
+            return text
+        return base(stage, name, prompt, r)
+
+    FakeDriver.agent = agent
+    ctx, code = _run(repo)
+    assert code == 0 and ctx.state.stages["plan"]["attempts"] == 2
+    assert "paths_exist_or_new" in seen[1] and "## Previous attempt" in seen[1]
+
+
+def test_no_retry_when_the_stage_has_too_few_turns_left(env, monkeypatch) -> None:
+    from s2a.stages import base as stage_base
+
+    repo, _ = env
+    monkeypatch.setattr(stage_base, "MIN_RETRY_TURNS", 100)   # nothing is ever "enough" for a retry
+    good = make_agent()
+
+    def agent(stage, name, prompt, r):
+        if stage == "plan":
+            return "no plan here"
+        return good(stage, name, prompt, r)
+
+    FakeDriver.agent = agent
+    ctx, code = _run(repo)
+    assert code == 3 and ctx.state.stages["plan"]["attempts"] == 1
+    assert [n for s, n in FakeDriver.log if s == "plan"] == ["plan"]
+
+
+def test_a_call_that_spends_the_last_turn_still_reaches_its_gate(env) -> None:
+    repo, _ = env
+    FakeDriver.agent = make_agent()
+    ctx, t0 = orchestrator.new_run("Playback speed resets after restart; it should persist.", repo=repo, profile="android",
+                                   mode="autonomous", model="claude-sonnet-5-5",
+                                   limits={"timeout_minutes": 45, "max_turns_total": 4, "max_usd": 15.0}, skip=[],
+                                   run_id="r1", branch=None, map_path=None, append_file=None)
+    code = orchestrator.execute(ctx, t0)        # the fake spends 2 turns per call: intake + map use all 4
+    assert code == 4 and ctx.state.exit_reason == "max_turns"
+    assert ctx.state.stages["map"]["status"] == "done"   # the map's gate ran and passed on the last turns

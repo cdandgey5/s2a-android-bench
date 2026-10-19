@@ -122,6 +122,14 @@ re-verify (+15 = 185) fits in 200; a second fix loop (+30) and the report polish
 opportunistic. `map` (25) counts against the total only when it
 actually runs in this invocation (it is cached per repo, or supplied with `--map`).
 
+Gate failures and turns (D-051). A call's work always reaches its gate, even when the call used
+up the turn budget (gates cost no turns); the budget check before the next call is what ends a
+run on `max_turns`. Every stage whose gate can fail gets **one retry** in a fresh session with the
+failed check (and, for test gates, the tail of the Gradle output) appended — `intake`, `locate`,
+`spec` and `plan` as well as `map` and `reproduce` — within the stage's own turn cap; a retry is
+not started when fewer than 5 of the stage's turns are left. After that, the read-only stages stop
+the run with exit 3 and `reproduce` records `repro: unavailable`.
+
 | # | Stage | Reads | Writes | Gate (machine-checked by the orchestrator) | Turns | Principles applied |
 |---|---|---|---|---|---|---|
 | 0 | `intake` | prompt, profile | `ticket.md`: title; `type` ∈ bug/feature/refactor/chore; `size` ∈ S/M/L; description; "done when"; constraints; unknowns | file exists; `type:` and `size:` lines parse | 5 | Normalize the request and agree "done" before touching code; `size` lets a deployment scale ceremony (`pipeline.yaml: small_change_skips`; empty in the benchmark) |

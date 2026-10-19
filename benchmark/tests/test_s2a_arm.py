@@ -116,7 +116,7 @@ def test_artifacts_skip_streams_and_gate_output(tmp_path: Path) -> None:
     assert {"ticket.md", "plan.json", "verify.md", "report.md", "repro/manifest.json", "gates/001-test_app/argv.json",
             "calls.jsonl"} <= got
     assert not any(g.startswith(("transcripts/", "prompts/", "agent-out/")) for g in got)
-    assert "gates/001-test_app/stdout.txt" not in got
+    assert "gates/001-test_app/stdout.txt" not in got and "gates/001-test_app/stdout.txt.tail" in got
     assert s2.gate_runs(rd) == (1, 12.5)
 
 

@@ -144,11 +144,17 @@ def _repro_selection(man: dict) -> dict[str, list[str]]:
     return out
 
 
-def _run_repro(ctx: Ctx, man: dict) -> dict[str, gradle.TestResult]:
+def _run_repro(ctx: Ctx, man: dict, tails: list[str] | None = None) -> dict[str, gradle.TestResult]:
+    """Run the manifest's tests; `tails` collects the end of the Gradle output of every run without JUnit results
+    (a compile error or an unknown test name), so the gate message says why (D-051)."""
     res: dict[str, gradle.TestResult] = {}
     for mod, sel in _repro_selection(man).items():
-        _, r = gradle.run_tests(ctx, mod, tests=sel, label="repro")
+        proc, r = gradle.run_tests(ctx, mod, tests=sel, label="repro")
         res.update(r)
+        if not r and tails is not None:
+            out = (proc.stdout() + "\n" + proc.stderr()).strip().splitlines()
+            keep = [ln for ln in out if re.search(r"error:|FAILED|No tests found|What went wrong|Could not|e: ", ln)]
+            tails.append(f"{mod} (exit {proc.exit_code}):\n" + "\n".join((keep or out)[-25:]))
     return res
 
 
@@ -169,9 +175,11 @@ def repro_tests_behave(ctx: Ctx, **_) -> GateResult:
             if r.exit_code != 0:
                 bad.append(f"{mod}: exit {r.exit_code}\n" + "\n".join(r.stdout().splitlines()[-30:]))
         return fail("acceptance skeletons do not compile:\n" + "\n".join(bad)) if bad else ok("skeletons compile")
-    sel = _selected(_run_repro(ctx, man), man)
+    tails: list[str] = []
+    sel = _selected(_run_repro(ctx, man, tails), man)
     if not sel:
-        return fail("the reproduction tests did not run (no JUnit results: compile error or wrong test names)")
+        return fail("the reproduction tests did not run (no JUnit results: compile error or wrong test names)"
+                    + ("; Gradle said:\n" + "\n".join(tails) if tails else ""))
     if kind == "bug":
         wrong = {k: v.status for k, v in sel.items() if not (v.status == "failed" and v.kind == "assertion")}
         if wrong:
@@ -188,9 +196,11 @@ def _repro_pass(ctx: Ctx, label: str) -> GateResult:
     man = repro_manifest(ctx)
     if not man or not man.get("tests"):
         return ok("no reproduction tests (unavailable)")
-    sel = _selected(_run_repro(ctx, man), man)
+    tails: list[str] = []
+    sel = _selected(_run_repro(ctx, man, tails), man)
     if not sel:
-        return fail(f"{label}: the reproduction tests did not run (compile error?)")
+        return fail(f"{label}: the reproduction tests did not run (compile error?)"
+                    + ("; Gradle said:\n" + "\n".join(tails) if tails else ""))
     bad = [k for k, v in sel.items() if v.status != "passed"]
     return fail(f"{label}: these tests do not pass: {bad[:10]}") if bad else ok(f"{len(sel)} test(s) pass")
 
@@ -439,7 +449,7 @@ def run_gates(ctx: Ctx, specs: list[str], *, stage: str, task: PlanTask | None =
 
 
 def summarize(results: list[tuple[str, GateResult]]) -> dict:
-    return {name: {"ok": r.ok, "message": r.message[:500], **{k: v for k, v in r.data.items() if k != "tests"}}
+    return {name: {"ok": r.ok, "message": r.message[:2000], **{k: v for k, v in r.data.items() if k != "tests"}}
             for name, r in results}
 
 

@@ -14,7 +14,7 @@ from s2a import gitutil, gradle, render
 from s2a.context import Ctx
 from s2a.gates import first_failure, run_gates, summarize
 from s2a.profile import prompt_text
-from s2a.stages.base import after_call, base_values, call_name, check_budget, stage_turns
+from s2a.stages.base import after_call, base_values, call_name, can_retry, check_budget, stage_turns
 
 RESULT = {"bug": "failing_test_written", "refactor": "characterization_written", "feature": "skeleton_written",
           "chore": "skeleton_written"}
@@ -66,6 +66,8 @@ def run(ctx: Ctx) -> None:
     st = ctx.state.stage("reproduce")
     used, last = st.get("turns_used", 0), None
     for attempt in range(1 + cfg.retry):
+        if attempt and not can_retry(ctx, cfg, used):
+            break
         check_budget(ctx, "reproduce")
         p = prompt if attempt == 0 else (prompt + "\n\n## Previous attempt\nThe orchestrator ran your tests and the check "
                                          f"`{last[0]}` failed:\n{last[1].message}\nFix the tests (not production code).")
@@ -102,7 +104,7 @@ def run(ctx: Ctx) -> None:
         gitutil.checkout_clean(ctx.repo)   # next attempt (or give up) starts from the committed tree
         ctx.save()
     ctx.art("repro/manifest.json").unlink(missing_ok=True)
-    ctx.state.mark("reproduce", "unavailable", reason=f"{last[0]}: {last[1].message[:300]}")
+    ctx.state.mark("reproduce", "unavailable", reason=f"{last[0]}: {last[1].message[:1500]}")
     ctx.state.notes.append(f"repro: unavailable ({last[0]})")
     ctx.save()
 

@@ -212,6 +212,13 @@ def copy_artifacts(rd: Path, dst: Path) -> list[str]:
         top = rel.split("/")[0]
         if not f.is_file() or top in ("transcripts", "prompts", "agent-out"):
             continue
+        if top == "gates" and f.name in ("stdout.txt", "stderr.txt"):   # the tail only: why a gate failed
+            tail = dst / f"{rel}.tail"
+            tail.parent.mkdir(parents=True, exist_ok=True)
+            lines = f.read_text(encoding="utf-8", errors="replace").splitlines()[-150:]
+            tail.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            out.append(f"{rel}.tail")
+            continue
         if top == "gates" and f.name != "argv.json":
             continue
         if f.suffix not in (".md", ".json", ".jsonl", ".txt") and top != "repro":
