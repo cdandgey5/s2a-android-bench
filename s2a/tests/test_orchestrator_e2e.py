@@ -229,11 +229,11 @@ def test_plan_gate_failure_gets_one_retry_with_the_failed_check(env) -> None:
     assert "paths_exist_or_new" in seen[1] and "## Previous attempt" in seen[1]
 
 
-def test_no_retry_when_the_stage_has_too_few_turns_left(env, monkeypatch) -> None:
+def test_no_retry_when_the_run_has_too_few_turns_left(env, monkeypatch) -> None:
     from s2a.stages import base as stage_base
 
     repo, _ = env
-    monkeypatch.setattr(stage_base, "MIN_RETRY_TURNS", 100)   # nothing is ever "enough" for a retry
+    monkeypatch.setattr(stage_base, "MIN_RETRY_TURNS", 1000)  # more than the whole budget: never enough
     good = make_agent()
 
     def agent(stage, name, prompt, r):

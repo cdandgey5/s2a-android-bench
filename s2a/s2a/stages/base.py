@@ -42,12 +42,17 @@ MIN_RETRY_TURNS = 5
 
 
 def can_retry(ctx: Ctx, cfg: StageCfg, used_in_stage: int) -> bool:
-    """D-051: a retry is started only with at least MIN_RETRY_TURNS of the stage's cap (and the total) left."""
-    return min(cfg.turns - used_in_stage, ctx.driver.budget.turns_left) >= MIN_RETRY_TURNS
+    """D-051: a retry is started only with at least MIN_RETRY_TURNS of the run's total budget left."""
+    return ctx.driver.budget.turns_left >= MIN_RETRY_TURNS
 
 
-def stage_turns(ctx: Ctx, cfg: StageCfg, used_in_stage: int = 0) -> int:
-    return max(1, min(cfg.turns - used_in_stage, ctx.driver.budget.turns_left))
+def stage_turns(ctx: Ctx, cfg: StageCfg, used_in_stage: int = 0, *, retry: bool = False) -> int:
+    """The stage's remaining cap; a retry gets at least MIN_RETRY_TURNS (fixing an artifact the gate rejected
+    needs a few turns even when the first answer used most of the cap), always within the total budget."""
+    cap = cfg.turns - used_in_stage
+    if retry:
+        cap = max(cap, MIN_RETRY_TURNS)
+    return max(1, min(cap, ctx.driver.budget.turns_left))
 
 
 def base_values(ctx: Ctx) -> dict[str, str]:
@@ -87,8 +92,12 @@ def system_prompt(ctx: Ctx) -> str:
 
 
 def call_name(ctx: Ctx, stage: str) -> str:
-    """intake, then intake-2, intake-3 … (one file per call under prompts/ and transcripts/)."""
-    s = ctx.state.stage(stage)
+    """intake, then intake-2, intake-3 … (one file per call under prompts/ and transcripts/). Counters for
+    names that are not pipeline stages (implement-T1, …) live under stages["_calls"], not as fake stages."""
+    if stage in {s.name for s in ctx.pipeline.stages}:
+        s = ctx.state.stage(stage)
+    else:
+        s = ctx.state.stages.setdefault("_calls", {}).setdefault(stage, {})
     s["calls_n"] = s.get("calls_n", 0) + 1
     return stage if s["calls_n"] == 1 else f"{stage}-{s['calls_n']}"
 
@@ -125,7 +134,7 @@ def artifact_stage(ctx: Ctx, stage: str, *, values: dict[str, str] | None = None
                                          "in exactly the requested format.")
         ctx.state.mark(stage, "running", attempts=attempt + 1)
         res = ctx.driver.call(stage, p, name=call_name(ctx, stage), system=ctx.system,
-                              turn_cap=stage_turns(ctx, cfg, used), read_only=cfg.tools == "read_only", structured=True)
+                              turn_cap=stage_turns(ctx, cfg, used, retry=attempt > 0), read_only=cfg.tools == "read_only", structured=True)
         used += res.call.num_turns
         st["turns_used"] = used
         st.setdefault("calls", []).append(res.call.name)

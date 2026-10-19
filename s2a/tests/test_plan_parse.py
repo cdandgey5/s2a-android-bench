@@ -60,3 +60,22 @@ def test_new_test_methods_compare_whole_files_not_diff_lines() -> None:
     assert new_test_methods(now, before) == ["speedPersists"]
     kt = "class T {\n    @Test\n    fun `keeps speed`() {}\n    @Test fun other() {}\n}\n"
     assert new_test_methods(kt, "") == ["keeps speed", "other"]
+
+
+def test_locate_candidates_skip_urls_elisions_and_files_to_create() -> None:
+    md = ("## Candidates (ranked)\n"
+          "1. `net/common/src/main/java/a/UrlChecker.java` — prepare() — handles https://subscribeonandroid.com/x\n"
+          "2. https://subscribeonandroid.com/example.com/feed — the failing input\n"
+          "3. `parser/media/.../MediaFormatDetector.java` — detection\n"
+          "4. `parser/media/src/main/java/a/m4a/M4AReader.java` (new) — the reader to add\n")
+    assert parse.locate_candidates(md) == ["net/common/src/main/java/a/UrlChecker.java",
+                                           "parser/media/src/main/java/a/m4a/M4AReader.java"]
+    assert parse.locate_candidates(md, include_new=False) == ["net/common/src/main/java/a/UrlChecker.java"]
+
+
+def test_compile_task_follows_the_test_task() -> None:
+    from s2a.gradle import compile_task_for
+
+    assert compile_task_for("testFreeDebugUnitTest") == "compileFreeDebugUnitTestSources"
+    assert compile_task_for("testDebugUnitTest") == "compileDebugUnitTestSources"
+    assert compile_task_for("test") == "testClasses" and compile_task_for(None) is None

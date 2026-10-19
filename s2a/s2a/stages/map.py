@@ -72,7 +72,7 @@ def build(ctx: Ctx) -> None:
                                          f"{last[1].message}\nFix .s2a/map.md and .s2a/map.json.")
         ctx.state.mark("map", "running", attempts=attempt + 1, cached=False)
         res = ctx.driver.call("map", p, name=call_name(ctx, "map"), system=ctx.system,
-                              turn_cap=stage_turns(ctx, cfg, used), read_only=False)
+                              turn_cap=stage_turns(ctx, cfg, used, retry=attempt > 0), read_only=False)
         used += res.call.num_turns
         st["turns_used"] = used
         st.setdefault("calls", []).append(res.call.name)

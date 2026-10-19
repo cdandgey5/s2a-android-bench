@@ -177,7 +177,10 @@ def outcome(state: dict | None, proc_exit: int, timed_out: bool) -> tuple[str, l
         return "agent_error", [f"s2a exited {proc_exit} without an ending in state.json"]
     code, reason = int(state["exit_code"]), str(state.get("exit_reason") or "")
     notes = [f"s2a exit {code} ({reason}); verdict {state.get('verdict')}"]
-    last = " ".join(state.get("notes") or [])[-600:]
+    all_notes = state.get("notes") or []
+    # the note that says why it stopped, not the agent's assumptions/unknowns recorded before it
+    last = next((n for n in reversed(all_notes) if n.startswith(("stopped:", "orchestrator error", "interrupted"))),
+                " ".join(all_notes)[-600:])
     if code in (0, 2):
         return "completed", notes
     if code == 4:

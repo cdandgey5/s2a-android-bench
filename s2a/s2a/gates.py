@@ -86,7 +86,7 @@ def map_test_command_runs(ctx: Ctx, **_) -> GateResult:
     if r.timed_out:
         return fail(f"the smoke test command for {mod} exceeded {ctx.pipeline.gate_timeout_s} s")
     if not res:
-        tail = "\n".join(r.stdout().splitlines()[-25:])
+        tail = gradle.failure_tail(r, 25)
         return fail(f"the smoke test command for {mod} produced no JUnit results (exit {r.exit_code}):\n{tail}")
     f = ctx.s2a_dir / "baseline" / f"{mod.strip(':').replace(':', '_')}.json"
     f.parent.mkdir(parents=True, exist_ok=True)
@@ -119,7 +119,7 @@ def map_lint_timed(ctx: Ctx, **_) -> GateResult:
 
 # ---------------------------------------------------------------------------- locate
 def listed_paths_exist(ctx: Ctx, **_) -> GateResult:
-    paths = parse.locate_candidates(ctx.read("locate.md"))
+    paths = parse.locate_candidates(ctx.read("locate.md"), include_new=False)   # a file to create cannot exist yet
     missing = [p for p in paths if not (ctx.repo / _rel(ctx, p)).exists()]
     return fail(f"listed paths do not exist: {missing[:8]}") if missing else ok(paths=len(paths))
 
@@ -152,9 +152,7 @@ def _run_repro(ctx: Ctx, man: dict, tails: list[str] | None = None) -> dict[str,
         proc, r = gradle.run_tests(ctx, mod, tests=sel, label="repro")
         res.update(r)
         if not r and tails is not None:
-            out = (proc.stdout() + "\n" + proc.stderr()).strip().splitlines()
-            keep = [ln for ln in out if re.search(r"error:|FAILED|No tests found|What went wrong|Could not|e: ", ln)]
-            tails.append(f"{mod} (exit {proc.exit_code}):\n" + "\n".join((keep or out)[-25:]))
+            tails.append(f"{mod} (exit {proc.exit_code}):\n" + gradle.failure_tail(proc, 25))
     return res
 
 
@@ -173,7 +171,7 @@ def repro_tests_behave(ctx: Ctx, **_) -> GateResult:
         for mod in sorted({t["module"] for t in man["tests"]}):
             r = gradle.compile_module(ctx, mod, label="repro-compile")
             if r.exit_code != 0:
-                bad.append(f"{mod}: exit {r.exit_code}\n" + "\n".join(r.stdout().splitlines()[-30:]))
+                bad.append(f"{mod}: exit {r.exit_code}\n" + gradle.failure_tail(r))
         return fail("acceptance skeletons do not compile:\n" + "\n".join(bad)) if bad else ok("skeletons compile")
     tails: list[str] = []
     sel = _selected(_run_repro(ctx, man, tails), man)
@@ -299,7 +297,7 @@ def compiles(ctx: Ctx, *, task: PlanTask | None = None, **_) -> GateResult:
         r = gradle.compile_module(ctx, m)
         if r.exit_code != 0:
             bad.append(f"{m} (exit {r.exit_code}{', timed out' if r.timed_out else ''}):\n"
-                       + "\n".join(r.stdout().splitlines()[-40:]))
+                       + gradle.failure_tail(r, 40))
     return fail("compile failed: " + "\n".join(bad)) if bad else ok()
 
 
@@ -364,7 +362,7 @@ def lint_if_enabled(ctx: Ctx, *, task: PlanTask | None = None, **_) -> GateResul
     mt = gradle.module_tasks(ctx, task.module)
     r = gradle.run_logged(ctx, gradle.render(ctx, ctx.profile.commands.lint, module=task.module,
                                              lint_task=mt["lint_task"]), f"lint-{task.id}-")
-    return ok() if r.exit_code == 0 else fail("lint failed:\n" + "\n".join(r.stdout().splitlines()[-30:]))
+    return ok() if r.exit_code == 0 else fail("lint failed:\n" + gradle.failure_tail(r))
 
 
 # ---------------------------------------------------------------------------- after all tasks / fix

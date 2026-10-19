@@ -78,7 +78,7 @@ def run(ctx: Ctx) -> None:
                                          f"`{last[0]}` failed:\n{last[1].message}\nFix the tests (not production code).")
         ctx.state.mark("reproduce", "running", attempts=attempt + 1)
         res = ctx.driver.call("reproduce", p, name=call_name(ctx, "reproduce"), system=ctx.system,
-                              turn_cap=stage_turns(ctx, cfg, used), read_only=False)
+                              turn_cap=stage_turns(ctx, cfg, used, retry=attempt > 0), read_only=False)
         used += res.call.num_turns
         st["turns_used"] = used
         st.setdefault("calls", []).append(res.call.name)

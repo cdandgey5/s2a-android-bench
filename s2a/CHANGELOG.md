@@ -25,3 +25,8 @@ the audit trail.
 - Interrupted calls are recorded; slash-command names are not questions (D-050).
 - Reproduction tests are the @Test methods a file has now and did not have at HEAD (whole-file comparison; the
   diff-line rule picked up an existing passing test in e2e `20261019-0310`); gate log numbering continues after a resume.
+
+### 2026-10-19 — bring-up fixes from the first dev5 run (D-052)
+- locate candidates skip URLs, elided paths and files marked new; a retry gets at least 5 turns of the total budget.
+- Without a map, task discovery reads tasks that have no description; the compile task follows the test task's name.
+- Gate messages quote Gradle's error lines from stdout and stderr; per-task call counters are kept out of `stages`.

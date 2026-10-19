@@ -75,6 +75,33 @@ def module_of_path(ctx: Ctx, rel_path: str) -> str | None:
     return None
 
 
+FAILURE_LINE = re.compile(r"error:|^e: |FAILED|Could not |not found|Exception|No tests found|cannot find symbol|"
+                          r"unresolved reference", re.I)
+
+
+def failure_tail(r, n: int = 30) -> str:
+    """Why a Gradle run failed, from stdout and stderr: the error lines plus the lines after each
+    "What went wrong:" (Gradle prints the reason on the next lines), else the last n lines."""
+    lines = (r.stdout() + "\n" + r.stderr()).splitlines()
+    keep: list[str] = []
+    for i, ln in enumerate(lines):
+        if "What went wrong" in ln:
+            keep += [x for x in lines[i + 1:i + 4] if x.strip()]
+        elif FAILURE_LINE.search(ln):
+            keep.append(ln)
+    return "\n".join((keep or lines)[-n:])
+
+
+def compile_task_for(test_task: str | None) -> str | None:
+    """Android's naming: testFreeDebugUnitTest -> compileFreeDebugUnitTestSources (`test` -> `testClasses`)."""
+    if not test_task:
+        return None
+    if test_task == "test":
+        return "testClasses"
+    m = re.fullmatch(r"test(\w*)UnitTest", test_task)
+    return f"compile{m.group(1)}UnitTestSources" if m else None
+
+
 def discover_tasks(ctx: Ctx, module: str) -> dict:
     """`gradlew <module>:tasks --all` once per module (cached in state): the unit-test, compile and lint
     task names. Used when the map is skipped or lacks the module (`--skip map` keeps every gate on)."""
@@ -84,16 +111,17 @@ def discover_tasks(ctx: Ctx, module: str) -> dict:
     d = ctx.profile.commands.defaults
     argv = ctx.plat.gradlew(ctx.repo) + flags(ctx) + [f"{module}:tasks", "--all"]
     r = run_logged(ctx, argv, f"tasks{module.replace(':', '_')}")
-    names = set(re.findall(r"(?m)^(\w+)\s+-\s", r.stdout()))
+    names = set(re.findall(r"(?m)^([a-z]\w*)(?:\s+-\s|\s*$)", r.stdout()))   # tasks without a description too
     def pick(default: str, pattern: str) -> str | None:
         if default in names:
             return default
         cands = sorted(n for n in names if re.fullmatch(pattern, n))
         pref = [n for n in cands if "Debug" in n]
         return (pref or cands or [None])[0]
-    info = {"task": pick(d.get("task", "testDebugUnitTest"), r"test\w*UnitTest") or ("test" if "test" in names else None),
+    task = pick(d.get("task", "testDebugUnitTest"), r"test\w*UnitTest") or ("test" if "test" in names else None)
+    info = {"task": task,
             "compile_task": pick(d.get("compile_task", "compileDebugUnitTestSources"), r"compile\w*UnitTestSources")
-            or ("testClasses" if "testClasses" in names else None),
+            or ("testClasses" if "testClasses" in names else None) or compile_task_for(task),
             "lint_task": pick(d.get("lint_task", "lintDebug"), r"lint\w*") , "known": bool(names),
             "exit_code": r.exit_code}
     cache[module] = info
@@ -105,7 +133,8 @@ def module_tasks(ctx: Ctx, module: str) -> dict:
     m = _map_module(ctx, module)
     if m and m.get("unit_test_task"):
         d = ctx.profile.commands.defaults
-        return {"task": m["unit_test_task"], "compile_task": m.get("compile_task") or d.get("compile_task"),
+        return {"task": m["unit_test_task"],
+                "compile_task": m.get("compile_task") or compile_task_for(m["unit_test_task"]) or d.get("compile_task"),
                 "lint_task": m.get("lint_task") or d.get("lint_task"), "known": True}
     return discover_tasks(ctx, module)
 

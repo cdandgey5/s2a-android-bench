@@ -55,16 +55,25 @@ def ticket_size(md: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------- locate
-PATH_TOKEN = re.compile(r"`?([A-Za-z]:[\\/][^\s`—|,]+|[\w.\-]+(?:[\\/][\w.\-@$]+)+\.\w+)`?")
+# a Windows drive path (not the "s://" inside a URL) or a relative path with a file extension
+PATH_TOKEN = re.compile(r"`?((?<![\w/])[A-Za-z]:[\\/](?![\\/])[^\s`—|,]+|[\w.\-]+(?:[\\/][\w.\-@$]+)+\.\w+)`?")
+NEW_MARK = re.compile(r"\((?:new|to (?:be )?create[d]?)\)|\bnew file\b|\bto be created\b|\bdoes not exist yet\b", re.I)
 
 
-def locate_candidates(md: str) -> list[str]:
+def locate_candidates(md: str, *, include_new: bool = True) -> list[str]:
+    """Paths of the ranked candidates: the first path-like token of each bullet, skipping URLs and elided paths
+    (`a/.../B.java`); with include_new=False, bullets marked as files to create are left out."""
     body = section(md, "Candidates") or md
     out = []
     for item in bullets(body):
-        m = PATH_TOKEN.search(item)
-        if m:
-            out.append(m.group(1).rstrip(".:;"))
+        if not include_new and NEW_MARK.search(item):
+            continue
+        for m in PATH_TOKEN.finditer(item):
+            tok, start = m.group(1).rstrip(".:;"), m.start(1)
+            if "://" in item[max(0, start - 8):start + 3] or "..." in tok or "…" in tok:
+                continue
+            out.append(tok)
+            break
     return out
 
 

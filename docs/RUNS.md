@@ -175,3 +175,29 @@ Bring-up runs (D-051): `0224` stopped in the map setup (max_turns before the gat
 | | **`20261019-0238-s2a-e2e` total (1 trials, 0 resolved)** | | mean 0 s | **82** | **28,683** | **1,532,544** | **178,457** | **1.1541** | 0 | incl. one-time setup |
 | 03:10 | `20261019-0310-s2a-e2e` s2a e2e antennapod-0001 | claude-sonnet-5-5 | first [4, 'timeout'], resume [0, 'completed'], 53 turns, 12 calls | 82 | 22,443 | 1,196,413 | 203,631 | 1.1588 | 0 | resolved=True; verdict ACCEPT; five-hour 0.66 → 0.68, seven-day 0.18 |
 | | **`20261019-0310-s2a-e2e` total (1 trials, 1 resolved)** | | mean 0 s | **82** | **22,443** | **1,196,413** | **203,631** | **1.1588** | 0 | incl. one-time setup |
+
+## 2026-10-19 — Phase 6 dev5 bring-up run (s2a, s2a-nomap, s2a-noverify)
+
+`20261019-0337-dev5-s2a-1`: 18 trials through `scripts/run_paced.py` (one usage-limit pause, resumed after the 06:10 reset); audit PASS. **Bring-up, not a measurement (D-052):** 6 trials stopped at a faulty locate gate and every `s2a-nomap` compile gate failed on a null task name. Resolved: s2a 3/6, s2a-noverify 5/6, s2a-nomap 0/6.
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 03:37 | `20261019-0337-dev5-s2a-1` s2a/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 26 turns, 362 s | 40 | 11,904 | 497,369 | 124,980 | 0.6688 | 0 | resolved=True; nudges 0; five-hour 0.77 → 0.78, seven-day 0.19; bring-up (D-052) |
+| 04:19 | `20261019-0337-dev5-s2a-1` s2a/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 37 turns, 377 s | 48 | 14,833 | 696,114 | 133,546 | 0.7522 | 0 | resolved=True; nudges 0; five-hour 0.91 → 0.93, seven-day 0.21; bring-up (D-052) |
+| 06:28 | `20261019-0337-dev5-s2a-1` s2a/antennapod-0002/t1 | claude-sonnet-5-5 | agent_error, 13 turns, 123 s | 18 | 6,099 | 258,302 | 49,758 | 0.2859 | 0 | resolved=False; nudges 0; five-hour 0.07 → 0.08, seven-day 0.22; bring-up (D-052) |
+| 07:08 | `20261019-0337-dev5-s2a-1` s2a/antennapod-0003/t1 | claude-sonnet-5-5 | agent_error, 12 turns, 89 s | 12 | 6,499 | 186,728 | 41,843 | 0.2511 | 0 | resolved=False; nudges 0; five-hour 0.24 → 0.25, seven-day 0.23; bring-up (D-052) |
+| 08:11 | `20261019-0337-dev5-s2a-1` s2a/antennapod-0004/t1 | claude-sonnet-5-5 | agent_error, 17 turns, 136 s | 22 | 8,981 | 374,000 | 75,264 | 0.4283 | 0 | resolved=False; nudges 0; five-hour 0.5 → 0.52, seven-day 0.26; bring-up (D-052) |
+| 08:22 | `20261019-0337-dev5-s2a-1` s2a/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 34 turns, 524 s | 48 | 27,147 | 751,015 | 170,651 | 1.0293 | 0 | resolved=True; nudges 0; five-hour 0.62 → 0.65, seven-day 0.27; bring-up (D-052) |
+| 03:50 | `20261019-0337-dev5-s2a-1` s2a-nomap/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 56 turns, 590 s | 84 | 18,598 | 1,026,746 | 139,052 | 0.8450 | 0 | resolved=False; nudges 0; five-hour 0.83 → 0.82, seven-day 0.2; bring-up (D-052) |
+| 06:12 | `20261019-0337-dev5-s2a-1` s2a-nomap/antennapod-0001/t1 | claude-sonnet-5-5 | agent_error, 13 turns, 96 s | 16 | 4,790 | 195,802 | 42,655 | 0.2381 | 0 | resolved=False; nudges 0; five-hour 0 → 0.02, seven-day 0.21; bring-up (D-052) |
+| 06:32 | `20261019-0337-dev5-s2a-1` s2a-nomap/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 79 turns, 866 s | 114 | 28,606 | 1,491,212 | 191,573 | 1.2017 | 0 | resolved=False; nudges 0; five-hour 0.17 → 0.16, seven-day 0.23; bring-up (D-052) |
+| 07:11 | `20261019-0337-dev5-s2a-1` s2a-nomap/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 114 turns, 1269 s | 132 | 72,407 | 2,515,203 | 296,287 | 2.1610 | 0 | resolved=False; nudges 0; five-hour 0.38 → 0.34, seven-day 0.24; bring-up (D-052) |
+| 08:15 | `20261019-0337-dev5-s2a-1` s2a-nomap/antennapod-0004/t1 | claude-sonnet-5-5 | agent_error, 21 turns, 143 s | 24 | 9,744 | 340,494 | 61,173 | 0.3762 | 0 | resolved=False; nudges 0; five-hour 0.53 → 0.54, seven-day 0.26; bring-up (D-052) |
+| 08:39 | `20261019-0337-dev5-s2a-1` s2a-nomap/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 82 turns, 897 s | 114 | 55,391 | 1,856,915 | 242,401 | 1.7094 | 0 | resolved=False; nudges 0; five-hour 0.76 → 0.74, seven-day 0.27; bring-up (D-052) |
+| 04:07 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 23 turns, 318 s | 34 | 10,937 | 412,936 | 105,413 | 0.5724 | 0 | resolved=True; nudges 0; five-hour 0.87 → 0.86, seven-day 0.2; bring-up (D-052) |
+| 06:15 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 31 turns, 423 s | 46 | 14,930 | 629,409 | 152,180 | 0.8211 | 0 | resolved=True; nudges 0; five-hour 0.06 → 0.05, seven-day 0.22; bring-up (D-052) |
+| 06:53 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 38 turns, 477 s | 56 | 18,704 | 790,699 | 147,868 | 0.8577 | 0 | resolved=True; nudges 0; five-hour 0.23 → 0.22, seven-day 0.23; bring-up (D-052) |
+| 07:44 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 62 turns, 656 s | 72 | 34,773 | 1,192,806 | 196,902 | 1.2548 | 0 | resolved=True; nudges 0; five-hour 0.46 → 0.45, seven-day 0.25; bring-up (D-052) |
+| 08:19 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0004/t1 | claude-sonnet-5-5 | agent_error, 15 turns, 97 s | 12 | 6,450 | 196,553 | 44,963 | 0.2640 | 0 | resolved=False; nudges 0; five-hour 0.56 → 0.58, seven-day 0.26; bring-up (D-052) |
+| 09:00 | `20261019-0337-dev5-s2a-1` s2a-noverify/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 31 turns, 535 s | 48 | 26,839 | 699,542 | 166,225 | 1.0033 | 0 | resolved=True; nudges 0; five-hour 0.83 → 0.81, seven-day 0.28; bring-up (D-052) |
+| | **`20261019-0337-dev5-s2a-1` total (18 trials, 8 resolved)** | | mean 443 s | **940** | **377,632** | **14,111,845** | **2,382,734** | **14.7203** | 0 | incl. one-time setup; bring-up (D-052) |
