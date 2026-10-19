@@ -130,6 +130,9 @@ def render(ctx: Ctx, template: str, **kw: str) -> list[str]:
 
 
 def run_logged(ctx: Ctx, argv: list[str], label: str, *, cwd: Path | None = None):
+    if ctx.gate_seq == 0 and (ctx.run_dir / "gates").exists():  # a resumed run continues the numbering
+        ctx.gate_seq = max((int(p.name[:3]) for p in (ctx.run_dir / "gates").iterdir() if p.name[:3].isdigit()),
+                           default=0)
     ctx.gate_seq += 1
     out = ctx.run_dir / "gates" / f"{ctx.gate_seq:03d}-{label}"
     r = ctx.plat.run(argv, cwd=cwd or ctx.repo, out_dir=out, timeout_s=ctx.pipeline.gate_timeout_s)

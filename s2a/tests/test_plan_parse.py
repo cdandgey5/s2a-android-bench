@@ -47,3 +47,16 @@ def test_locate_candidates() -> None:
     md = ("## Candidates (ranked)\n1. playback/src/main/java/a/B.java — B.speed — reads the pref\n"
           f"2. `{WIN_PATH}` — X — evidence\n3. no path here\n## Call graph\n- x")
     assert parse.locate_candidates(md) == ["playback/src/main/java/a/B.java", WIN_PATH]
+
+
+def test_new_test_methods_compare_whole_files_not_diff_lines() -> None:
+    from s2a.stages.reproduce import new_test_methods
+
+    before = "class SpeedTest {\n    @Test\n    void loads() { assertEquals(1, 1); }\n}\n"
+    # a new test inserted above an existing one whose line was also touched: in the diff the existing signature is
+    # an added line after an added @Test, and the new one may follow a context @Test
+    now = ("class SpeedTest {\n    @Test\n    void speedPersists() { assertEquals(1.5f, new Speed().load()); }\n\n"
+           "    @Test\n    void loads() { assertEquals(1, 1 ); }\n}\n")
+    assert new_test_methods(now, before) == ["speedPersists"]
+    kt = "class T {\n    @Test\n    fun `keeps speed`() {}\n    @Test fun other() {}\n}\n"
+    assert new_test_methods(kt, "") == ["keeps speed", "other"]

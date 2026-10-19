@@ -134,6 +134,8 @@ def test_interrupt_then_resume_continues_at_the_unfinished_task(env) -> None:
     assert code2 == 0 and [n for _, n in FakeDriver.log][0].startswith("implement-T2")
     assert "implement-T1" not in [n for _, n in FakeDriver.log]
     assert git(repo, "log", "--format=%s").count("s2a: T1 -") == 1
+    seqs = [p.name[:3] for p in (ctx2.run_dir / "gates").iterdir()]
+    assert len(seqs) == len(set(seqs))      # the resumed process continued the gate numbering
 
 
 def test_reject_then_fix_then_accept(env) -> None:

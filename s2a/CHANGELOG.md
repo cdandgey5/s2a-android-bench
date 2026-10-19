@@ -23,3 +23,5 @@ the audit trail.
 - intake, locate, spec and plan retry once on a gate failure; no retry with fewer than 5 stage turns left.
 - The reproduction gate reports the end of the Gradle output when the tests produced no results.
 - Interrupted calls are recorded; slash-command names are not questions (D-050).
+- Reproduction tests are the @Test methods a file has now and did not have at HEAD (whole-file comparison; the
+  diff-line rule picked up an existing passing test in e2e `20261019-0310`); gate log numbering continues after a resume.

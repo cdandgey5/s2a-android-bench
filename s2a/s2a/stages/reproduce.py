@@ -21,13 +21,10 @@ RESULT = {"bug": "failing_test_written", "refactor": "characterization_written",
 TEST_FILE = re.compile(r"(?:^|/)src/test\w*/(?:java|kotlin)/(.+)\.(?:java|kt)$")
 
 
-def _new_test_methods(diff_text: str) -> list[str]:
-    """Names of test functions on added lines that follow an added @Test line."""
+def test_methods(source: str) -> list[str]:
+    """Names of the @Test functions in a Java/Kotlin test source (the first signature after each @Test)."""
     names, armed = [], False
-    for ln in diff_text.splitlines():
-        if not ln.startswith("+") or ln.startswith("+++"):
-            continue
-        body = ln[1:]
+    for body in source.splitlines():
         if re.search(r"@Test\b", body):
             armed = True
         m = re.search(r"\bfun\s+`([^`]+)`\s*\(|\bfun\s+(\w+)\s*\(|\bvoid\s+(\w+)\s*\(", body)
@@ -35,6 +32,13 @@ def _new_test_methods(diff_text: str) -> list[str]:
             names.append(next(g for g in m.groups() if g))
             armed = False
     return names
+
+
+def new_test_methods(now: str, before: str) -> list[str]:
+    """@Test functions the file has now and did not have at HEAD (D-051: compared by name over whole files, since a
+    diff can show an existing method as added, or a new one as context, depending on how git aligns it)."""
+    old = set(test_methods(before))
+    return [n for n in test_methods(now) if n not in old]
 
 
 def build_manifest(ctx: Ctx) -> tuple[dict, list[str]]:
@@ -48,7 +52,8 @@ def build_manifest(ctx: Ctx) -> tuple[dict, list[str]]:
                 continue   # fixtures/resources: committed with the tests, not run as tests
             cls = m.group(1).replace("/", ".")
             module = gradle.module_of_path(ctx, p) or ":app"
-            methods = _new_test_methods(gitutil.diff(ctx.repo, "HEAD", paths=[p]))
+            before = gitutil.git(ctx.repo, "show", f"HEAD:{p}", check=False)   # "" for a new file
+            methods = new_test_methods((ctx.repo / p).read_text(encoding="utf-8", errors="replace"), before)
             if methods:
                 tests += [{"path": p, "module": module, "class": cls, "id": f"{cls}.{n}"} for n in methods]
             else:
