@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Callable, Literal
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class Job:
     arm: str
     task: str

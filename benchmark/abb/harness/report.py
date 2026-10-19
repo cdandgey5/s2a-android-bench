@@ -81,6 +81,10 @@ def render(run_id: str) -> str:
     by_arm: dict[str, list[dict]] = {}
     for r in rs:
         by_arm.setdefault(r["arm"], []).append(r)
+    if aud and not aud.get("ok") or man.get("audit_ok") is False:   # phase 8 step 10: no headline numbers
+        by_arm = {}
+        lines.append("**Withheld: `abb audit` fails for this run** (the transcripts do not reproduce run.json, or a "
+                     "token leaked). The per-trial rows above are unverified; fix and re-run `abb audit` first.")
     lines += ["| arm | resolved | mean est. USD | total est. USD | mean duration s | mean turns |", "|---|---|---|---|---|---|"]
     for arm, rr in by_arm.items():
         costs = [r["cost_usd"] if r["cost_usd"] is not None else (r["cost_usd_imputed"] or 0) for r in rr]

@@ -1,0 +1,10 @@
+# `abb run --dry-run`: mean est. USD per trial per arm (Claude Code's client-side estimate; no bill under the
+# subscription). From valid dev5 runs on claude-sonnet-5-5 (docs/RUNS.md); update when new runs change them.
+model: claude-sonnet-5-5
+per_trial_usd:
+  plain: 0.20            # 20261018-0429-dev5-plain-1, -0456-dev5-plain-2
+  plain-guided: 0.22     # 20261018-1010-dev5-guided-1
+  speckit: 0.72          # 20261019-0112-dev5-speckit-2
+  s2a: 1.18              # 20261019-1112-dev5-s2a-2
+  s2a-nomap: 0.85
+  s2a-noverify: 0.81

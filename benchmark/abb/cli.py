@@ -400,13 +400,19 @@ def tasks_show(task_id: str) -> None:
 @run_app.callback()
 def run_main(ctx: typer.Context,
              arm: Optional[list[str]] = typer.Option(None, "--arm", help="plain | plain-guided | plain-gate | speckit | speckit-sdd (repeatable)"),
-             tasks: str = typer.Option("dev5", help="dev5 | dev | test | comma-separated ids"),
+             tasks: str = typer.Option("dev5", help="dev5 | dev | test | all | comma-separated ids"),
              trials: int = typer.Option(1), model: str = typer.Option("claude-sonnet-5-5"),
              label: str = typer.Option("run"), grade: bool = typer.Option(True, "--grade/--no-grade"),
              sandbox: str = typer.Option("user", help="user | none (dev only; refused for test tasks)"),
              resume: Optional[str] = typer.Option(None, help="run_id to continue"),
+             parallel: Optional[int] = typer.Option(None, help="workers, one sandbox slot user each (default 1; "
+                                                    "a resume keeps the run's value)"),
+             max_usd: Optional[float] = typer.Option(None, help="stop launching trials once the run's est. USD crosses this"),
+             dry_run: bool = typer.Option(False, "--dry-run", help="print the matrix and its estimated cost, run nothing"),
+             allow_no_canary: bool = typer.Option(False, help="run a matrix without the usage-limit canary (recorded)"),
+             max_pause_h: float = typer.Option(48.0, help="give up (aborted: usage_limit) after pausing this long"),
              allow_env_drift: bool = typer.Option(False), profile: Optional[str] = typer.Option(None)) -> None:
-    """Run arms x tasks x trials sequentially (Phase 4 minimal runner); results under ABB_RESULTS_DIR/<run_id>."""
+    """Run arms x tasks x trials on --parallel workers; results under ABB_RESULTS_DIR/<run_id> (phase 8)."""
     if ctx.invoked_subcommand is not None:
         return
     import json
@@ -419,24 +425,45 @@ def run_main(ctx: typer.Context,
         m = json.loads((paths.results_dir() / resume / "manifest.json").read_text(encoding="utf-8"))
         arms, ids, trials, model = m["arms"], m["task_ids"], m["trials"], m["limits"]["model"]
         label, run_id, task_set = m["label"], resume, m["task_set"]
+        parallel = parallel or m.get("parallel") or 1
+        max_usd = max_usd if max_usd is not None else m.get("max_usd")
+        allow_no_canary = allow_no_canary or bool(m.get("allow_no_canary"))
+        grade = bool(m.get("grade", grade))
     else:
         if not arm:
             typer.echo("give at least one --arm", err=True)
             raise typer.Exit(2)
         arms, ids, run_id, task_set = list(arm), runmod.resolve_tasks(tasks), runmod.new_run_id(label), tasks
+    if dry_run:
+        typer.echo(json.dumps(runmod.dry_run(arms, ids, trials), indent=2))
+        return
     if sandbox == "none" and any(load_task(t).split == "test" for t in ids):
         typer.echo("--sandbox none is refused for split: test tasks (D-009)", err=True)
         raise typer.Exit(2)
     r = runmod.Runner(run_id=run_id, label=label, arms=arms, tasks=ids, trials=trials, model=model, grade=grade,
-                      sandbox=sandbox, allow_env_drift=allow_env_drift, profile=profile, task_set=task_set)
+                      sandbox=sandbox, allow_env_drift=allow_env_drift, profile=profile, task_set=task_set,
+                      parallel=parallel or 1, max_usd=max_usd, allow_no_canary=allow_no_canary, max_pause_h=max_pause_h)
     out = r.run()
-    typer.echo(f"run {out['run_id']} finished; aborted_reason={out['aborted_reason']}")
+    typer.echo(f"run {out['run_id']} finished; aborted_reason={out['aborted_reason']}; est. USD {out['spent_usd']}")
     typer.echo(f"results: {paths.results_dir() / out['run_id']}")
 
 
 @run_app.command("status")
-def run_status(run_id: Optional[str] = typer.Argument(None)) -> None:
-    _stub(8)
+def run_status(run_id: str = typer.Argument(..., help="the run to describe")) -> None:
+    """Done / running / pending trials, est. USD so far, pause state, peak memory of the agents."""
+    import json
+
+    from abb.harness import run as runmod
+
+    typer.echo(json.dumps(runmod.status(run_id), indent=2))
+
+
+@run_app.command("abort")
+def run_abort(run_id: str = typer.Argument(...)) -> None:
+    """Stop launching trials (running ones finish); `abb run --resume <run_id>` continues later."""
+    from abb.harness import run as runmod
+
+    typer.echo(f"stop file written: {runmod.abort(run_id)}")
 
 
 @app.command("grade")
