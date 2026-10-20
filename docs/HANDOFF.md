@@ -12,10 +12,10 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `8` (runner), **waiting for the owner's UAC step**: `abb sandbox setup --slots 2` (creates `abb-agent2`, its grants and firewall rule; D-037). Built and committed: scheduler, cost meter, manifest, runner on top (slot users per worker, setup lock, pause/probe, audit in the loop), `abb run --parallel/--max-usd/--dry-run`, `abb run status|abort`, report withholds totals on a failed audit; 151 tests pass. Verified on real trials: `20261019-2337-p8-smoke` (1 trial, slot 1, audit in the loop OK) and the budget gate `20261019-2341-p8-budget-test` (stopped after the trial that crossed $0.50: aborted_reason budget).
-- Last commit: `phase 8: wip — run CLI …` + this handoff
+- Phase: `8` **passed 2026-10-20** (README row 8, RUNS.md, D-054). Next in RUN-ALL order: **Phase 6 step 18 (S2A tuning, `ABB_TUNING=1`) + Phase 9 (analysis)**; hard stop S4 (manual failure labels) inside Phase 9.
+- Last commit: `phase 8: runner …` (`git log -1`)
 - Working tree: clean
-- Date: `2026-10-19`
+- Date: `2026-10-20`
 
 ## What exists and is verified
 
@@ -41,7 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. Owner (hard stop, UAC): in PowerShell, `cd $env:USERPROFILE\abb-src\benchmark; .\.venv\Scripts\abb.exe sandbox setup --slots 2`, accept the UAC prompt. The agent never runs it (system/security settings).
-2. Then `abb sandbox check --no-smoke` (every slot row OK), and the resume gate: `abb run --arm plain --arm s2a --tasks dev5 --trials 2 --parallel 2 --model claude-sonnet-5-5 --label p8-resume-test --grade`, interrupted (Ctrl+C) after ~3 trials complete, then `abb run --resume <run_id>`: completed trials skipped, the rest finished; no memory-limit kills (`abb run status` peak memory). Mind the five-hour window (~$16 est. for the 24 trials).
-3. RUNS.md (smoke, budget, resume runs; parallel memory numbers), README, commit `phase 8: runner`.
-4. Then Phase 6 step 18 (tuning, `ABB_TUNING=1`) + Phase 9.
+1. Phase 6 step 18 (tuning): every tuning session runs with `$env:ABB_TUNING=1` (test ids refused); tasks `split: dev` only (10: dev5 + wikipedia-0002/0006/0007/0009), >= 2 trials per change, one change at a time, before/after in `s2a/CHANGELOG.md`; first calibrate the verifier (6 dev diffs, 3 resolved + 3 not; agreement >= 5/6 or revise `verify.md`). Candidate first change from the gate runs: `locate`/`plan` name files to create without `(new)` (gate failures in 20261019-1112 and 20261020-0036).
+2. Phase 9 (`phases/phase-9-analysis.md`): analysis code; S4 = the owner labels failures.
+3. Then Phase 10 (S5, S6).
+- Runner: `abb run … --parallel 2` (slots exist), `abb run status|abort`, `--dry-run`; `scripts/run_paced.py` is no longer needed (the scheduler pauses itself).
