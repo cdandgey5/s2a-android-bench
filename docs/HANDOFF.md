@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `8` **passed 2026-10-20** (README row 8, RUNS.md, D-054). Next in RUN-ALL order: **Phase 6 step 18 (S2A tuning, `ABB_TUNING=1`) + Phase 9 (analysis)**; hard stop S4 (manual failure labels) inside Phase 9.
-- Last commit: `phase 8: runner …` (`git log -1`)
+- Phase: `6 step 18 (tuning) + 9 (analysis)`. Phase 9 code done and committed: `stats.py` (known-answer tests), full deterministic `report.py` (`abb report <run> [--out]`, `abb report-diff`), `charts.py`, blind LLM labeller (`labeller.py`, `abb labels init|show|set|llm|agreement`; tried on 2 failures, $0.035). 159 tests pass. **Waiting on the owner's quota decision** before the dev-set baseline run: the seven-day window was at 59 % on 2026-10-20 05:50 UTC (resets Sun 2026-10-25 19:00 UTC) and the dev baseline (plain + speckit + s2a, 10 dev tasks x 2) is est. $42 ≈ 90 % of a week on Pro. Options given: A wait for the reset (default), B a small run now, C move to Max.
+- Last commit: `phase 9: wip — stats …` + this handoff
 - Working tree: clean
 - Date: `2026-10-20`
 
@@ -41,7 +41,8 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. Phase 6 step 18 (tuning): every tuning session runs with `$env:ABB_TUNING=1` (test ids refused); tasks `split: dev` only (10: dev5 + wikipedia-0002/0006/0007/0009), >= 2 trials per change, one change at a time, before/after in `s2a/CHANGELOG.md`; first calibrate the verifier (6 dev diffs, 3 resolved + 3 not; agreement >= 5/6 or revise `verify.md`). Candidate first change from the gate runs: `locate`/`plan` name files to create without `(new)` (gate failures in 20261019-1112 and 20261020-0036).
-2. Phase 9 (`phases/phase-9-analysis.md`): analysis code; S4 = the owner labels failures.
-3. Then Phase 10 (S5, S6).
-- Runner: `abb run … --parallel 2` (slots exist), `abb run status|abort`, `--dry-run`; `scripts/run_paced.py` is no longer needed (the scheduler pauses itself).
+1. Owner's quota answer (A/B/C). Then the dev-set baseline under `$env:ABB_TUNING=1`: `abb run --arm plain --arm speckit --arm s2a --tasks dev --trials 2 --parallel 2 --label dev-baseline-1 --grade` (first Wikipedia trials for Spec Kit and s2a: their one-time setups run first); controls `--arm plain-guided --arm plain-gate --trials 1` after it if the quota allows.
+2. Phase 9 on that run: `abb report`, `abb labels init`, then **S4**: 20–30 blind bundles for the owner (`abb labels show`), or `skip` (labeller stays uncalibrated); `abb labels llm --calibrate`; `abb labels agreement`; determinism check (`--out r1/r2`, `report-diff`); commit `phase 9: analysis`.
+3. Tuning (Phase 6 step 18) on `split: dev` only with `ABB_TUNING=1`: verifier calibration (6 dev diffs), then one change at a time, >= 2 trials, before/after in `s2a/CHANGELOG.md`. First candidate: locate/plan naming files to create without `(new)`.
+4. Then Phase 10 (S5, S6). Budget it before S5: the held-out run is pinned to Opus.
+- D-055 (open): one parallel trial lost its Gradle distribution's readability mid-trial; watch for it.
