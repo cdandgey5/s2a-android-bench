@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `6` **passed 2026-10-19** (bring-up; README row 6). Next in RUN-ALL order: **Phase 8** (runner), then Phase 6 step 18 (tuning, `ABB_TUNING=1`) + Phase 9, then Phase 10.
-- Last commit: `phase 6: s2a orchestrator + arm …` (`git log -1`)
+- Phase: `8` (runner), **waiting for the owner's UAC step**: `abb sandbox setup --slots 2` (creates `abb-agent2`, its grants and firewall rule; D-037). Built and committed: scheduler, cost meter, manifest, runner on top (slot users per worker, setup lock, pause/probe, audit in the loop), `abb run --parallel/--max-usd/--dry-run`, `abb run status|abort`, report withholds totals on a failed audit; 151 tests pass. Verified on real trials: `20261019-2337-p8-smoke` (1 trial, slot 1, audit in the loop OK) and the budget gate `20261019-2341-p8-budget-test` (stopped after the trial that crossed $0.50: aborted_reason budget).
+- Last commit: `phase 8: wip — run CLI …` + this handoff
 - Working tree: clean
 - Date: `2026-10-19`
 
@@ -41,19 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-Phase 8 is in progress (usage limit reached mid-build, 2026-10-19). Done and committed as WIP:
-`abb/harness/scheduler.py` (worker pool, job order, budget/abort/pause/probe), `costmeter.py`, `manifest.py`,
-`run.py` rewritten on top of them (slot users per worker, setup lock, Outcome per trial, scheduler probe,
-audit at the end, `status()`, `abort()`, `dry_run()`), sandbox slots (`abb sandbox setup --slots N`, the
-elevated script loops over slot users, `sandbox check` covers every slot), `Workspace(run_as=...)` + peak memory,
-platform `ac_standby_timeout_s`. Existing tests pass (138); none of the new code has run against a real trial yet.
-
-Still to do, in order:
-1. CLI: `abb run` options `--parallel`, `--max-usd`, `--dry-run`, `--allow-no-canary`, `--max-pause-h` (pass to Runner;
-   on `--resume` keep the manifest's values unless given); `abb run status <id>` -> `run.status()`, `abb run abort <id>` -> `run.abort()`.
-2. `config/cost_estimates.yaml` (`per_trial_usd`: plain 0.21, plain-guided 0.22, speckit 0.72, s2a 1.18, s2a-nomap 0.85, s2a-noverify 0.81).
-3. `tests/test_scheduler.py` (fake run_job/clock/sleep/probe): order, resume rule (`complete`), retry-once on harness_error,
-   budget stop, abort file, usage-limit pause -> probe -> resume, pause_at.
-4. `abb report` refuses headline numbers when `manifest.audit_ok` is false.
-5. Ask the owner for the UAC step: `abb sandbox setup --slots 2`, then `abb sandbox check`.
-6. Gate runs (phases/phase-8-runner.md), RUNS.md, README, commit `phase 8: runner`.
+1. Owner (hard stop, UAC): in PowerShell, `cd $env:USERPROFILE\abb-src\benchmark; .\.venv\Scripts\abb.exe sandbox setup --slots 2`, accept the UAC prompt. The agent never runs it (system/security settings).
+2. Then `abb sandbox check --no-smoke` (every slot row OK), and the resume gate: `abb run --arm plain --arm s2a --tasks dev5 --trials 2 --parallel 2 --model claude-sonnet-5-5 --label p8-resume-test --grade`, interrupted (Ctrl+C) after ~3 trials complete, then `abb run --resume <run_id>`: completed trials skipped, the rest finished; no memory-limit kills (`abb run status` peak memory). Mind the five-hour window (~$16 est. for the 24 trials).
+3. RUNS.md (smoke, budget, resume runs; parallel memory numbers), README, commit `phase 8: runner`.
+4. Then Phase 6 step 18 (tuning, `ABB_TUNING=1`) + Phase 9.
