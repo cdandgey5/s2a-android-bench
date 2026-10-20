@@ -8,7 +8,6 @@ makes each variant's edit, and records `git diff --binary base` as the fixture.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from abb import paths
 from abb.config import load_repo, load_task

@@ -12,7 +12,7 @@ import pytest
 
 from abb import paths
 from abb.config import load_repo, load_sandbox, load_task
-from abb.harness.platform import ProcSpec, get_platform
+from abb.harness.platform import get_platform
 from abb.harness.workspace import Workspace
 from abb.util import stamp
 

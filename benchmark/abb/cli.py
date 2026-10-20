@@ -519,11 +519,25 @@ def grade_patch(task_id: str, patch: Path, out: Optional[Path] = typer.Option(No
 
 
 @app.command("report")
-def report(run_id: str) -> None:
-    """Minimal results table (Phase 4; Phase 9 adds CIs and charts) -> <run>/report/summary.md."""
+def report(run_id: str, out: Optional[Path] = typer.Option(None, help="write here instead of <results>/<run_id>/report"),
+           quiet: bool = typer.Option(False, help="do not print summary.md")) -> None:
+    """summary.md + tables/*.csv + charts/ from the run's files alone (deterministic; phase 9)."""
     from abb.harness import report as rep
 
-    typer.echo(rep.render(run_id))
+    text = rep.render(run_id, out=out)
+    if not quiet:
+        typer.echo(text)
+
+
+@app.command("report-diff")
+def report_diff(a: Path, b: Path) -> None:
+    """Compare two report directories byte for byte: prints `identical` or the files that differ."""
+    from abb.harness import report as rep
+
+    d = rep.diff_dirs(a, b)
+    typer.echo("identical" if not d else "differ:\n  " + "\n  ".join(d))
+    if d:
+        raise typer.Exit(1)
 
 
 @app.command("split")
@@ -538,14 +552,71 @@ def split(seed: int = typer.Option(20261101), dev_frac: float = typer.Option(0.3
     typer.echo(f"dev {len(doc['dev'])} / test {len(doc['test'])}; wrote tasks/split.yaml")
 
 
-@labels_app.command("prepare")
-def labels_prepare(run_id: str) -> None:
-    _stub(9)
+def _labels_guard(run_id: str, ids: list[str] | None = None) -> None:
+    """ABB_TUNING=1: labels of held-out (split: test) tasks are neither shown nor labelled (fairness-protocol.md)."""
+    from abb.harness import labeller
+    from abb.harness.tasks import refuse_held_out_while_tuning
+
+    items = labeller.load(run_id)["items"]
+    refuse_held_out_while_tuning(sorted({items[i]["task"] for i in (ids or items) if i in items}))
+
+
+@labels_app.command("init")
+def labels_init(run_id: str) -> None:
+    """A skeleton item (opaque id) for every unresolved trial of the run -> <run>/labels.json."""
+    from abb.harness import labeller
+
+    data = labeller.init(run_id)
+    todo = [i for i, v in sorted(data["items"].items()) if not v.get("primary")]
+    typer.echo(f"{len(data['items'])} unresolved trial(s); unlabelled: {len(todo)}")
+    for i in todo:
+        typer.echo(f"  {i}")
+
+
+@labels_app.command("show")
+def labels_show(run_id: str, item: str, with_transcript: bool = typer.Option(False, help="secondary-flag pass only")) -> None:
+    """The blind bundle of one item: ticket, scoped diff, grade summary (no arm name, no artifacts)."""
+    from abb.harness import labeller
+
+    _labels_guard(run_id, [item])
+    typer.echo(labeller.bundle(run_id, item, with_transcript=with_transcript))
+
+
+@labels_app.command("set")
+def labels_set(run_id: str, item: str, label: str,
+               secondary: Optional[str] = typer.Option(None, help="comma-separated secondary flags")) -> None:
+    """Record a manual label (source: manual)."""
+    from abb.harness import labeller
+
+    it = labeller.set_manual(run_id, item, label, [s.strip() for s in (secondary or "").split(",") if s.strip()])
+    typer.echo(f"{item}: {it['primary']} (manual)")
+
+
+@labels_app.command("llm")
+def labels_llm(run_id: str, calibrate: bool = typer.Option(False, help="label the manually labelled items (agreement)"),
+               model: Optional[str] = typer.Option(None, help="default: the run's pinned model")) -> None:
+    """The headless LLM labeller on every unlabelled item (or the manual set with --calibrate)."""
+    import json
+
+    from abb import paths
+    from abb.harness import labeller
+
+    _labels_guard(run_id)
+    m = json.loads((paths.results_dir() / run_id / "manifest.json").read_text(encoding="utf-8"))
+    res = labeller.run_llm(run_id, model=model or m["limits"]["model"], calibrate=calibrate)
+    typer.echo(json.dumps(res))
+    if calibrate:
+        typer.echo(json.dumps(labeller.agreement(run_id), indent=2))
 
 
 @labels_app.command("agreement")
 def labels_agreement(run_id: str) -> None:
-    _stub(9)
+    """Manual vs LLM primary labels: agreement %, confusion, per arm (stored as the run's calibration)."""
+    import json
+
+    from abb.harness import labeller
+
+    typer.echo(json.dumps(labeller.agreement(run_id), indent=2))
 
 
 @app.command("audit")
