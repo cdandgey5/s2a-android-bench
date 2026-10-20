@@ -184,10 +184,14 @@ class Runner:
         self.preflight()
         stale = paths.work_dir() / self.run_id  # a killed harness leaves a live trial open to the sandbox user (D-037)
         if stale.exists():
-            # keep the verbatim streams of the interrupted processes first: they exist only in agent-out/
-            for so in stale.glob("*/*/t*/agent-out/*/stdout.txt"):
-                trial = so.parents[2]
-                dst = self.root / trial.relative_to(stale) / "transcript" / f"{so.parent.name}.salvaged.jsonl"
+            # keep the verbatim streams of the interrupted processes first: they exist only in the workspace —
+            # agent-out/ (the harness's own calls) and work/.s2a/runs/*/agent-out/ (calls an orchestrator made).
+            # They go to <run>/salvaged/<stamp>/..., outside the trial dir, which the re-run wipes.
+            dst_root = self.root / "salvaged" / stamp()
+            for so in [*stale.glob("*/*/t*/agent-out/*/stdout.txt"),
+                       *stale.glob("*/*/t*/work/.s2a/runs/*/agent-out/*/stdout.txt")]:
+                rel = so.relative_to(stale)
+                dst = dst_root / rel.parent / "stdout.jsonl"
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(so, dst)
                 self.event(event="stream_salvaged", file=str(dst.relative_to(self.root)), bytes=so.stat().st_size)
