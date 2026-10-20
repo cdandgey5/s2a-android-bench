@@ -34,3 +34,12 @@ the audit trail.
 ### 2026-10-19 — after the Phase 6 gate run (D-053)
 - dev5 × 1 (`20261019-1112-dev5-s2a-2`, s2a `ed8f6f9`): s2a 6/6, s2a-nomap 5/6, s2a-noverify 4/6 resolved.
 - locate candidates skip host names; a failed read-only artifact is reported from the final answer.
+
+## Tuning (Phase 6 step 18; `split: dev` only, `ABB_TUNING=1`)
+
+### 2026-10-20 — verifier calibration, preliminary (no change made)
+- Final verify verdict vs the hidden-test grade on every s2a / s2a-nomap trial with a verdict in
+  `20261019-1112-dev5-s2a-2` and `20261020-0036-p8-resume-test` (dev5): 21/22 agree (ACCEPT & resolved 20,
+  REJECT & unresolved 1, REJECT & resolved 1: antennapod-0003 t1, the trial that hit its time limit).
+- Above the 5/6 bar, but only 2 unresolved trials had a verdict: REJECT is barely tested. Re-check on the
+  dev baseline (`dev-baseline-1`, Wikipedia tasks included) before deciding anything about `verify.md`.
