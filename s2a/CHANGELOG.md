@@ -43,3 +43,15 @@ the audit trail.
   REJECT & unresolved 1, REJECT & resolved 1: antennapod-0003 t1, the trial that hit its time limit).
 - Above the 5/6 bar, but only 2 unresolved trials had a verdict: REJECT is barely tested. Re-check on the
   dev baseline (`dev-baseline-1`, Wikipedia tasks included) before deciding anything about `verify.md`.
+
+### 2026-10-21 — tuning 1: verify checks the original request (s2a `1ee1ad9`)
+- **Change:** `prompts/verify.md` adds a "Request requirements" section (one R line per behavioural requirement
+  of the original request; R FAIL forces REJECT like AC/UB) and two short scored examples (one REJECT, one
+  ACCEPT); `parse.verdict` counts R lines. New `s2a verify <run>` re-runs the stage (no fix loop).
+- **Why:** on `20261020-2049-dev-baseline-1` the verifier ACCEPTed 2 unresolved s2a trials whose spec had
+  dropped a requirement of the request; the verifier only checked the spec's criteria.
+- **Calibration** (`scripts/verify_calibration.py`, run `20261021-1722-verify-calibration`, 3 resolved + 3
+  unresolved dev trials, verify re-run on each final diff): **4/6 before -> 5/6 after** (bar: 5/6).
+  wikipedia-0006/t1 ACCEPT -> REJECT (R3: completion until June 25 not implemented; R12: the requested field is
+  never used); antennapod-0003/t1 still a false ACCEPT; the 3 resolved stay ACCEPT. Cost est. $0.93.
+- **After-run:** s2a on all dev tasks x 2 against the baseline's s2a (pending).

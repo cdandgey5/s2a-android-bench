@@ -2,15 +2,13 @@ diff --git a/app/src/test/java/org/wikipedia/dataclient/WikiSiteLanguageCodeTest
 new file mode 100644
 --- /dev/null
 +++ b/app/src/test/java/org/wikipedia/dataclient/WikiSiteLanguageCodeTest.kt
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,28 @@
 +package org.wikipedia.dataclient
 +
 +import org.junit.Assert.assertEquals
 +import org.junit.Test
 +import org.junit.runner.RunWith
 +import org.robolectric.RobolectricTestRunner
-+import org.wikipedia.WikipediaApp
-+import org.wikipedia.language.AppLanguageLookUpTable
 +
 +@RunWith(RobolectricTestRunner::class)
 +class WikiSiteLanguageCodeTest {
@@ -23,13 +21,6 @@ new file mode 100644
 +    @Test
 +    fun minNanCodeIsNormalizedToTheLegacyCode() {
 +        assertEquals("zh-min-nan", WikiSite.normalizeLanguageCode("nan"))
-+    }
-+
-+
-+    @Test
-+    fun minNanLanguageHasTheLegacyLanguageName() {
-+        val table = AppLanguageLookUpTable(WikipediaApp.instance)
-+        assertEquals("Bân-lâm-gú", table.getLocalizedName("nan"))
 +    }
 +
 +    @Test

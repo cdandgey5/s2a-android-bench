@@ -64,14 +64,18 @@ def main() -> None:
                         shutil.copyfile(rec_src / "artifacts" / f, rd / f)
                 if (rec_src / "artifacts" / "repro").exists():
                     shutil.copytree(rec_src / "artifacts" / "repro", rd / "repro", dirs_exist_ok=True)
+                ctx = DriverContext(ws=ws, record_dir=rec, run_dir=runner.root, tag=name, token=runner.token or "",
+                                    budget=TrialBudget.start(Limits()), as_agent=True)
+                inputs = s2.write_inputs(ctx, None)          # the trial's own copy went with its workspace
                 st = json.loads((rd / "state.json").read_text(encoding="utf-8"))
                 old = st.get("verdict")
                 st["base_commit"] = ws.git("rev-parse", "base").stdout().strip()
                 st["branch"] = "s2a/calibration"
                 st["exit_code"], st["exit_reason"] = None, None
+                st["repo"] = str(ws.dirs.work)
+                st["append_system_prompt_file"] = str(inputs["environment"])
+                st["map_path"] = str(ws.dirs.work / ".s2a" / "map.md")
                 (rd / "state.json").write_text(json.dumps(st, indent=2), encoding="utf-8")
-                ctx = DriverContext(ws=ws, record_dir=rec, run_dir=runner.root, tag=name, token=runner.token or "",
-                                    budget=TrialBudget.start(Limits()), as_agent=True)
                 r = s2.invoke(ctx, [str(s2.exe()), "verify", s2.RUN_ID, "--repo", str(ws.dirs.work),
                                     "--note", "verifier calibration"], "s2a-verify", 30 * 60)
                 new = (s2.read_state(rd) or {}).get("verdict")

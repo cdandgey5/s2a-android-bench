@@ -35,7 +35,7 @@ drafted_with_model: claude-opus-5-5
 hidden_tests: authored
 validation:
   runs: 3
-  last_validated: '2026-10-18T17:30:18Z'
+  last_validated: '2026-10-21T17:43:29Z'
   env_fingerprint: sha256:55e53532a0e1ab546f08217d4e544c94def16fcb3ace3f7e7cace95fc3320ba4
   p2p_stable:
   - org.wikipedia.analytics.eventplatform.EventPlatformClientTest.testAlwaysInSample

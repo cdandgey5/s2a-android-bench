@@ -63,4 +63,8 @@ counts:
     test: 1
 task_ids_sha256: b3b7f521fc51137f97e85ae9de6a28ca9c172aec4cca1b78a209d3593653dec9
 taskset_sha256_before_split_fields: 9ca43898daed617c435f31ab33c767c4fc8b94622d06a3601dd05985e9afda00
-taskset_sha256: 2eeddcff6d7eb750347da11500cbe3bb9d14646e402414d1ca7822ffe688f61d
+taskset_sha256: 80b55a02e489c1600c2073bd7d943964b8f8580237d7328ea266a65aea625010
+taskset_history:
+- sha256: 2eeddcff6d7eb750347da11500cbe3bb9d14646e402414d1ca7822ffe688f61d
+  until: '2026-10-21'
+  why: wikipedia-0007 test fix (tasks/CHANGELOG.md)
