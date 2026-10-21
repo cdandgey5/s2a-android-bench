@@ -474,6 +474,15 @@ def run_status(run_id: str = typer.Argument(..., help="the run to describe")) ->
     typer.echo(json.dumps(runmod.status(run_id), indent=2))
 
 
+@run_app.command("invalidate")
+def run_invalidate(run_id: str, trial: str = typer.Argument(..., help="<arm>/<task>/t<k>"),
+                   reason: str = typer.Option(..., help="the proven harness bug (DECISIONS id, evidence)")) -> None:
+    """Set aside a trial a proven harness bug spoiled; `abb run --resume <run_id>` runs it again."""
+    from abb.harness import run as runmod
+
+    typer.echo(f"moved to {runmod.invalidate(run_id, trial, reason)}")
+
+
 @run_app.command("abort")
 def run_abort(run_id: str = typer.Argument(...)) -> None:
     """Stop launching trials (running ones finish); `abb run --resume <run_id>` continues later."""

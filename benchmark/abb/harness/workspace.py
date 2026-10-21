@@ -60,6 +60,11 @@ def apply_trial_acls(dirs: TrialDirs, user: str) -> None:
         anc = anc.parent
     for a in reversed(chain):
         plat.grant(a, user, "list")
+    for a in chain:   # D-055: a shared parent must keep this user's list right (Java's toRealPath() walks them all)
+        if not plat.has_explicit_ace(a, user):
+            plat.grant(a, user, "list")
+            if not plat.has_explicit_ace(a, user):
+                raise OSError(f"could not grant {user} list on {a}")
     plat.grant(dirs.root, user, "rx", inherit=False)
     plat.owner_rights_none(dirs.root)
     for d in (dirs.work, dirs.home, dirs.gradle_home, dirs.claude_config, dirs.agent_out):

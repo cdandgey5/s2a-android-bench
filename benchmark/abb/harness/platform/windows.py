@@ -13,6 +13,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import threading
 import time
 from ctypes import wintypes
 from pathlib import Path
@@ -26,6 +27,8 @@ import win32job
 import win32process
 
 from abb import paths
+
+_ACL_LOCK = threading.RLock()   # D-055: one icacls at a time per process
 from abb.harness.platform.base import Proc, ProcResult, ProcSpec
 
 JOB_OBJECT_MSG_END_OF_JOB_TIME = 1
@@ -338,12 +341,25 @@ class WindowsPlatform:
 
     # ------------------------------------------------------------------ ACLs (applied in Phase 1)
     def _icacls(self, *args: str) -> None:
+        """Every ACL write goes through here, one at a time per process (D-055): icacls reads a DACL, adds an
+        ACE and writes it back, so two workers granting different slot users on one shared parent folder at
+        the same moment lost one grant in 16 of 40 rounds (scripts/acl_race_check.py)."""
         from abb.harness.platform.base import run_capture
 
         icacls = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "icacls.exe"
-        r = run_capture(self, [str(icacls), *args], cwd=Path.cwd(), timeout_s=600)
+        with _ACL_LOCK:
+            r = run_capture(self, [str(icacls), *args], cwd=Path.cwd(), timeout_s=600)
         if r.exit_code != 0:
             raise OSError(f"icacls {' '.join(args)} failed ({r.exit_code}): {r.stdout()} {r.stderr()}")
+
+    def has_explicit_ace(self, path: Path, principal: str) -> bool:
+        """True when `principal` has an ACE on `path` itself (not only inherited ones)."""
+        from abb.harness.platform.base import run_capture
+
+        icacls = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "icacls.exe"
+        out = run_capture(self, [str(icacls), str(path)], cwd=Path.cwd(), timeout_s=120).stdout()
+        name = principal.split("\\")[-1].lower()
+        return any(f"\\{name}:" in ln.lower() and "(i)" not in ln.lower() for ln in out.splitlines())
 
     def grant(self, path: Path, principal: str, rights: Literal["rx", "modify", "deny", "list"], *, inherit: bool = True) -> None:
         inh = "(OI)(CI)" if inherit and Path(path).is_dir() else ""

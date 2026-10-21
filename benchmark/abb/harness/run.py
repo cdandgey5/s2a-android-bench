@@ -453,6 +453,24 @@ def status(run_id: str) -> dict:
             "parallel": m.get("parallel"), "audit_ok": m.get("audit_ok")}
 
 
+def invalidate(run_id: str, trial: str, reason: str) -> Path:
+    """A trial a proven harness bug spoiled (PREREG harness-bug criteria): moved to <run>/invalidated/<arm>/<task>/
+    t<k>-<stamp>/ with the reason, logged in events.jsonl; `abb run --resume` runs it again. Kept, never graded again."""
+    root = paths.results_dir() / run_id
+    arm, task, tk = trial.strip("/").split("/")
+    src = root / arm / task / tk
+    if not (src / "run.json").exists():
+        raise SystemExit(f"{src} is not a finished trial")
+    dst = root / "invalidated" / arm / task / f"{tk}-{stamp()}"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(src), str(dst))
+    (dst / "INVALIDATED.txt").write_text(f"{utcnow_iso()}\n{reason}\n", encoding="utf-8")
+    with open(root / "events.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps({"at": utcnow_iso(), "event": "invalidated", "arm": arm, "task": task,
+                            "trial": int(tk[1:]), "moved_to": str(dst.relative_to(root)), "reason": reason}) + "\n")
+    return dst
+
+
 def abort(run_id: str) -> Path:
     """`abb run abort`: the scheduler stops launching trials; running ones finish (resumable)."""
     p = paths.results_dir() / run_id / "STOP"
