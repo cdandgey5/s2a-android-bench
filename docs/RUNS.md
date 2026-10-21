@@ -389,3 +389,31 @@ Verifier calibration `20261021-1722-verify-calibration` (6 re-verifications, est
 | 04:39 | `20261020-2049-dev-baseline-1` speckit/wikipedia-0009/t1 | claude-sonnet-5-5 | completed, 27 turns, 581 s | 54 | 19,073 | 1,742,650 | 80,522 | 0.6872 | 0 | resolved=True; nudges 0; five-hour 0.75 → 0.79, seven-day 0.79 |
 | 14:24 | `20261020-2049-dev-baseline-1` speckit/wikipedia-0009/t2 | claude-sonnet-5-5 | completed, 24 turns, 593 s | 48 | 21,208 | 1,605,037 | 82,203 | 0.7015 | 0 | resolved=True; nudges 0; five-hour 0.84 → 0.91, seven-day 0.93 |
 | | **`20261020-2049-dev-baseline-1` total (100 trials, 87 resolved)** | | mean 403 s | **3,554** | **1,293,267** | **81,970,168** | **6,902,296** | **48.7460** | 0 | incl. one-time setup |
+
+## 2026-10-21 — tuning 1 after-run (s2a, dev × 2, Sonnet 5.5, `ABB_TUNING=1`)
+
+`20261021-1802-dev-s2a-tune1` (s2a `1ee1ad9`): stopped with `abb run abort` after 6 trials when D-055 recurred, s2a/antennapod-0000/t1 invalidated (D-056) and the run resumed with the ACL fix; the baseline's speckit/antennapod-0001/t2 was invalidated and re-run the same way (resolved). audit PASS. s2a pass@1 0.75 (baseline 0.75), pass^2 0.70 (0.60). Plan: Max from 2026-10-21 18:02 UTC.
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 19:01 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0000/t1 | claude-sonnet-5-5 | completed, 30 turns, 300 s | 44 | 13,039 | 576,205 | 115,898 | 0.6517 | 0 | resolved=True; nudges 0; five-hour 0.26 → 0.29, seven-day 0.04 |
+| 19:56 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0000/t2 | claude-sonnet-5-5 | completed, 31 turns, 314 s | 46 | 13,335 | 604,002 | 131,909 | 0.7215 | 0 | resolved=True; nudges 0; five-hour 0.4 → 0.41, seven-day 0.05 |
+| 18:02 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0001/t1 | claude-sonnet-5-5 | completed, 56 turns, 533 s | 78 | 23,318 | 1,147,771 | 211,076 | 1.1924 | 0 | resolved=True; nudges 0; five-hour 0.04 → 0.04, seven-day 0 |
+| 20:08 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0001/t2 | claude-sonnet-5-5 | completed, 47 turns, 450 s | 62 | 21,946 | 905,928 | 180,852 | 1.0336 | 0 | resolved=True; nudges 0; five-hour 0.43 → 0.43, seven-day 0.05 |
+| 18:18 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0002/t1 | claude-sonnet-5-5 | completed, 34 turns, 386 s | 52 | 16,277 | 715,757 | 142,325 | 0.8037 | 0 | resolved=True; nudges 0; five-hour 0.08 → 0.09, seven-day 0.01 |
+| 20:09 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0002/t2 | claude-sonnet-5-5 | completed, 38 turns, 378 s | 60 | 16,734 | 860,942 | 145,746 | 0.8365 | 0 | resolved=True; nudges 0; five-hour 0.42 → 0.44, seven-day 0.05 |
+| 18:20 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0003/t1 | claude-sonnet-5-5 | completed, 67 turns, 718 s | 86 | 40,001 | 1,433,489 | 244,448 | 1.5213 | 0 | resolved=True; nudges 0; five-hour 0.08 → 0.18, seven-day 0.02 |
+| 20:23 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0003/t2 | claude-sonnet-5-5 | completed, 69 turns, 691 s | 94 | 35,902 | 1,628,877 | 242,615 | 1.4926 | 0 | resolved=True; nudges 0; five-hour 0.45 → 0.47, seven-day 0.06 |
+| 18:36 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0004/t1 | claude-sonnet-5-5 | agent_error, 18 turns, 77 s | 20 | 9,288 | 319,970 | 65,180 | 0.3856 | 0 | resolved=False; nudges 0; five-hour 0.1 → 0.1, seven-day 0.01 |
+| 20:25 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0004/t2 | claude-sonnet-5-5 | completed, 78 turns, 827 s | 110 | 42,455 | 1,832,499 | 289,543 | 1.7662 | 0 | resolved=True; nudges 1; five-hour 0.46 → 0.48, seven-day 0.06 |
+| 18:39 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0005/t1 | claude-sonnet-5-5 | completed, 36 turns, 515 s | 50 | 23,666 | 814,843 | 159,741 | 0.9572 | 0 | resolved=True; nudges 0; five-hour 0.14 → 0.21, seven-day 0.03 |
+| 20:53 | `20261021-1802-dev-s2a-tune1` s2a/antennapod-0005/t2 | claude-sonnet-5-5 | completed, 39 turns, 411 s | 54 | 24,329 | 809,602 | 169,324 | 1.0017 | 0 | resolved=True; nudges 0; five-hour 0.49 → 0.53, seven-day 0.06 |
+| 19:02 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0002/t1 | claude-sonnet-5-5 | completed, 47 turns, 862 s | 72 | 33,340 | 1,080,597 | 184,102 | 1.1780 | 0 | resolved=True; nudges 2; five-hour 0.32 → 0.36, seven-day 0.05 |
+| 20:55 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0002/t2 | claude-sonnet-5-5 | completed, 41 turns, 662 s | 58 | 26,226 | 801,637 | 172,528 | 1.0327 | 0 | resolved=True; nudges 2; five-hour 0.53 → 0.54, seven-day 0.06 |
+| 19:15 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0006/t1 | claude-sonnet-5-5 | agent_error, 37 turns, 506 s | 42 | 29,642 | 603,404 | 146,412 | 0.9425 | 0 | resolved=False; nudges 0; five-hour 0.3 → 0.33, seven-day 0.04 |
+| 21:12 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0006/t2 | claude-sonnet-5-5 | completed, 82 turns, 1004 s | 98 | 43,144 | 1,606,558 | 298,740 | 1.7873 | 0 | resolved=False; nudges 0; five-hour 0.57 → 0.56, seven-day 0.07 |
+| 19:28 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0007/t1 | claude-sonnet-5-5 | completed, 49 turns, 655 s | 66 | 22,496 | 926,716 | 163,776 | 0.9729 | 0 | resolved=False; nudges 0; five-hour 0.38 → 0.39, seven-day 0.05 |
+| 21:26 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0007/t2 | claude-sonnet-5-5 | completed, 38 turns, 692 s | 54 | 17,627 | 757,355 | 141,795 | 0.8193 | 0 | resolved=False; nudges 0; five-hour 0.57 → 0.57, seven-day 0.07 |
+| 19:35 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0009/t1 | claude-sonnet-5-5 | completed, 42 turns, 655 s | 62 | 34,212 | 948,653 | 226,777 | 1.3442 | 0 | resolved=True; nudges 0; five-hour 0.39 → 0.4, seven-day 0.05 |
+| 21:54 | `20261021-1802-dev-s2a-tune1` s2a/wikipedia-0009/t2 | claude-sonnet-5-5 | completed, 62 turns, 1074 s | 86 | 46,724 | 1,325,293 | 297,267 | 1.7890 | 0 | resolved=True; nudges 0; five-hour 0.6 → 0.6, seven-day 0.07 |
+| | **`20261021-1802-dev-s2a-tune1` total (20 trials, 15 resolved)** | | mean 586 s | **1,294** | **533,701** | **19,700,098** | **3,730,054** | **22.2298** | 0 | incl. one-time setup |

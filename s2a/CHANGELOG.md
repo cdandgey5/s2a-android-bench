@@ -54,7 +54,7 @@ the audit trail.
   unresolved dev trials, verify re-run on each final diff): **4/6 before -> 5/6 after** (bar: 5/6).
   wikipedia-0006/t1 ACCEPT -> REJECT (R3: completion until June 25 not implemented; R12: the requested field is
   never used); antennapod-0003/t1 still a false ACCEPT; the 3 resolved stay ACCEPT. Cost est. $0.93.
-- **After-run:** s2a on all dev tasks x 2 against the baseline's s2a (pending).
+- **After-run** `20261021-1802-dev-s2a-tune1` (s2a, dev x 2, Sonnet 5.5; one trial re-run after D-056): **pass@1 0.75 -> 0.75**, pass^2 0.60 -> 0.70, est. $1.10 -> $1.11 per trial (baseline s2a in `20261020-2049-dev-baseline-1`). Neutral on resolution at this n (10 tasks x 2; detectable delta ~0.38); kept for the calibration gain. The fix loop does not turn the new REJECTs into fixes (wikipedia-0006/t2). s2a fixes wikipedia-0007's URL but not the shared `normalizeLanguageCode` mapping the other arms extend (both trials).
 
 ### 2026-10-21 — tuning 2 (prepared, not yet installed): files to create get their own locate section
 - **Change:** `prompts/locate.md` adds `## Files to create`; the ranked candidates are existing paths only; the
