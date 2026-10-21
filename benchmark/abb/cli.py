@@ -64,6 +64,22 @@ def tools_check() -> None:
 
 
 # ---------------------------------------------------------------------------- auth
+@auth_app.command("set-plan")
+def auth_set_plan(plan: str = typer.Argument(..., help="pro | max | ... (what the owner's subscription is now)"),
+                  source: str = typer.Option("owner", help="who said so")) -> None:
+    """Record the subscription plan for run manifests: token sessions do not report it (state/plan.json)."""
+    import json
+
+    from abb import paths
+    from abb.util import utcnow_iso
+
+    p = paths.state_dir() / "plan.json"
+    hist = json.loads(p.read_text(encoding="utf-8")).get("history", []) if p.exists() else []
+    rec = {"plan": plan, "source": source, "at": utcnow_iso()}
+    p.write_text(json.dumps({**rec, "history": hist + [rec]}, indent=2), encoding="utf-8")
+    typer.echo(json.dumps(rec))
+
+
 @auth_app.command("check")
 def auth_check() -> None:
     """`claude.exe auth status` through the launcher with the mapped token and an empty CLAUDE_CONFIG_DIR."""

@@ -30,6 +30,11 @@ def initial(runner) -> dict:
     sha = subprocess.run(["git", "-C", str(paths.repo_clone()), "rev-parse", "HEAD"], capture_output=True,
                          text=True).stdout.strip()
     tl = paths.config_dir() / "toolchain.lock.yaml"
+    pp = paths.state_dir() / "plan.json"          # `abb auth set-plan` (token sessions do not report the plan)
+    planrec = json.loads(pp.read_text(encoding="utf-8")) if pp.exists() else {}
+    if planrec.get("plan") and not authrec.get("subscriptionType"):
+        authrec = {**authrec, "subscriptionType": planrec["plan"],
+                   "plan_source": f"{planrec.get('source')} via abb auth set-plan, {planrec.get('at')}"}
     return {
         "run_id": runner.run_id, "created_at": utcnow_iso(), "label": runner.label, "prereg_sha256": None,
         "arms": runner.arms, "task_set": runner.task_set, "task_ids": runner.tasks,
