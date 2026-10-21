@@ -25,3 +25,11 @@ def test_reject_with_defects_and_missing_verdict() -> None:
     v = parse.verdict("AC1 — FAIL — no\n## Defects\n1. B.java:12 speed not saved\nVERDICT: REJECT")
     assert v.derived == "REJECT" and v.defects == ["B.java:12 speed not saved"]
     assert parse.verdict("AC1 — PASS").derived is None
+
+
+def test_a_failed_request_requirement_rejects() -> None:
+    md = ("# Verification\n## Request requirements\nR1 — PASS — legacy URI accepted — test\n"
+          "R2 — FAIL — completion stops tracking — streak still resets\n## Acceptance criteria\nAC1 — PASS — ok\n"
+          "## Defects\n1. Repo.kt:40 completed streak resets\nVERDICT: ACCEPT\n")
+    v = parse.verdict(md)
+    assert v.lines == {"R1": "PASS", "R2": "FAIL", "AC1": "PASS"} and v.derived == "REJECT"

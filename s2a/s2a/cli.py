@@ -72,6 +72,28 @@ def resume(run_id: str, repo: Path = typer.Option(Path("."))) -> None:
 
 
 @app.command()
+def verify(run_id: str, repo: Path = typer.Option(Path(".")),
+           note: Optional[str] = typer.Option(None, help="why this re-verification was run (kept in the run's notes)")
+           ) -> None:
+    """Run the verify stage again on the run's current tree (e.g. after manual changes): a new verify round,
+    no fix loop. Exit 0 on ACCEPT, 2 on REJECT."""
+    import time
+
+    from s2a import orchestrator
+    from s2a.stages import verify as verify_stage
+
+    ctx, t0 = orchestrator.load_run(run_id, repo)
+    rounds = len(ctx.state.stage("verify").get("rounds") or [])
+    if note:
+        ctx.state.notes.append(f"re-verify: {note}"[:300])
+    verdict = verify_stage.run(ctx, round_no=rounds + 1)
+    ctx.state.used["seconds"] = round(float(ctx.state.used.get("seconds", 0)) + time.monotonic() - t0, 1)
+    ctx.save()
+    typer.echo(f"verdict {verdict} (round {rounds + 1}); report: {ctx.art(f'verify-{rounds + 1}.md')}")
+    raise typer.Exit(0 if verdict == "ACCEPT" else 2)
+
+
+@app.command()
 def status(run_id: str, repo: Path = typer.Option(Path("."))) -> None:
     """Stage table, budgets used, tool-error counts, next action."""
     from s2a import orchestrator

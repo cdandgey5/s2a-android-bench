@@ -163,7 +163,7 @@ class Verdict:
 
 def verdict(md: str) -> Verdict:
     lines = {}
-    for m in re.finditer(r"(?m)^\s*(?:[-*]\s*)?\**((?:AC|UB)\d+)\**\s*[—:-]+\s*\**(PASS|FAIL)\**", md):
+    for m in re.finditer(r"(?m)^\s*(?:[-*]\s*)?\**((?:AC|UB|R)\d+)\**\s*[—:-]+\s*\**(PASS|FAIL)\**", md):
         lines[m.group(1)] = m.group(2)
     vm = re.findall(r"(?im)^\s*\**VERDICT\**\s*:\s*\**(ACCEPT|REJECT)\**", md)
     defects = [d for d in bullets(section(md, "Defects")) if d and not re.match(r"(?i)^\(?none\)?\.?$", d)]
