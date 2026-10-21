@@ -55,3 +55,10 @@ the audit trail.
   wikipedia-0006/t1 ACCEPT -> REJECT (R3: completion until June 25 not implemented; R12: the requested field is
   never used); antennapod-0003/t1 still a false ACCEPT; the 3 resolved stay ACCEPT. Cost est. $0.93.
 - **After-run:** s2a on all dev tasks x 2 against the baseline's s2a (pending).
+
+### 2026-10-21 — tuning 2 (prepared, not yet installed): files to create get their own locate section
+- **Change:** `prompts/locate.md` adds `## Files to create`; the ranked candidates are existing paths only; the
+  `listed_paths_exist` gate message says where a new file belongs.
+- **Why:** feature tasks list the file they must create among the candidates and fail the gate even after the
+  retry (antennapod-0004: `20261020-2049-dev-baseline-1` s2a/t1 and `20261021-1802-dev-s2a-tune1` s2a/t1).
+- **Measured after tuning 1's after-run completes** (one change at a time).

@@ -121,7 +121,9 @@ def map_lint_timed(ctx: Ctx, **_) -> GateResult:
 def listed_paths_exist(ctx: Ctx, **_) -> GateResult:
     paths = parse.locate_candidates(ctx.read("locate.md"), include_new=False)   # a file to create cannot exist yet
     missing = [p for p in paths if not (ctx.repo / _rel(ctx, p)).exists()]
-    return fail(f"listed paths do not exist: {missing[:8]}") if missing else ok(paths=len(paths))
+    return fail(f"listed paths do not exist: {missing[:8]} (check the spelling against the tree; a file the change "
+                "will create belongs under '## Files to create', not among the candidates)") if missing else ok(
+        paths=len(paths))
 
 
 def min_candidates(ctx: Ctx, *, arg: str | None = None, **_) -> GateResult:
