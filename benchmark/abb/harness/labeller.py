@@ -141,7 +141,7 @@ def call_llm(bundle_text: str, *, model: str, timeout_s: int = 300) -> dict:
     trial.create(claude_template=claude_template_dir())
     env = build_agent_env(trial, token=token, proxy=False)
     argv = [str(plat.claude_exe()), "-p", "--output-format", "json", "--json-schema", json.dumps(schema()),
-            "--tools", "", "--max-turns", "1", "--model", model]
+            "--tools", "", "--max-turns", "3", "--model", model]  # json-schema output can take a 2nd turn
     out: dict = {"primary": None}
     for attempt in (1, 2):
         spec = ProcSpec(argv=argv, cwd=trial.work, env=env, stdin_text=prompt(bundle_text), timeout_s=timeout_s,
@@ -168,7 +168,7 @@ def run_llm(run_id: str, *, model: str, calibrate: bool = False, ids: list[str] 
     """Label with the LLM: every item without a label, or (calibrate) every manually labelled item."""
     data = init(run_id)
     todo = ids or [i for i, v in sorted(data["items"].items())
-                   if (v.get("manual") if calibrate else not v.get("primary"))]
+                   if (v.get("manual") if calibrate else v.get("primary") in (None, "unlabelled"))]
     n, cost = 0, 0.0
     for iid in todo:
         res = call_llm(bundle(run_id, iid), model=model)
