@@ -28,7 +28,8 @@ change after the freeze tag; if it must, the run is a new, labelled run.
   (15 tasks x 3 x 6 = 270 trials). Optional at 1 trial if the budget allows: `plain-gate`, `s2a-norepro`,
   `speckit-sdd` (MVP cut, D-045). **[confirm]** whether the optional arms run.
 - Model: **`claude-opus-5-5`** (D-001; profile `final`); Claude Code **2.1.302**; Spec Kit **v1.2.1**;
-  `s2a_git_sha` **8f8fc504e39ba792daa4b91b91bda78f689de1a3** (frozen 2026-10-22, s2a/CHANGELOG.md).
+  `s2a_git_sha` **5ca7283a1a63170d9070a2a0e54e3f5fd179729c** (frozen 2026-10-22 at `8f8fc50`; re-frozen here
+  after one post-freeze setup fix before any held-out run, D-059: map turn cap 25 -> 40; s2a/CHANGELOG.md).
 - Limits: 45 min, $15 est., 200 turns, nudges 2/call 4/trial. Binding: wall-clock and est. USD. One-time setups
   (Spec Kit constitution, s2a map) are built per repo with the pinned model (D-058) and reported separately.
 - Parallelism: `--parallel 2` on the laptop (two sandbox users, D-037/D-056).
