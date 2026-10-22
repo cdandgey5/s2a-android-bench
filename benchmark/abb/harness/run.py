@@ -28,7 +28,7 @@ from abb.harness.agent_driver import AbortRun, DriverContext, HarnessError, Tria
 from abb.harness.agent_env import preflight
 from abb.harness.costmeter import CostMeter
 from abb.harness.env import load_env_lock
-from abb.harness.manifest import Manifest
+from abb.harness.manifest import Manifest, initial_shas
 from abb.harness.platform import get_platform
 from abb.harness.proxy import from_sandbox_config
 from abb.harness.scheduler import Job, Outcome, Scheduler, order_jobs
@@ -178,8 +178,9 @@ class Runner:
         self.write_manifest()
         if resumed:
             m = self.manifest.read()
+            cur = initial_shas()  # trials after a resume run on these; the top-level shas stay the run start's
             self.write_manifest(resumes=m.get("resumes", []) + [{"at": utcnow_iso(), "reason": "--resume",
-                                                                 "parallel": self.parallel}],
+                                                                 "parallel": self.parallel, **cur}],
                                 aborted_reason=None, finished_at=None, parallel=self.parallel,
                                 slot_users=self.slot_users())
         self.preflight()

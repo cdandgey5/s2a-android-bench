@@ -1,7 +1,7 @@
 # Arm C — the S2A orchestrator, driven through its CLI only (AGENTS.md rule 13; phases/phase-6 step 15).
 profile: android
 setup:                                   # `s2a map` at repos.<repo>.build.setup_commit, cached (setup kind s2a-map)
-  limits: {timeout_minutes: 20, max_turns_total: 25, max_usd: 5.0}
+  limits: {timeout_minutes: 30, max_turns_total: 50, max_usd: 10.0}   # D-059: 40-turn map + a retry
   keep: [map.md, map.json, map.key.json, map.calls.jsonl, map]   # what the cache keeps of .s2a/ (no runs/, baseline/)
 variants:                                # skip: s2a --skip values; turns_off: the skipped stages' turn caps, taken off
   s2a: {skip: [], map: true, turns_off: 0}                       # max_turns_total so an ablation never gets more

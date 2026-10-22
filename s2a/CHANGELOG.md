@@ -75,3 +75,11 @@ new, labelled run). Tuning summary on `split: dev` (10 tasks x 2, Sonnet 5.5): b
 tuning 2 0.75 pass@1; both changes kept for what they fix (verifier calibration 4/6 -> 5/6; feature-task locate
 stops), neither is visible in pass@1 at this n (detectable delta ~0.38). The frozen sha is the one
 `abb sandbox install-s2a` records in `env.lock.json` after this commit.
+
+## Post-freeze — 2026-10-22 (bring-up fix before any held-out run; D-059)
+
+- **Map stage turn cap 25 -> 40** (`pipeline.yaml`). On Opus 5.5 the one-time map explored for 26 turns and
+  stopped on `error_max_turns` with `map.json` written but no `map.md` (`20261022-0355-dev-opus-confirm`).
+  The map is setup, outside every trial's budget; no prompt, gate or other stage changed.
+- The freeze moves to the sha `abb sandbox install-s2a` records in `env.lock.json` after this commit;
+  `docs/PREREG.md` names it. Nothing else changes before the held-out run.

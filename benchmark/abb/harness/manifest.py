@@ -19,6 +19,13 @@ from abb.harness.tools import load_lock
 from abb.util import sha256_file, utcnow_iso
 
 
+def initial_shas() -> dict:
+    """The code a trial runs on: harness commit and installed s2a (recorded at run start and at every resume)."""
+    sha = subprocess.run(["git", "-C", str(paths.repo_clone()), "rev-parse", "HEAD"], capture_output=True,
+                         text=True).stdout.strip()
+    return {"harness_git_sha": sha, "s2a_git_sha": (load_env_lock().get("_s2a") or {}).get("s2a_git_sha")}
+
+
 def initial(runner) -> dict:
     from abb.harness.run import _split_sha, task_set_sha
 
@@ -27,8 +34,8 @@ def initial(runner) -> dict:
     ap = paths.state_dir() / "auth.json"
     if ap.exists():
         authrec = json.loads(ap.read_text(encoding="utf-8"))
-    sha = subprocess.run(["git", "-C", str(paths.repo_clone()), "rev-parse", "HEAD"], capture_output=True,
-                         text=True).stdout.strip()
+    shas = initial_shas()
+    sha = shas["harness_git_sha"]
     tl = paths.config_dir() / "toolchain.lock.yaml"
     pp = paths.state_dir() / "plan.json"          # `abb auth set-plan` (token sessions do not report the plan)
     planrec = json.loads(pp.read_text(encoding="utf-8")) if pp.exists() else {}
@@ -42,7 +49,7 @@ def initial(runner) -> dict:
         "limits": asdict(runner.limits), "profile": runner.profile,
         "agent_version": load_toolchain().claude_code.version,
         "speckit_version": (load_lock().get("speckit") or {}).get("ref"),
-        "s2a_git_sha": (load_env_lock().get("_s2a") or {}).get("s2a_git_sha"),
+        "s2a_git_sha": shas["s2a_git_sha"],
         "platform": get_platform().id,
         "env_fingerprints": {r: (lock.get(r) or {}).get("fingerprint")
                              for r in sorted({load_task(t).repo for t in runner.tasks})},

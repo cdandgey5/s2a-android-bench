@@ -27,7 +27,7 @@ stages:
 
   - name: map
     session: fresh
-    turns: 25
+    turns: 40                     # D-059: Opus explores longer; the map is a one-time setup outside trial budgets
     tools: full
     cache: {key: [commit, profile, prompt_hash], stale_after_days: 30}   # bypassed entirely by `--map PATH`
     gate: [artifact_exists, map_json_valid, map_test_command_runs]

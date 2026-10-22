@@ -312,6 +312,12 @@ def render(run_id: str, out: Path | None = None, n_boot: int = 10_000) -> str:
          f"- Limits: {json.dumps(man.get('limits'), sort_keys=True)}",
          f"- Plan: {man.get('plan')} ({man.get('auth_mode')}) · aborted: {man.get('aborted_reason')} · scheduler pauses: "
          f"{man.get('scheduler_pauses', 0)} · usage-limited attempts: {len(cuts)}", ""]
+    changed = [r for r in man.get("resumes") or [] if r.get("s2a_git_sha", man.get("s2a_git_sha")) != man.get("s2a_git_sha")
+               or r.get("harness_git_sha", man.get("harness_git_sha")) != man.get("harness_git_sha")]
+    if changed:
+        L += ["> **Code changed at a resume:** trials run after " + "; ".join(
+            f"{r['at']} used s2a {r.get('s2a_git_sha')} · harness {r.get('harness_git_sha')}" for r in changed)
+              + " (see docs/RUNS.md).", ""]
     if man.get("invalid"):
         L += [f"> **INVALID run ({man['invalid'].get('decision')}):** {man['invalid'].get('reason')}. Its numbers are kept "
               "for the cost log only and enter no comparison.", ""]
