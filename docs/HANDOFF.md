@@ -12,10 +12,10 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `6 step 18 (tuning) + 9 (analysis)`. Phase 9 code done and committed: `stats.py` (known-answer tests), full deterministic `report.py` (`abb report <run> [--out]`, `abb report-diff`), `charts.py`, blind LLM labeller (`labeller.py`, `abb labels init|show|set|llm|agreement`; tried on 2 failures, $0.035). 159 tests pass. **Waiting on the owner's quota decision** before the dev-set baseline run: the seven-day window was at 59 % on 2026-10-20 05:50 UTC (resets Sun 2026-10-25 19:00 UTC) and the dev baseline (plain + speckit + s2a, 10 dev tasks x 2) is est. $42 ≈ 90 % of a week on Pro. Options given: A wait for the reset (default), B a small run now, C move to Max.
-- Last commit: `phase 9: wip — stats …` + this handoff
+- Phase: `9` **passed 2026-10-22** (README row 9; S4 skipped, D-057). Phase 6 step 18 tuning in progress: tuning 1 (verify checks the original request) kept — neutral on pass@1 (0.75 -> 0.75), pass^2 0.60 -> 0.70; tuning 2 (locate lists files to create separately, s2a `8a06aa2`) after-run `20261021-2234-dev-s2a-tune2` running (7/20 at 00:26 UTC, paused for the five-hour window until 04:02 UTC, resumes by itself). Plan: Max since 2026-10-21 (`abb auth set-plan`).
+- Last commit: `phase 9: analysis …` (`git log -1`)
 - Working tree: clean
-- Date: `2026-10-20`
+- Date: `2026-10-22`
 
 ## What exists and is verified
 
@@ -41,8 +41,8 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. Owner's quota answer (A/B/C). Then the dev-set baseline under `$env:ABB_TUNING=1`: `abb run --arm plain --arm speckit --arm s2a --tasks dev --trials 2 --parallel 2 --label dev-baseline-1 --grade` (first Wikipedia trials for Spec Kit and s2a: their one-time setups run first); controls `--arm plain-guided --arm plain-gate --trials 1` after it if the quota allows.
-2. Phase 9 on that run: `abb report`, `abb labels init`, then **S4**: 20–30 blind bundles for the owner (`abb labels show`), or `skip` (labeller stays uncalibrated); `abb labels llm --calibrate`; `abb labels agreement`; determinism check (`--out r1/r2`, `report-diff`); commit `phase 9: analysis`.
-3. Tuning (Phase 6 step 18) on `split: dev` only with `ABB_TUNING=1`: verifier calibration (6 dev diffs), then one change at a time, >= 2 trials, before/after in `s2a/CHANGELOG.md`. First candidate: locate/plan naming files to create without `(new)`.
-4. Then Phase 10 (S5, S6). Budget it before S5: the held-out run is pinned to Opus.
-- D-055 (open): one parallel trial lost its Gradle distribution's readability mid-trial; watch for it.
+1. When `dev-s2a-tune2` ends: audit, report, compare s2a with tuning 1 (`20261021-1802-dev-s2a-tune1`) and the baseline per task; log in `s2a/CHANGELOG.md` and RUNS.md; keep or revert tuning 2 (`abb sandbox install-s2a` after a revert).
+2. Freeze s2a: a "frozen" entry in `s2a/CHANGELOG.md` with the final sha; no prompt/pipeline change after it.
+3. Opus dev confirmation run (Phase 10 prerequisite): `$env:ABB_TUNING=1; abb run --arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev --trials 1 --parallel 2 --model claude-opus-5-5 --label dev-opus-confirm --grade` (profile `final`); RUNS.md with cost and five-hour share per arm.
+4. Draft `docs/PREREG.md` (fill every known field: test n = 15, robustness n = 3 with detectable delta ~0.6, TASKSET 80b55a02…, split seed 20261101 dev 10 / test 15, arms, limits, exclusion + invalidation rules (D-056), budget from step 3) and stop at **S5**: owner reviews PREREG, decides `auth_mode`, creates a fresh `claude setup-token` token; then tag `v1.0-frozen`.
+- Facts: wikipedia-0007 fixed after the split (tasks/CHANGELOG.md); D-056 ACL race fixed (`abb run invalidate` for spoiled trials); labels LLM-only (D-057).
