@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `9` **passed 2026-10-22** (README row 9; S4 skipped, D-057). Phase 6 step 18 tuning in progress: tuning 1 (verify checks the original request) kept — neutral on pass@1 (0.75 -> 0.75), pass^2 0.60 -> 0.70; tuning 2 (locate lists files to create separately, s2a `8a06aa2`) after-run `20261021-2234-dev-s2a-tune2` running (7/20 at 00:26 UTC, paused for the five-hour window until 04:02 UTC, resumes by itself). Plan: Max since 2026-10-21 (`abb auth set-plan`).
-- Last commit: `phase 9: analysis …` (`git log -1`)
+- Phase: `10` prerequisites. s2a **frozen** at `8f8fc50` (s2a/CHANGELOG.md "Frozen"; D-058). Phases 0-9 passed. Running: the Opus dev-set confirmation `dev-opus-confirm` (plain, plain-guided, speckit, s2a, s2a-nomap, s2a-noverify; dev x 1; `claude-opus-5-5`, profile `final`, parallel 2; started 2026-10-22 03:5x UTC; log `C:\abb\logs\dev-opus-confirm.log`). `docs/PREREG.md` drafted for S5.
+- Last commit: `PREREG: draft for S5 …` + this handoff
 - Working tree: clean
 - Date: `2026-10-22`
 
@@ -41,8 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. When `dev-s2a-tune2` ends: audit, report, compare s2a with tuning 1 (`20261021-1802-dev-s2a-tune1`) and the baseline per task; log in `s2a/CHANGELOG.md` and RUNS.md; keep or revert tuning 2 (`abb sandbox install-s2a` after a revert).
-2. Freeze s2a: a "frozen" entry in `s2a/CHANGELOG.md` with the final sha; no prompt/pipeline change after it.
-3. Opus dev confirmation run (Phase 10 prerequisite): `$env:ABB_TUNING=1; abb run --arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks dev --trials 1 --parallel 2 --model claude-opus-5-5 --label dev-opus-confirm --grade` (profile `final`); RUNS.md with cost and five-hour share per arm.
-4. Draft `docs/PREREG.md` (fill every known field: test n = 15, robustness n = 3 with detectable delta ~0.6, TASKSET 80b55a02…, split seed 20261101 dev 10 / test 15, arms, limits, exclusion + invalidation rules (D-056), budget from step 3) and stop at **S5**: owner reviews PREREG, decides `auth_mode`, creates a fresh `claude setup-token` token; then tag `v1.0-frozen`.
-- Facts: wikipedia-0007 fixed after the split (tasks/CHANGELOG.md); D-056 ACL race fixed (`abb run invalidate` for spoiled trials); labels LLM-only (D-057).
+1. When `dev-opus-confirm` ends: audit, report, RUNS.md with est. USD and five-hour share per arm (trials per window on Max); fill PREREG's **[confirm]** fields (expected windows; `--max-usd` = 1.3 x the dry-run estimate of `--arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks test --trials 3 --model claude-opus-5-5`, after adding the Opus per-trial costs to `config/cost_estimates.yaml` under a model key); decide the optional arms.
+2. **S5 (hard stop):** show the owner PREREG; they choose `auth_mode` (subscription batches / ask Anthropic first / API key) and create a fresh token (`claude setup-token` -> `ABB_OAUTH_TOKEN`). Then Phase 10 step 1: `abb tasks lint --all`, `abb tasks lint --setup-leak`, `abb env verify` per repo, TASKSET check; commit PREREG; tag `v1.0-frozen`; D-010 entry.
+3. **S6:** held-out run (`abb run … --tasks test --trials 3 --parallel 2 --model claude-opus-5-5 --label heldout-final --grade --max-usd <PREREG>`) in batches; never under `ABB_TUNING=1`; never tuned on.
+4. Report, labels (LLM-only, D-057), README, reproducibility package (`abb repro` still to build), write-up, publish (Phase 10 steps 5-9).
