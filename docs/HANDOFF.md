@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `10` prerequisites. s2a **frozen** at `8f8fc50` (s2a/CHANGELOG.md "Frozen"; D-058). Phases 0-9 passed. Running: the Opus dev-set confirmation `dev-opus-confirm` (plain, plain-guided, speckit, s2a, s2a-nomap, s2a-noverify; dev x 1; `claude-opus-5-5`, profile `final`, parallel 2; started 2026-10-22 03:5x UTC; log `C:\abb\logs\dev-opus-confirm.log`). `docs/PREREG.md` drafted for S5.
-- Last commit: `PREREG: draft for S5 …` + this handoff
+- Phase: `10` prerequisites. s2a **frozen** at `5ca7283` (first frozen at `8f8fc50`, D-058; re-frozen after the post-freeze map turn-cap fix D-059, s2a/CHANGELOG.md "Post-freeze"). Phases 0-9 passed. Running: the Opus dev-set confirmation `20261022-0355-dev-opus-confirm` (plain, plain-guided, speckit, s2a, s2a-nomap, s2a-noverify; dev x 1; `claude-opus-5-5`, profile `final`, parallel 2; log `C:\abb\logs\dev-opus-confirm.log`). It aborted once at 4/60 trials (`setup_failed`: Opus map out of turns) and was resumed on `5ca7283` at 04:3x UTC (`ABB_TUNING=1 abb run --resume … --max-pause-h 150`). `docs/PREREG.md` drafted for S5.
+- Last commit: `env.lock: s2a re-frozen at 5ca7283 (D-059)…` + this handoff
 - Working tree: clean
 - Date: `2026-10-22`
 
