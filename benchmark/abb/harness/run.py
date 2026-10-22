@@ -180,7 +180,8 @@ class Runner:
             m = self.manifest.read()
             self.write_manifest(resumes=m.get("resumes", []) + [{"at": utcnow_iso(), "reason": "--resume",
                                                                  "parallel": self.parallel}],
-                                aborted_reason=None, parallel=self.parallel, slot_users=self.slot_users())
+                                aborted_reason=None, finished_at=None, parallel=self.parallel,
+                                slot_users=self.slot_users())
         self.preflight()
         stale = paths.work_dir() / self.run_id  # a killed harness leaves a live trial open to the sandbox user (D-037)
         if stale.exists():
