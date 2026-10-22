@@ -554,3 +554,16 @@ needs roughly 50-55 % of a week's allowance (Sonnet and Opus share it on this pl
 | 15:27 | `20261022-0355-dev-opus-confirm` speckit/wikipedia-0009/t1 | claude-opus-5-5 | completed, 44 turns, 1032 s | 72 | 40,371 | 2,845,126 | 103,471 | 2.2045 | 0 | resolved=True; nudges 0; five-hour 0 → 0.05, seven-day 0.17 |
 | | **`20261022-0355-dev-opus-confirm` total (60 trials, 46 resolved)** | | mean 872 s | **4,434** | **1,908,922** | **105,961,186** | **9,132,544** | **132.4488** | 0 | incl. one-time setup |
 | | **including the failed map attempt and the invalidated trial** | | | | | | | **136.1344** | 0 | 132.4488 + 0.8128 + 2.8728 |
+
+## 2026-10-22 — S5 freeze and the held-out run (S6)
+
+S5 passed (owner): `auth_mode: subscription`, Max 5x, optional arms kept, freeze approved; fresh token stored as
+`ABB_OAUTH_TOKEN`. Tag `v1.0-frozen` = `207ebfe` (PREREG sha256 7253364d…). Phase 10 step 3 smoke trial with the new
+token (`20261022-2059-smoke-s5-token`, plain/antennapod-0000, dev): completed, resolved, audit PASS; Claude Code
+2.1.302, no model drift, plan max-5x, AntennaPod fingerprint as in env.lock. S6: owner approved all batches; the main
+matrix runs as one batch (D-064).
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 21:00 | `20261022-2059-smoke-s5-token` plain/antennapod-0000/t1 | claude-opus-5-5 | completed, 9 turns, 139 s | 12 | 1,865 | 129,553 | 33,279 | 0.3295 | 0 | resolved=True; nudges 0; five-hour 0 → 0.01, seven-day 0.19 |
+| | **`20261022-2059-smoke-s5-token` total (1 trials, 1 resolved)** | | mean 139 s | **12** | **1,865** | **129,553** | **33,279** | **0.3295** | 0 | incl. one-time setup |
