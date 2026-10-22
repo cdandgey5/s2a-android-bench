@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `10` prerequisites. s2a **frozen** at `5ca7283` (first frozen at `8f8fc50`, D-058; re-frozen after the post-freeze map turn-cap fix D-059, s2a/CHANGELOG.md "Post-freeze"). Phases 0-9 passed. Running: the Opus dev-set confirmation `20261022-0355-dev-opus-confirm` (plain, plain-guided, speckit, s2a, s2a-nomap, s2a-noverify; dev x 1; `claude-opus-5-5`, profile `final`, parallel 2; log `C:\abb\logs\dev-opus-confirm.log`). It aborted once at 4/60 trials (`setup_failed`: Opus map out of turns) and was resumed on `5ca7283` at 04:3x UTC (`ABB_TUNING=1 abb run --resume … --max-pause-h 150`). `docs/PREREG.md` drafted for S5.
-- Last commit: `env.lock: s2a re-frozen at 5ca7283 (D-059)…` + this handoff
+- Phase: `10`, **waiting at S5** (hard stop). s2a frozen at `5ca7283` (D-058, D-059). The Opus dev-set confirmation `20261022-0355-dev-opus-confirm` is done (audit PASS; 60 trials + 1 invalidated and re-run, D-060; RUNS.md has per-arm cost/time and the held-out plan). `docs/PREREG.md` has every field filled except the owner's **[S5]** ones. Phase 10 step 1 pre-flight: `abb tasks lint --all` 25/0 errors; `abb tasks lint --setup-leak` 0 leaks (after D-062); `tasks/TASKSET.sha256` = 80b55a02… unchanged; `abb env verify` per repo running/done (logs `C:\abb\logs\verify-phase10-<repo>.log`).
+- Last commit: `Opus confirmation done; setup records kept on retry (D-061); setup-leak lint per spec (D-062)` + this handoff
 - Working tree: clean
 - Date: `2026-10-22`
 
@@ -41,7 +41,7 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. When `dev-opus-confirm` ends: audit, report, RUNS.md with est. USD and five-hour share per arm (trials per window on Max); fill PREREG's **[confirm]** fields (expected windows; `--max-usd` = 1.3 x the dry-run estimate of `--arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks test --trials 3 --model claude-opus-5-5`, after adding the Opus per-trial costs to `config/cost_estimates.yaml` under a model key); decide the optional arms.
-2. **S5 (hard stop):** show the owner PREREG; they choose `auth_mode` (subscription batches / ask Anthropic first / API key) and create a fresh token (`claude setup-token` -> `ABB_OAUTH_TOKEN`). Then Phase 10 step 1: `abb tasks lint --all`, `abb tasks lint --setup-leak`, `abb env verify` per repo, TASKSET check; commit PREREG; tag `v1.0-frozen`; D-010 entry.
-3. **S6:** held-out run (`abb run … --tasks test --trials 3 --parallel 2 --model claude-opus-5-5 --label heldout-final --grade --max-usd <PREREG>`) in batches; never under `ABB_TUNING=1`; never tuned on.
+1. **S5 (hard stop, owner):** review `docs/PREREG.md`; choose `auth_mode` (subscription batches on Max / subscription after asking Anthropic / API key); confirm the plan name (Max 5x or 20x) and the optional run (`plain-gate`, `s2a-norepro`, `speckit-sdd` x 1; default yes, after the main matrix); approve the freeze tag; create a fresh token in their own terminal (`claude setup-token`, store it as the user environment variable `ABB_OAUTH_TOKEN`; never pasted into chat); reply `done`.
+2. Then Phase 10 step 1: fill the [S5] fields, commit PREREG, record its sha256, tag `v1.0-frozen`, D-010 entry (`test set run once on <date>; no task or prompt changes after the tag`), `abb auth check` with the new token.
+3. **S6:** main matrix `abb run --arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks test --trials 3 --parallel 2 --model claude-opus-5-5 --profile final --label heldout-final --grade --max-usd 757.52 --max-pause-h 150` (never under `ABB_TUNING=1`; never tuned on; ~52 h); then the optional run (`--arm plain-gate --arm s2a-norepro --arm speckit-sdd --trials 1 --label heldout-optional --max-usd 149.66`).
 4. Report, labels (LLM-only, D-057), README, reproducibility package (`abb repro` still to build), write-up, publish (Phase 10 steps 5-9).
