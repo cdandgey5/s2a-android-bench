@@ -1,6 +1,6 @@
 """One-time per-repo setup (specs/adapter-interface.md: `one_time_setup`), reported separately.
 
-Cached per (setup_kind, repo, setup_commit, environment fingerprint, prompt hash) under
+Cached per (setup_kind, repo, setup_commit, environment fingerprint, prompt hash, model; D-058) under
 <results>/_setup_cache/<key>/ so arms that share a setup kind share the artifact (D-012). The run
 that produces a setup records it under <run>/setup/<kind>/<repo>/ (run.json, calls.jsonl,
 transcript/, prompts/, artifacts/) and pays its cost there; later runs record a reference
@@ -30,10 +30,10 @@ class SetupError(RuntimeError):
         self.subtype = subtype
 
 
-def cache_key(setup_kind: str, repo_key: str, prompt_hash: str) -> str:
+def cache_key(setup_kind: str, repo_key: str, prompt_hash: str, model: str) -> str:
     repo = load_repo(repo_key)
     fp = (load_env_lock().get(repo_key) or {}).get("fingerprint", "")
-    raw = json.dumps([setup_kind, repo_key, repo.build.setup_commit, fp, prompt_hash])
+    raw = json.dumps([setup_kind, repo_key, repo.build.setup_commit, fp, prompt_hash, model])
     return f"{setup_kind}-{repo_key}-{hashlib.sha256(raw.encode()).hexdigest()[:16]}"
 
 
@@ -52,7 +52,7 @@ def _write_record(rec_dir: Path, data: dict) -> None:
 
 
 def ensure_setup(arm, repo_key: str, run_dir: Path, *, run_id: str,
-                 make_context: Callable[[object, str, Path], tuple]) -> dict | None:
+                 make_context: Callable[[object, str, Path], tuple], model: str) -> dict | None:
     """The setup artifacts for (arm.setup_kind, repo): from the cache, or produced now.
 
     `make_context(arm, repo_key, rec_dir) -> (workspace, DriverContext)` builds the sandboxed
@@ -62,7 +62,7 @@ def ensure_setup(arm, repo_key: str, run_dir: Path, *, run_id: str,
 
     if getattr(arm, "setup_kind", None) is None:
         return None
-    key = cache_key(arm.setup_kind, repo_key, arm.setup_prompt_hash())
+    key = cache_key(arm.setup_kind, repo_key, arm.setup_prompt_hash(), model)   # D-058: the trials' model
     cdir = cache_dir(key)
     rec_dir = run_dir / "setup" / arm.setup_kind / repo_key
     if (cdir / "record.json").exists() and (cdir / "artifacts").exists():

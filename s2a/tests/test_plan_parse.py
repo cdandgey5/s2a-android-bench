@@ -87,3 +87,11 @@ def test_locate_candidates_skip_host_names() -> None:
           "2. `www.itunes.com/DTDs/Podcast-1.0.dtd` — the legacy namespace\n"
           "3. `.github/workflows/ci.yml` — CI\n")
     assert parse.locate_candidates(md) == ["net/common/src/main/java/a/UrlChecker.java", ".github/workflows/ci.yml"]
+
+
+def test_locate_candidates_ignore_indented_evidence_lines() -> None:
+    md = ("## Candidates (ranked)\n"
+          "1. app/src/main/java/org/a/CookieManager.kt — loadForRequest — the carry-over branch\n"
+          "   - It is also used by `page/PageActivity.kt:527` to pick the browser\n"
+          "2. app/src/main/java/org/a/Service.kt — isWikimediaAuthority\n")
+    assert parse.locate_candidates(md) == ["app/src/main/java/org/a/CookieManager.kt", "app/src/main/java/org/a/Service.kt"]

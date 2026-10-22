@@ -56,9 +56,22 @@ the audit trail.
   never used); antennapod-0003/t1 still a false ACCEPT; the 3 resolved stay ACCEPT. Cost est. $0.93.
 - **After-run** `20261021-1802-dev-s2a-tune1` (s2a, dev x 2, Sonnet 5.5; one trial re-run after D-056): **pass@1 0.75 -> 0.75**, pass^2 0.60 -> 0.70, est. $1.10 -> $1.11 per trial (baseline s2a in `20261020-2049-dev-baseline-1`). Neutral on resolution at this n (10 tasks x 2; detectable delta ~0.38); kept for the calibration gain. The fix loop does not turn the new REJECTs into fixes (wikipedia-0006/t2). s2a fixes wikipedia-0007's URL but not the shared `normalizeLanguageCode` mapping the other arms extend (both trials).
 
-### 2026-10-21 — tuning 2 (prepared, not yet installed): files to create get their own locate section
+### 2026-10-21 — tuning 2: files to create get their own locate section
 - **Change:** `prompts/locate.md` adds `## Files to create`; the ranked candidates are existing paths only; the
   `listed_paths_exist` gate message says where a new file belongs.
 - **Why:** feature tasks list the file they must create among the candidates and fail the gate even after the
   retry (antennapod-0004: `20261020-2049-dev-baseline-1` s2a/t1 and `20261021-1802-dev-s2a-tune1` s2a/t1).
-- **Measured after tuning 1's after-run completes** (one change at a time).
+- **After-run** `20261021-2234-dev-s2a-tune2` (s2a `8a06aa2`, dev x 2; paused once for the five-hour window, resumed after the owner's quota reset): **pass@1 0.75** (tuning 1: 0.75, baseline 0.75), pass^2 0.60, est. $1.15 per trial. Its target resolved (antennapod-0004/t1 got past locate); kept. Remaining s2a-only losses: a locate stop caused by the candidate parser (fixed below) and a plan path typo (`danoeth`) the plan gate rightly rejects.
+
+### 2026-10-22 — fix (not tuning): locate candidates are the top-level items only
+- `parse.locate_candidates` read indented evidence lines as candidates; `20261021-2234-dev-s2a-tune2`
+  wikipedia-0002/t1 stopped because an evidence line cited `page/PageActivity.kt:527`. Unit test added; on that
+  report the parser now returns the three real files.
+
+## Frozen — 2026-10-22
+
+s2a is frozen for the held-out run: no prompt, pipeline or gate change after this entry (a change would need a
+new, labelled run). Tuning summary on `split: dev` (10 tasks x 2, Sonnet 5.5): baseline 0.75 -> tuning 1 0.75 ->
+tuning 2 0.75 pass@1; both changes kept for what they fix (verifier calibration 4/6 -> 5/6; feature-task locate
+stops), neither is visible in pass@1 at this n (detectable delta ~0.38). The frozen sha is the one
+`abb sandbox install-s2a` records in `env.lock.json` after this commit.

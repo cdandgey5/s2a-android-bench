@@ -302,7 +302,8 @@ class Runner:
                 return ws, ctx
 
             try:
-                res = ensure_setup(arm, repo_key, self.root, run_id=self.run_id, make_context=make_context)
+                res = ensure_setup(arm, repo_key, self.root, run_id=self.run_id, make_context=make_context,
+                                   model=self.limits.model)
             finally:
                 for ev in (holder["ctx"].events if "ctx" in holder else []):
                     self.event(**ev)

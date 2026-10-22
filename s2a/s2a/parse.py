@@ -65,7 +65,10 @@ def locate_candidates(md: str, *, include_new: bool = True) -> list[str]:
     (`a/.../B.java`); with include_new=False, bullets marked as files to create are left out."""
     body = section(md, "Candidates") or md
     out = []
-    for item in bullets(body):
+    # top-level items only: indented sub-bullets carry evidence ("also used by `page/X.kt:527`"), not candidates
+    top = [re.sub(r"^(?:[-*]|\d+[.)])\s+", "", ln).strip() for ln in body.splitlines()
+           if re.match(r"^(?:[-*]|\d+[.)])\s+\S", ln)]
+    for item in top:
         if not include_new and NEW_MARK.search(item):
             continue
         for m in PATH_TOKEN.finditer(item):

@@ -94,7 +94,7 @@ class Arm(Protocol):
 
     def one_time_setup(self, repo_key: str, ws: "Workspace", limits: Limits) -> list[PhaseCall]:
         """Per-repo setup whose cost is reported separately. Idempotent; cached per
-        (setup_kind, repo, setup_commit, environment fingerprint, prompt hash)."""
+        (setup_kind, repo, setup_commit, environment fingerprint, prompt hash, model; D-058)."""
 
     def run(self, task: "Task", ws: "Workspace", limits: Limits) -> RunResult:
         """Attempt the task. Must respect Limits. Must never read task.test_patch or
