@@ -87,7 +87,11 @@ every task workspace. They are generated at `repos.<repo>.build.setup_commit` =
 `git merge-base --octopus <all task base commits of the repo>` — an ancestor of every task's
 base (never at `cache_commit`, which already contains every mined/reverted fix). `abb tasks lint
 --setup-leak` fails if a setup artifact mentions a path or class name that any task's
-`gold.patch` adds, and reports counts of mentions of files any gold patch *modifies*. Cache key:
+`gold.patch` adds, and reports counts of mentions of files any gold patch *modifies*. Each setup is
+checked against the tasks of its own repo; "adds" means absent at that setup's `setup_commit` (a
+declared name that already exists there is not added); names match as whole words; a file that is
+byte-identical in the setups of two different repos was installed by the tool (Spec Kit's stock
+skills and scripts), not generated about a repo, and is skipped and counted (D-062). Cache key:
 (**setup kind**, repo, setup_commit, environment fingerprint, prompt hash), where setup kind is
 `speckit-constitution` or `s2a-map`; all `s2a-*` arms except `s2a-nomap` share one map.
 

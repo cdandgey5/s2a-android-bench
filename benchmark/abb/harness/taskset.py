@@ -201,31 +201,74 @@ def split_sha256() -> str | None:
 
 
 # ---------------------------------------------------------------------------- setup-leak lint
-def setup_leaks() -> list[str]:
-    """Cached one-time setup artifacts (results/_setup_cache/**) that mention a path or class name
-    added by any task's gold.patch (phases/phase-7 step 5). Empty when no setup cache exists yet."""
-    from abb.harness.tasks import added_lines, code_only, patch_files
+def leak_needles(repo_key: str, setup_commit: str) -> tuple[dict[str, str], dict[str, str]]:
+    """({needle: task}, {modified path: task}) for the tasks of one repo against its setup_commit
+    (fairness-protocol.md): needles are the files a gold.patch adds and the names it declares that do
+    not exist at setup_commit; a file the patch only modifies exists there and is merely counted (D-062)."""
+    from abb.harness.tasks import added_lines, code_only, identifiers, patch_files, tree
 
-    root = paths.results_dir() / "_setup_cache"
-    if not root.exists():
-        return []
-    needles: dict[str, str] = {}
+    repo = load_repo(repo_key)
+    files_at, names_at = set(tree(repo, setup_commit)), identifiers(repo, setup_commit)
+    added: dict[str, str] = {}
+    modified: dict[str, str] = {}
     for tid in task_ids():
+        if load_task(tid).repo != repo_key:
+            continue
         gold = (task_dir(tid) / "gold.patch").read_text(encoding="utf-8", errors="replace")
         for f in patch_files(gold):
-            needles[f] = tid
+            (modified if f in files_at else added)[f] = tid
         for name in set(re.findall(r"\b(?:class|interface|object|enum class|fun)\s+([A-Z][A-Za-z0-9_]{3,})",
                                    code_only("\n".join(added_lines(gold))))):
-            needles[name] = tid
-    hits = []
-    for f in root.rglob("*"):
-        if not f.is_file():
-            continue
-        text = f.read_text(encoding="utf-8", errors="replace")
-        for needle, tid in needles.items():
-            if needle in text:
-                hits.append(f"{f.relative_to(root)}: mentions {needle!r} (added by {tid}'s gold.patch)")
-    return hits
+            if name not in names_at:
+                added[name] = tid
+    return added, modified
+
+
+def _mentions(needle: str, text: str) -> int:
+    return len(re.findall(rf"(?<![A-Za-z0-9_]){re.escape(needle)}(?![A-Za-z0-9_])", text))
+
+
+def setup_leaks() -> tuple[list[str], dict[str, int], int]:
+    """(hits, modified-file mention counts, files skipped) for the cached one-time setup artifacts
+    (results/_setup_cache/<key>/artifacts/**), each checked against the gold.patch of every task of its
+    own repo at its own setup_commit (phases/phase-7 step 5). A file byte-identical in the setups of two
+    different repos was installed by the tool (Spec Kit's stock skills and scripts), not generated about
+    a repo, and is skipped (D-062). ([], {}, 0) when no setup cache exists yet."""
+    root = paths.results_dir() / "_setup_cache"
+    if not root.exists():
+        return [], {}, 0
+    caches = []
+    repos_of: dict[tuple[str, str, str], set[str]] = {}
+    for cdir in sorted(p for p in root.iterdir() if (p / "record.json").exists()):
+        rec = json.loads((cdir / "record.json").read_text(encoding="utf-8"))
+        files = []
+        for f in sorted((cdir / "artifacts").rglob("*")):
+            if f.is_file():
+                rel = f.relative_to(cdir / "artifacts").as_posix()
+                sha = hashlib.sha256(f.read_bytes()).hexdigest()
+                repos_of.setdefault((rec["setup_kind"], rel, sha), set()).add(rec["repo"])
+                files.append((f, rel, sha))
+        caches.append((rec, files))
+    hits: list[str] = []
+    counts: Counter = Counter()
+    skipped = 0
+    needles: dict[tuple[str, str], tuple[dict[str, str], dict[str, str]]] = {}
+    for rec, files in caches:
+        key = (rec["repo"], rec["setup_commit"])
+        if key not in needles:
+            needles[key] = leak_needles(*key)
+        added, modified = needles[key]
+        for f, rel, sha in files:
+            if len(repos_of[(rec["setup_kind"], rel, sha)]) > 1:
+                skipped += 1
+                continue
+            text = f.read_text(encoding="utf-8", errors="replace")
+            for needle, tid in added.items():
+                if _mentions(needle, text):
+                    hits.append(f"{f.relative_to(root)}: mentions {needle!r} (added by {tid}'s gold.patch)")
+            for path, tid in modified.items():
+                counts[f"{path} ({tid})"] += _mentions(path, text)
+    return hits, {k: v for k, v in sorted(counts.items()) if v}, skipped
 
 
 def summary_json(d: dict) -> str:

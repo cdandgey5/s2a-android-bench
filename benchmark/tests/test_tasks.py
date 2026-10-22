@@ -162,3 +162,37 @@ def test_tuning_sessions_refuse_held_out_tasks(monkeypatch) -> None:
     refuse_held_out_while_tuning(["antennapod-0000"])                          # dev (pinned dev5)
     with pytest.raises(SystemExit, match="antennapod-0006"):
         refuse_held_out_while_tuning(["antennapod-0000", "antennapod-0006"])  # split: test
+
+
+def test_setup_leak_lint(tmp_path: Path, monkeypatch) -> None:
+    """D-062: own repo only, whole words, modified files counted, files identical across repos skipped."""
+    import json
+
+    from abb.harness import taskset
+
+    monkeypatch.setattr(paths, "results_dir", lambda: tmp_path)
+    needles = {"wikipedia": ({"Duplicate": "wikipedia-0011", "app/New.kt": "wikipedia-0011"},
+                             {"app/strings.xml": "wikipedia-0011"}),
+               "antennapod": ({}, {})}
+    monkeypatch.setattr(taskset, "leak_needles", lambda repo, commit: needles[repo])
+
+    def cache(name: str, repo: str, files: dict[str, str]) -> None:
+        d = tmp_path / "_setup_cache" / name
+        (d / "artifacts").mkdir(parents=True)
+        (d / "record.json").write_text(json.dumps({"setup_kind": "speckit-constitution", "repo": repo,
+                                                   "setup_commit": "c"}), encoding="utf-8")
+        for rel, text in files.items():
+            (d / "artifacts" / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / "artifacts" / rel).write_text(text, encoding="utf-8")
+
+    stock = "Duplicate or conflicting requirement\n"
+    cache("speckit-constitution-wikipedia-1", "wikipedia",
+          {"skills/analyze.md": stock, "memory/constitution.md": "See app/strings.xml. No Duplicates here.\n"})
+    cache("speckit-constitution-antennapod-1", "antennapod",
+          {"skills/analyze.md": stock, "memory/constitution.md": "Duplicate\n"})
+    hits, modified, skipped = taskset.setup_leaks()
+    assert hits == [] and modified == {"app/strings.xml (wikipedia-0011)": 1} and skipped == 2
+    (tmp_path / "_setup_cache" / "speckit-constitution-wikipedia-1" / "artifacts" / "memory" / "constitution.md"
+     ).write_text("Add a Duplicate result in app/New.kt\n", encoding="utf-8")
+    hits, _, _ = taskset.setup_leaks()
+    assert len(hits) == 2 and all("constitution.md" in h for h in hits)

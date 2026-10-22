@@ -483,15 +483,16 @@ def abort(run_id: str) -> Path:
     return p
 
 
-def dry_run(arms: list[str], ids: list[str], trials: int) -> dict:
-    """The matrix and its estimated cost from config/cost_estimates.yaml (mean est. USD per trial per arm)."""
+def dry_run(arms: list[str], ids: list[str], trials: int, model: str) -> dict:
+    """The matrix and its estimated cost from config/cost_estimates.yaml (mean est. USD per trial per arm, per model)."""
     import yaml
 
     p = paths.config_dir() / "cost_estimates.yaml"
-    est = (yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("per_trial_usd", {}) if p.exists() else {}
+    models = (yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("models", {}) if p.exists() else {}
+    est = (models.get(model) or {}).get("per_trial_usd", {})
     jobs = order_jobs(arms, ids, trials)
     per_arm = {a: {"trials": sum(1 for j in jobs if j.arm == a), "usd_per_trial": est.get(a)} for a in arms}
     total = sum((v["usd_per_trial"] or 0) * v["trials"] for v in per_arm.values())
-    return {"trials": len(jobs), "order": [f"{j.arm}/{j.task}/t{j.trial}" for j in jobs[:12]]
+    return {"trials": len(jobs), "model": model, "order": [f"{j.arm}/{j.task}/t{j.trial}" for j in jobs[:12]]
             + (["…"] if len(jobs) > 12 else []), "per_arm": per_arm, "estimated_usd": round(total, 2),
             "unknown_arms": [a for a, v in per_arm.items() if v["usd_per_trial"] is None]}

@@ -103,14 +103,20 @@ def load_rows(run_id: str, root: Path | None = None) -> tuple[pd.DataFrame, pd.D
     trials = [_trial_row(rj.parent) for rj in sorted(root.glob("*/*/t*/run.json"))
               if rj.parts[-4] not in ("usage_limited", "setup", "salvaged")]
     cuts = [_trial_row(rj.parent, cut=True) for rj in sorted(root.glob("usage_limited/*/*/t*/run.json"))]
+    failed: dict[tuple, list[float]] = {}  # failed attempts kept by a retry (D-061): (kind, repo) -> costs
+    for sp in sorted(root.glob("setup_failed/*/*/*/run.json")):
+        sd = _load(sp)
+        usd = sd.get("cost_usd") if sd.get("cost_usd") is not None else sd.get("cost_usd_imputed")
+        failed.setdefault((sd.get("setup_kind"), sd.get("repo")), []).append(float(usd or 0.0))
     setups = []
     for sp in sorted(root.glob("setup/*/*/run.json")):
         sd = _load(sp)
         usd = sd.get("cost_usd") if sd.get("cost_usd") is not None else sd.get("cost_usd_imputed")
+        fc = failed.get((sd.get("setup_kind"), sd.get("repo")), [])
         setups.append({"setup_kind": sd.get("setup_kind"), "repo": sd.get("repo"), "cost_this_run": float(usd or 0.0),
                        "produced_cost": float(sd.get("produced_cost_usd") if sd.get("reused_from") else (usd or 0.0)),
                        "reused_from": sd.get("reused_from") or "", "turns": int(sd.get("num_turns") or 0),
-                       "is_setup": True})
+                       "failed_attempts": len(fc), "failed_cost": round(sum(fc), 4), "is_setup": True})
     man = _load(root / "manifest.json")
     have = {(r["arm"], r["task_id"], r["trial"]) for r in trials}
     missing = [f"{a}/{t}/t{k}" for k in range(1, int(man.get("trials") or 1) + 1) for t in man.get("task_ids") or []
@@ -194,13 +200,14 @@ def failures(rows: pd.DataFrame, labels: dict) -> pd.DataFrame:
 def setup_table(setups: pd.DataFrame, rows: pd.DataFrame) -> pd.DataFrame:
     if setups.empty:
         return pd.DataFrame(columns=["setup_kind", "repo", "produced_cost", "cost_this_run", "reused_from",
-                                     "tasks_in_run", "amortised_per_task"])
+                                     "failed_attempts", "failed_cost", "tasks_in_run", "amortised_per_task"])
     out = []
     for _, s in setups.sort_values(["setup_kind", "repo"]).iterrows():
         n = rows[rows.get("repo", pd.Series(dtype=str)) == s.repo].task_id.nunique() if "repo" in rows else 0
         out.append({"setup_kind": s.setup_kind, "repo": s.repo, "produced_cost": s.produced_cost,
-                    "cost_this_run": s.cost_this_run, "reused_from": s.reused_from, "tasks_in_run": n,
-                    "amortised_per_task": (s.produced_cost / n) if n else float("nan")})
+                    "cost_this_run": s.cost_this_run, "reused_from": s.reused_from,
+                    "failed_attempts": int(s.get("failed_attempts", 0)), "failed_cost": float(s.get("failed_cost", 0.0)),
+                    "tasks_in_run": n, "amortised_per_task": (s.produced_cost / n) if n else float("nan")})
     return pd.DataFrame(out)
 
 

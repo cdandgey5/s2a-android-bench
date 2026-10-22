@@ -44,6 +44,8 @@ def run(tmp_path, monkeypatch) -> str:
                                           "split": "dev", "build_ok": True, "regressions_n": 0, "output_tokens": 100})
     _w(root / "setup" / "s2a-map" / "antennapod" / "run.json", {"setup_kind": "s2a-map", "repo": "antennapod",
                                                                  "cost_usd": 0.45, "num_turns": 22})
+    _w(root / "setup_failed" / "s2a-map" / "antennapod" / "20261101-000000" / "run.json",
+       {"setup_kind": "s2a-map", "repo": "antennapod", "cost_usd": 0.81, "num_turns": 26})
     _w(root / "labels.json", {"items": {"Lx": {"arm": "plain", "task": "antennapod-0001", "trial": 1,
                                                "primary": "INCOMPLETE"}}})
     return rid
@@ -52,6 +54,7 @@ def run(tmp_path, monkeypatch) -> str:
 def test_rows_tables_and_exclusions(run, tmp_path) -> None:
     trials, setups, cuts, missing = report.load_rows(run)
     assert len(trials) == 12 and len(setups) == 1 and setups.iloc[0].cost_this_run == pytest.approx(0.45)
+    assert setups.iloc[0].failed_attempts == 1 and setups.iloc[0].failed_cost == pytest.approx(0.81)
     rows, lost = report.counted(trials)
     assert len(lost) == 1 and len(rows) == 11 and missing == []
     report.render(run, n_boot=500)

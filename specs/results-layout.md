@@ -15,6 +15,7 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   probes/<ts>-scheduler-<n>.jsonl     # pause-loop probes; `abb audit` recounts manifest.usage_limited_pauses from this directory
   usage_limited/<arm>/<task_id>/t<k>-a<n>/   # D-028: cut attempts, kept (run.json, transcript/, prompts/); never graded; input to the usage-limit sensitivity check; `abb audit` scans them too
   setup/<setup_kind>/<repo>/          # one-time per-repo setup, reported separately
+  setup_failed/<setup_kind>/<repo>/<stamp>/   # D-061: a failed setup attempt, moved here before a retry; audited; its cost is reported (failed_cost)
     run.json  transcript/  prompts/  artifacts/        # setup_kind = speckit-constitution | s2a-map
   <arm>/<task_id>/t<k>/               # k = 1..trials
     run.json                          # RunResult (serialized) + limits used

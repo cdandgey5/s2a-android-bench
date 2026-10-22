@@ -1,9 +1,9 @@
 # Pre-registration (complete and commit BEFORE `v1.0-frozen`; sha256 goes into the manifest)
 
-Status: **DRAFT for S5 (2026-10-22)** — every field the harness already knows is filled from the repository and
-the run records. Fields marked **[S5]** are the owner's decisions at the hard stop; fields marked **[confirm]** are
-filled from the Opus dev-set confirmation run (`dev-opus-confirm`) before the freeze. Nothing in this file may
-change after the freeze tag; if it must, the run is a new, labelled run.
+Status: **DRAFT for S5 (2026-10-22)** — every field the harness knows is filled from the repository and the run
+records, including the budget and windows from the Opus dev-set confirmation run (`20261022-0355-dev-opus-confirm`).
+Fields marked **[S5]** are the owner's decisions at the hard stop. Nothing in this file may change after the freeze
+tag; if it must, the run is a new, labelled run.
 
 ## Primary hypothesis and comparison
 
@@ -25,18 +25,26 @@ change after the freeze tag; if it must, the run is a new, labelled run.
 ## Arms in the matrix and trials
 
 - Final arms at **3 trials**: `plain`, `plain-guided`, `speckit`, `s2a`, `s2a-nomap`, `s2a-noverify`
-  (15 tasks x 3 x 6 = 270 trials). Optional at 1 trial if the budget allows: `plain-gate`, `s2a-norepro`,
-  `speckit-sdd` (MVP cut, D-045). **[confirm]** whether the optional arms run.
+  (15 tasks x 3 x 6 = 270 trials). Optional arms at **1 trial** (MVP cut, D-045): `plain-gate`, `s2a-norepro`,
+  `speckit-sdd` (15 x 1 x 3 = 45 trials), as a **second run** (`heldout-optional`) started only after the main
+  matrix has finished, so they cannot delay or starve it; exploratory, never part of the primary comparison. The
+  owner may drop them at S5.
 - Model: **`claude-opus-5-5`** (D-001; profile `final`); Claude Code **2.1.302**; Spec Kit **v1.2.1**;
   `s2a_git_sha` **5ca7283a1a63170d9070a2a0e54e3f5fd179729c** (frozen 2026-10-22 at `8f8fc50`; re-frozen here
   after one post-freeze setup fix before any held-out run, D-059: map turn cap 25 -> 40; s2a/CHANGELOG.md).
 - Limits: 45 min, $15 est., 200 turns, nudges 2/call 4/trial. Binding: wall-clock and est. USD. One-time setups
   (Spec Kit constitution, s2a map) are built per repo with the pinned model (D-058) and reported separately.
 - Parallelism: `--parallel 2` on the laptop (two sandbox users, D-037/D-056).
-- **[S5] `auth_mode`:** `subscription` (batches across usage windows; plan **Max** since 2026-10-21; expected
-  windows **[confirm]**) | `subscription after asking Anthropic` (answer kept in `docs/`) | `api_key` — see
-  `specs/auth-and-usage.md` §5.
-- Budget: `--max-usd` = 1.3 x the estimate from the confirmation run = **[confirm]**.
+- **[S5] `auth_mode`:** `subscription` (batches across usage windows; plan **Max** since 2026-10-21) |
+  `subscription after asking Anthropic` (answer kept in `docs/`) | `api_key` — see `specs/auth-and-usage.md` §5.
+- Expected duration and windows (from `20261022-0355-dev-opus-confirm`, docs/RUNS.md): main matrix ≈ 105
+  slot-hours ≈ **52 h at `--parallel 2`**, ≈ 11 five-hour windows with no pause expected (each window of the
+  confirmation run peaked at 0.60-0.68 at parallel 2; the pause point is 0.9); about **50-55 % of one week's
+  allowance** at the seven-day window (0.06 -> 0.18 for the confirmation run's est. $136). Optional run ≈ 9 h,
+  ≈ 10 % of a week. A weekly cut is handled as `usage_limited` (pause, probe, re-queue).
+- Budget (`abb run --dry-run`, `config/cost_estimates.yaml`, Opus per-trial means from the confirmation run):
+  main matrix est. **$582.71** -> `--max-usd` **757.52** (1.3 x); optional run est. **$115.12** (stand-in costs
+  for arms never run on Opus) -> `--max-usd` **149.66**. Est. API-equivalent USD; no bill under the subscription.
 
 ## Task set
 

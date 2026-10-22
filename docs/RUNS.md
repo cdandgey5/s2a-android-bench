@@ -445,3 +445,112 @@ Verifier calibration `20261021-1722-verify-calibration` (6 re-verifications, est
 | 00:58 | `20261021-2234-dev-s2a-tune2` s2a/wikipedia-0009/t1 | claude-sonnet-5-5 | completed, 37 turns, 579 s | 56 | 37,931 | 784,993 | 230,376 | 1.3794 | 0 | resolved=True; nudges 0; five-hour 0.19 → 0.26, seven-day 0.03 |
 | 03:20 | `20261021-2234-dev-s2a-tune2` s2a/wikipedia-0009/t2 | claude-sonnet-5-5 | completed, 42 turns, 779 s | 66 | 31,215 | 992,371 | 216,743 | 1.2785 | 0 | resolved=True; nudges 0; five-hour 0.5 → 0.5, seven-day 0.05 |
 | | **`20261021-2234-dev-s2a-tune2` total (20 trials, 15 resolved)** | | mean 606 s | **1,394** | **562,590** | **22,465,890** | **3,802,915** | **23.0869** | 0 | incl. one-time setup |
+
+## 2026-10-22 — Opus dev-set confirmation (6 arms × 10 dev tasks × 1, Opus 5.5, `ABB_TUNING=1`)
+
+`20261022-0355-dev-opus-confirm` (plain, plain-guided, speckit, s2a, s2a-nomap, s2a-noverify; `--tasks dev --trials 1
+--model claude-opus-5-5 --profile final --parallel 2`; plan Max). The Phase 10 prerequisite that plans the held-out
+run. Audit PASS; 0 scheduler pauses; 0 usage-limited attempts; peak job memory 9.8 GB (Wikipedia s2a trials; limit
+10.24 GB).
+
+- 03:55 started on s2a `8f8fc50`, harness `475efc2`. 04:14 **aborted `setup_failed`** after 4 trials: the Opus map
+  used 26 of its 25 turns (`error_max_turns`, `map.json` written, no `map.md`) → D-059 (map cap 40, s2a re-frozen
+  at `5ca7283`).
+- 04:34 resumed on s2a `5ca7283`, harness `365440c` (recorded in `manifest.resumes`); finished 16:28.
+- D-060 (trial clock started before the setup was ready): s2a/wikipedia-0002/t1 had 28.35 of 45 min and stopped
+  on `timeout`; set aside with `abb run invalidate` (kept under `invalidated/`) and re-run 16:28-17:12 on harness
+  `afd0417` (44.98 min given; completed, resolved).
+- D-061: the failed first map attempt's record was overwritten by the rebuild. Its row below was read from its
+  transcript before the overwrite (this session); tokens were not noted and are left blank.
+
+| arm | pass@1 (10 tasks × 1) | est. USD per trial | slot-min per trial (start → graded) |
+|---|---|---|---|
+| plain | 0.90 | 0.5118 | 9.5 |
+| plain-guided | 0.90 | 0.6144 | 11.3 |
+| speckit | 0.90 | 2.2602 | 20.2 |
+| s2a | 0.80 | 3.5134 | 35.0 |
+| s2a-noverify | 0.60 | 2.9369 | 31.7 |
+| s2a-nomap | 0.50 | 3.1124 | 32.0 |
+
+One-time setup on Opus: s2a map antennapod $1.0620 (29 turns) + failed attempt $0.8128, wikipedia $1.0767 (33 turns);
+Spec Kit constitution antennapod $0.4788, wikipedia $0.3405. The held-out run reuses these (same cache keys).
+
+**Held-out plan from this run** (`abb run --arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap
+--arm s2a-noverify --tasks test --trials 3 --model claude-opus-5-5 --dry-run`, `config/cost_estimates.yaml`):
+270 trials, **est. $582.71** → `--max-usd` **$757.52** (1.3 ×). Wall clock ≈ 105 slot-hours → **≈ 52 h at
+`--parallel 2`**. Five-hour window: each window of this run peaked at 0.60-0.68 at parallel 2, under the 0.9 pause
+point, so ≈ 11 windows with no pause expected. Seven-day window: 0.06 → 0.18 during this run (est. $136 incl. the
+set-aside work; the subscription is shared, so the owner's own use in those hours is included), so the held-out run
+needs roughly 50-55 % of a week's Opus allowance; it resets Sundays 19:00 UTC. A weekly cut is handled as
+`usage_limited` (pause, probe, re-queue; `--max-pause-h`).
+
+| Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 04:14 | `20261022-0355-dev-opus-confirm` setup s2a-map/antennapod, **first attempt (failed)** | claude-opus-5-5 | error_max_turns, 26 turns | | | | | 0.8128 | 0 | record overwritten by the rebuild (D-061); values read from its transcript before that |
+| 11:36 | `20261022-0355-dev-opus-confirm` s2a/wikipedia-0002/t1, **invalidated attempt** | claude-opus-5-5 | timeout, 55 turns, 1198 s | 74 | 46,926 | 1,217,679 | 211,300 | 2.8728 | 0 | resolved=True; clock cut to 28.35 min (D-060); kept under `invalidated/`, not counted |
+| 04:46 | `20261022-0355-dev-opus-confirm` setup s2a-map/antennapod | claude-opus-5-5 | success, 29 turns | 50 | 19,119 | 1,304,066 | 52,322 | 1.0620 | 0 | one-time setup (reported separately); five-hour 0.61 → 0.62, seven-day 0.07 |
+| 11:07 | `20261022-0355-dev-opus-confirm` setup s2a-map/wikipedia | claude-opus-5-5 | success, 33 turns | 62 | 17,030 | 1,529,408 | 53,752 | 1.0767 | 0 | one-time setup (reported separately); five-hour 0.03 → 0.05, seven-day 0.13 |
+| 04:01 | `20261022-0355-dev-opus-confirm` setup speckit-constitution/antennapod | claude-opus-5-5 | success, 9 turns | 18 | 7,016 | 327,873 | 34,098 | 0.4788 | 0 | one-time setup (reported separately); five-hour 0.55 → 0.56, seven-day 0.06 |
+| 10:40 | `20261022-0355-dev-opus-confirm` setup speckit-constitution/wikipedia | claude-opus-5-5 | success, 7 turns | 14 | 5,874 | 204,073 | 22,765 | 0.3405 | 0 | one-time setup (reported separately); five-hour 0.02 → 0.02, seven-day 0.13 |
+| 03:55 | `20261022-0355-dev-opus-confirm` plain/antennapod-0000/t1 | claude-opus-5-5 | completed, 7 turns, 142 s | 12 | 1,860 | 126,940 | 28,202 | 0.2883 | 0 | resolved=True; nudges 0; five-hour 0.55 → 0.55, seven-day 0.06 |
+| 05:04 | `20261022-0355-dev-opus-confirm` plain/antennapod-0001/t1 | claude-opus-5-5 | completed, 14 turns, 151 s | 20 | 3,362 | 276,889 | 24,527 | 0.3189 | 0 | resolved=True; nudges 0; five-hour 0.66 → 0.66, seven-day 0.07 |
+| 05:38 | `20261022-0355-dev-opus-confirm` plain/antennapod-0002/t1 | claude-opus-5-5 | completed, 9 turns, 196 s | 16 | 2,583 | 207,664 | 27,491 | 0.3132 | 0 | resolved=True; nudges 0; five-hour 0.04 → 0.05, seven-day 0.08 |
+| 06:33 | `20261022-0355-dev-opus-confirm` plain/antennapod-0003/t1 | claude-opus-5-5 | completed, 27 turns, 472 s | 46 | 14,919 | 1,270,085 | 58,620 | 1.0215 | 0 | resolved=True; nudges 0; five-hour 0.14 → 0.15, seven-day 0.09 |
+| 07:58 | `20261022-0355-dev-opus-confirm` plain/antennapod-0004/t1 | claude-opus-5-5 | completed, 19 turns, 484 s | 36 | 9,306 | 788,890 | 47,298 | 0.7224 | 0 | resolved=True; nudges 0; five-hour 0.35 → 0.37, seven-day 0.1 |
+| 09:16 | `20261022-0355-dev-opus-confirm` plain/antennapod-0005/t1 | claude-opus-5-5 | completed, 20 turns, 398 s | 28 | 7,717 | 496,329 | 31,856 | 0.5086 | 0 | resolved=True; nudges 0; five-hour 0.52 → 0.53, seven-day 0.12 |
+| 10:24 | `20261022-0355-dev-opus-confirm` plain/wikipedia-0002/t1 | claude-opus-5-5 | completed, 14 turns, 499 s | 24 | 7,656 | 360,568 | 22,017 | 0.4015 | 0 | resolved=True; nudges 0; five-hour 0 → 0.01, seven-day 0.13 |
+| 11:46 | `20261022-0355-dev-opus-confirm` plain/wikipedia-0006/t1 | claude-opus-5-5 | completed, 23 turns, 531 s | 28 | 12,192 | 626,347 | 44,543 | 0.7256 | 0 | resolved=False; nudges 0; five-hour 0.12 → 0.14, seven-day 0.14 |
+| 13:36 | `20261022-0355-dev-opus-confirm` plain/wikipedia-0007/t1 | claude-opus-5-5 | completed, 11 turns, 498 s | 20 | 3,636 | 328,143 | 27,089 | 0.3551 | 0 | resolved=True; nudges 0; five-hour 0.45 → 0.47, seven-day 0.16 |
+| 15:00 | `20261022-0355-dev-opus-confirm` plain/wikipedia-0009/t1 | claude-opus-5-5 | completed, 13 turns, 487 s | 22 | 7,347 | 384,718 | 29,900 | 0.4632 | 0 | resolved=True; nudges 0; five-hour 0.62 → 0.64, seven-day 0.17 |
+| 03:55 | `20261022-0355-dev-opus-confirm` plain-guided/antennapod-0000/t1 | claude-opus-5-5 | completed, 10 turns, 345 s | 16 | 2,750 | 211,409 | 16,782 | 0.2316 | 0 | resolved=True; nudges 0; five-hour 0.55 → 0.56, seven-day 0.06 |
+| 05:05 | `20261022-0355-dev-opus-confirm` plain-guided/antennapod-0001/t1 | claude-opus-5-5 | completed, 13 turns, 375 s | 26 | 4,096 | 416,099 | 24,434 | 0.3607 | 0 | resolved=True; nudges 0; five-hour 0.66 → 0.67, seven-day 0.07 |
+| 05:42 | `20261022-0355-dev-opus-confirm` plain-guided/antennapod-0002/t1 | claude-opus-5-5 | completed, 16 turns, 340 s | 28 | 5,512 | 464,389 | 25,791 | 0.4096 | 0 | resolved=True; nudges 0; five-hour 0.05 → 0.05, seven-day 0.08 |
+| 06:41 | `20261022-0355-dev-opus-confirm` plain-guided/antennapod-0003/t1 | claude-opus-5-5 | completed, 35 turns, 671 s | 58 | 20,033 | 1,904,527 | 77,266 | 1.3999 | 0 | resolved=True; nudges 0; five-hour 0.15 → 0.19, seven-day 0.09 |
+| 08:10 | `20261022-0355-dev-opus-confirm` plain-guided/antennapod-0004/t1 | claude-opus-5-5 | completed, 22 turns, 556 s | 38 | 11,995 | 884,727 | 44,536 | 0.7733 | 0 | resolved=True; nudges 0; five-hour 0.37 → 0.38, seven-day 0.11 |
+| 09:25 | `20261022-0355-dev-opus-confirm` plain-guided/antennapod-0005/t1 | claude-opus-5-5 | completed, 25 turns, 537 s | 40 | 11,123 | 773,240 | 37,670 | 0.6786 | 0 | resolved=True; nudges 0; five-hour 0.53 → 0.54, seven-day 0.12 |
+| 10:36 | `20261022-0355-dev-opus-confirm` plain-guided/wikipedia-0002/t1 | claude-opus-5-5 | completed, 12 turns, 477 s | 22 | 7,464 | 347,353 | 24,568 | 0.4154 | 0 | resolved=True; nudges 0; five-hour 0.01 → 0.03, seven-day 0.13 |
+| 12:01 | `20261022-0355-dev-opus-confirm` plain-guided/wikipedia-0006/t1 | claude-opus-5-5 | completed, 19 turns, 559 s | 26 | 13,592 | 595,531 | 47,377 | 0.7701 | 0 | resolved=False; nudges 0; five-hour 0.14 → 0.16, seven-day 0.14 |
+| 13:51 | `20261022-0355-dev-opus-confirm` plain-guided/wikipedia-0007/t1 | claude-opus-5-5 | completed, 18 turns, 539 s | 32 | 6,772 | 633,596 | 35,167 | 0.5436 | 0 | resolved=True; nudges 0; five-hour 0.47 → 0.49, seven-day 0.16 |
+| 15:13 | `20261022-0355-dev-opus-confirm` plain-guided/wikipedia-0009/t1 | claude-opus-5-5 | completed, 15 turns, 477 s | 20 | 10,432 | 380,268 | 34,536 | 0.5611 | 0 | resolved=True; nudges 0; five-hour 0.65 → 0, seven-day 0.17 |
+| 04:46 | `20261022-0355-dev-opus-confirm` s2a/antennapod-0000/t1 | claude-opus-5-5 | completed, 44 turns, 614 s | 68 | 20,757 | 970,041 | 144,329 | 1.7641 | 0 | resolved=True; nudges 0; five-hour 0.65 → 0.65, seven-day 0.07 |
+| 05:13 | `20261022-0355-dev-opus-confirm` s2a/antennapod-0001/t1 | claude-opus-5-5 | completed, 60 turns, 843 s | 94 | 32,866 | 1,504,081 | 230,600 | 2.8033 | 0 | resolved=True; nudges 0; five-hour 0.01 → 0.03, seven-day 0.08 |
+| 05:51 | `20261022-0355-dev-opus-confirm` s2a/antennapod-0002/t1 | claude-opus-5-5 | completed, 46 turns, 771 s | 76 | 28,706 | 1,171,222 | 193,946 | 2.3602 | 0 | resolved=False; nudges 0; five-hour 0.08 → 0.1, seven-day 0.08 |
+| 06:55 | `20261022-0355-dev-opus-confirm` s2a/antennapod-0003/t1 | claude-opus-5-5 | completed, 82 turns, 1474 s | 128 | 63,372 | 2,734,780 | 334,310 | 4.4894 | 0 | resolved=True; nudges 0; five-hour 0.23 → 0.29, seven-day 0.1 |
+| 08:25 | `20261022-0355-dev-opus-confirm` s2a/antennapod-0004/t1 | claude-opus-5-5 | completed, 64 turns, 1138 s | 116 | 48,834 | 2,171,651 | 288,736 | 3.7214 | 0 | resolved=True; nudges 0; five-hour 0.42 → 0.46, seven-day 0.11 |
+| 09:35 | `20261022-0355-dev-opus-confirm` s2a/antennapod-0005/t1 | claude-opus-5-5 | completed, 58 turns, 1007 s | 88 | 49,534 | 1,616,750 | 252,805 | 3.3368 | 0 | resolved=True; nudges 0; five-hour 0.57 → 0.61, seven-day 0.12 |
+| 16:29 | `20261022-0355-dev-opus-confirm` s2a/wikipedia-0002/t1 | claude-opus-5-5 | completed, 68 turns, 1595 s | 112 | 61,068 | 1,889,463 | 274,920 | 3.7991 | 0 | resolved=True; nudges 0; five-hour 0.2 → 0.21, seven-day 0.18 |
+| 12:22 | `20261022-0355-dev-opus-confirm` s2a/wikipedia-0006/t1 | claude-opus-5-5 | timeout, 117 turns, 1819 s | 158 | 90,815 | 3,243,852 | 428,826 | 5.8963 | 0 | resolved=False; nudges 0; five-hour 0.36 → 0.31, seven-day 0.15 |
+| 14:06 | `20261022-0355-dev-opus-confirm` s2a/wikipedia-0007/t1 | claude-opus-5-5 | completed, 72 turns, 1411 s | 120 | 42,305 | 2,228,479 | 254,713 | 3.3300 | 0 | resolved=True; nudges 0; five-hour 0.55 → 0.58, seven-day 0.16 |
+| 15:40 | `20261022-0355-dev-opus-confirm` s2a/wikipedia-0009/t1 | claude-opus-5-5 | completed, 57 turns, 1289 s | 96 | 53,792 | 1,687,621 | 277,432 | 3.6332 | 0 | resolved=True; nudges 0; five-hour 0.09 → 0.12, seven-day 0.18 |
+| 04:11 | `20261022-0355-dev-opus-confirm` s2a-nomap/antennapod-0000/t1 | claude-opus-5-5 | completed, 44 turns, 603 s | 64 | 18,554 | 837,643 | 155,214 | 1.7806 | 0 | resolved=True; nudges 0; five-hour 0.59 → 0.6, seven-day 0.06 |
+| 05:18 | `20261022-0355-dev-opus-confirm` s2a-nomap/antennapod-0001/t1 | claude-opus-5-5 | agent_error, 35 turns, 379 s | 52 | 19,930 | 731,834 | 119,952 | 1.5048 | 0 | resolved=False; nudges 0; five-hour 0.68 → 0.01, seven-day 0.07 |
+| 06:01 | `20261022-0355-dev-opus-confirm` s2a-nomap/antennapod-0002/t1 | claude-opus-5-5 | completed, 58 turns, 1022 s | 96 | 33,787 | 1,462,200 | 218,792 | 2.7189 | 0 | resolved=False; nudges 0; five-hour 0.12 → 0.12, seven-day 0.08 |
+| 07:10 | `20261022-0355-dev-opus-confirm` s2a-nomap/antennapod-0003/t1 | claude-opus-5-5 | timeout, 124 turns, 1568 s | 206 | 83,064 | 4,508,894 | 394,100 | 5.7167 | 0 | resolved=True; nudges 0; five-hour 0.28 → 0.27, seven-day 0.1 |
+| 08:58 | `20261022-0355-dev-opus-confirm` s2a-nomap/antennapod-0004/t1 | claude-opus-5-5 | agent_error, 48 turns, 782 s | 66 | 31,851 | 1,245,626 | 167,166 | 2.2237 | 0 | resolved=False; nudges 0; five-hour 0.47 → 0.51, seven-day 0.12 |
+| 09:54 | `20261022-0355-dev-opus-confirm` s2a-nomap/antennapod-0005/t1 | claude-opus-5-5 | completed, 59 turns, 1050 s | 90 | 50,170 | 1,619,323 | 219,210 | 3.0813 | 0 | resolved=True; nudges 0; five-hour 0.62 → 0, seven-day 0.13 |
+| 11:01 | `20261022-0355-dev-opus-confirm` s2a-nomap/wikipedia-0002/t1 | claude-opus-5-5 | completed, 55 turns, 1408 s | 88 | 55,678 | 1,372,078 | 221,619 | 3.1613 | 0 | resolved=True; nudges 0; five-hour 0.1 → 0.11, seven-day 0.14 |
+| 12:45 | `20261022-0355-dev-opus-confirm` s2a-nomap/wikipedia-0006/t1 | claude-opus-5-5 | timeout, 120 turns, 1691 s | 166 | 90,342 | 3,333,223 | 387,227 | 5.5720 | 0 | resolved=False; nudges 2; five-hour 0.39 → 0.33, seven-day 0.15 |
+| 14:10 | `20261022-0355-dev-opus-confirm` s2a-nomap/wikipedia-0007/t1 | claude-opus-5-5 | completed, 81 turns, 1576 s | 130 | 49,007 | 2,209,759 | 236,565 | 3.3151 | 0 | resolved=True; nudges 0; five-hour 0.57 → 0.6, seven-day 0.17 |
+| 15:50 | `20261022-0355-dev-opus-confirm` s2a-nomap/wikipedia-0009/t1 | claude-opus-5-5 | agent_error, 26 turns, 766 s | 50 | 33,583 | 805,789 | 152,091 | 2.0497 | 0 | resolved=False; nudges 0; five-hour 0.05 → 0.1, seven-day 0.18 |
+| 04:46 | `20261022-0355-dev-opus-confirm` s2a-noverify/antennapod-0000/t1 | claude-opus-5-5 | completed, 38 turns, 598 s | 58 | 19,723 | 815,372 | 128,861 | 1.5887 | 0 | resolved=True; nudges 0; five-hour 0.65 → 0.64, seven-day 0.07 |
+| 05:29 | `20261022-0355-dev-opus-confirm` s2a-noverify/antennapod-0001/t1 | claude-opus-5-5 | completed, 51 turns, 659 s | 78 | 28,248 | 1,195,806 | 199,232 | 2.3983 | 0 | resolved=True; nudges 0; five-hour 0.04 → 0.03, seven-day 0.08 |
+| 06:18 | `20261022-0355-dev-opus-confirm` s2a-noverify/antennapod-0002/t1 | claude-opus-5-5 | completed, 44 turns, 770 s | 64 | 28,362 | 1,011,368 | 168,379 | 2.1168 | 0 | resolved=False; nudges 0; five-hour 0.13 → 0.13, seven-day 0.08 |
+| 07:37 | `20261022-0355-dev-opus-confirm` s2a-noverify/antennapod-0003/t1 | claude-opus-5-5 | timeout, 109 turns, 1466 s | 158 | 65,089 | 3,532,058 | 362,402 | 4.9080 | 0 | resolved=True; nudges 0; five-hour 0.34 → 0.33, seven-day 0.1 |
+| 09:00 | `20261022-0355-dev-opus-confirm` s2a-noverify/antennapod-0004/t1 | claude-opus-5-5 | completed, 56 turns, 1038 s | 94 | 41,524 | 1,648,197 | 249,639 | 3.1576 | 0 | resolved=True; nudges 0; five-hour 0.5 → 0.49, seven-day 0.11 |
+| 10:06 | `20261022-0355-dev-opus-confirm` s2a-noverify/antennapod-0005/t1 | claude-opus-5-5 | agent_error, 53 turns, 868 s | 84 | 40,601 | 1,551,502 | 203,328 | 2.7493 | 0 | resolved=True; nudges 0; five-hour 0.64 → 0.64, seven-day 0.13 |
+| 11:41 | `20261022-0355-dev-opus-confirm` s2a-noverify/wikipedia-0002/t1 | claude-opus-5-5 | completed, 57 turns, 1296 s | 86 | 53,780 | 1,495,405 | 223,788 | 3.1653 | 0 | resolved=True; nudges 0; five-hour 0.15 → 0.14, seven-day 0.14 |
+| 13:14 | `20261022-0355-dev-opus-confirm` s2a-noverify/wikipedia-0006/t1 | claude-opus-5-5 | agent_error, 82 turns, 1295 s | 104 | 62,255 | 2,058,125 | 309,723 | 4.1349 | 0 | resolved=False; nudges 0; five-hour 0.45 → 0.42, seven-day 0.16 |
+| 14:48 | `20261022-0355-dev-opus-confirm` s2a-noverify/wikipedia-0007/t1 | claude-opus-5-5 | timeout, 89 turns, 2109 s | 146 | 47,183 | 2,753,555 | 239,209 | 3.4086 | 0 | resolved=False; nudges 0; five-hour 0.65 → 0.63, seven-day 0.17 |
+| 16:13 | `20261022-0355-dev-opus-confirm` s2a-noverify/wikipedia-0009/t1 | claude-opus-5-5 | agent_error, 25 turns, 617 s | 44 | 27,269 | 814,983 | 129,073 | 1.7411 | 0 | resolved=False; nudges 0; five-hour 0.12 → 0.14, seven-day 0.18 |
+| 04:02 | `20261022-0355-dev-opus-confirm` speckit/antennapod-0000/t1 | claude-opus-5-5 | completed, 17 turns, 422 s | 30 | 7,973 | 841,506 | 87,261 | 1.0260 | 0 | resolved=True; nudges 0; five-hour 0.56 → 0.58, seven-day 0.06 |
+| 05:08 | `20261022-0355-dev-opus-confirm` speckit/antennapod-0001/t1 | claude-opus-5-5 | completed, 21 turns, 499 s | 34 | 11,052 | 788,196 | 56,357 | 0.8297 | 0 | resolved=True; nudges 0; five-hour 0.66 → 0.68, seven-day 0.07 |
+| 05:50 | `20261022-0355-dev-opus-confirm` speckit/antennapod-0002/t1 | claude-opus-5-5 | completed, 20 turns, 555 s | 34 | 9,900 | 867,002 | 61,446 | 0.8631 | 0 | resolved=True; nudges 0; five-hour 0.06 → 0.08, seven-day 0.08 |
+| 06:43 | `20261022-0355-dev-opus-confirm` speckit/antennapod-0003/t1 | claude-opus-5-5 | completed, 75 turns, 1468 s | 120 | 59,965 | 7,075,304 | 175,797 | 4.0212 | 0 | resolved=True; nudges 0; five-hour 0.16 → 0.23, seven-day 0.09 |
+| 08:22 | `20261022-0355-dev-opus-confirm` speckit/antennapod-0004/t1 | claude-opus-5-5 | completed, 102 turns, 2020 s | 168 | 56,180 | 11,846,181 | 215,879 | 5.2205 | 0 | resolved=True; nudges 0; five-hour 0.38 → 0.46, seven-day 0.11 |
+| 09:34 | `20261022-0355-dev-opus-confirm` speckit/antennapod-0005/t1 | claude-opus-5-5 | completed, 50 turns, 1103 s | 84 | 37,716 | 3,615,511 | 115,118 | 2.3987 | 0 | resolved=True; nudges 0; five-hour 0.54 → 0.59, seven-day 0.12 |
+| 10:40 | `20261022-0355-dev-opus-confirm` speckit/wikipedia-0002/t1 | claude-opus-5-5 | completed, 25 turns, 876 s | 42 | 20,802 | 1,073,678 | 56,416 | 1.0823 | 0 | resolved=True; nudges 0; five-hour 0.02 → 0.04, seven-day 0.13 |
+| 12:17 | `20261022-0355-dev-opus-confirm` speckit/wikipedia-0006/t1 | claude-opus-5-5 | completed, 82 turns, 1321 s | 118 | 63,708 | 6,596,788 | 161,910 | 3.8893 | 0 | resolved=False; nudges 0; five-hour 0.17 → 0.27, seven-day 0.15 |
+| 13:51 | `20261022-0355-dev-opus-confirm` speckit/wikipedia-0007/t1 | claude-opus-5-5 | completed, 30 turns, 785 s | 50 | 15,820 | 1,348,082 | 60,095 | 1.0670 | 0 | resolved=True; nudges 0; five-hour 0.47 → 0.49, seven-day 0.16 |
+| 15:27 | `20261022-0355-dev-opus-confirm` speckit/wikipedia-0009/t1 | claude-opus-5-5 | completed, 44 turns, 1032 s | 72 | 40,371 | 2,845,126 | 103,471 | 2.2045 | 0 | resolved=True; nudges 0; five-hour 0 → 0.05, seven-day 0.17 |
+| | **`20261022-0355-dev-opus-confirm` total (60 trials, 46 resolved)** | | mean 872 s | **4,434** | **1,908,922** | **105,961,186** | **9,132,544** | **132.4488** | 0 | incl. one-time setup |
+| | **including the failed map attempt and the invalidated trial** | | | | | | | **136.1344** | 0 | 132.4488 + 0.8128 + 2.8728 |

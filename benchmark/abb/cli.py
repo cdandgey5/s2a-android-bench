@@ -323,9 +323,12 @@ def tasks_lint(task_id: Optional[str] = typer.Argument(None), all_: bool = typer
     if setup_leak:
         from abb.harness import taskset
 
-        hits = taskset.setup_leaks()
+        hits, modified, skipped = taskset.setup_leaks()
         for h in hits:
             typer.echo(f"ERROR setup-leak {h}")
+        for path, n in modified.items():   # files a gold patch modifies exist at setup_commit: counted, not failed
+            typer.echo(f"INFO  mentions of a modified file: {path}: {n}")
+        typer.echo(f"INFO  {skipped} tool-installed file(s) skipped (identical in two repos' setups)")
         typer.echo(f"{len(hits)} leak(s)")
         raise typer.Exit(1 if hits else 0)
 
@@ -451,7 +454,7 @@ def run_main(ctx: typer.Context,
             raise typer.Exit(2)
         arms, ids, run_id, task_set = list(arm), runmod.resolve_tasks(tasks), runmod.new_run_id(label), tasks
     if dry_run:
-        typer.echo(json.dumps(runmod.dry_run(arms, ids, trials), indent=2))
+        typer.echo(json.dumps(runmod.dry_run(arms, ids, trials, model), indent=2))
         return
     if sandbox == "none" and any(load_task(t).split == "test" for t in ids):
         typer.echo("--sandbox none is refused for split: test tasks (D-009)", err=True)

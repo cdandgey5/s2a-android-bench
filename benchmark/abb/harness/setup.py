@@ -4,7 +4,8 @@ Cached per (setup_kind, repo, setup_commit, environment fingerprint, prompt hash
 <results>/_setup_cache/<key>/ so arms that share a setup kind share the artifact (D-012). The run
 that produces a setup records it under <run>/setup/<kind>/<repo>/ (run.json, calls.jsonl,
 transcript/, prompts/, artifacts/) and pays its cost there; later runs record a reference
-(`reused_from`) at cost 0. The setup workspace is a snapshot at `repos.<repo>.build.setup_commit`
+(`reused_from`) at cost 0. A failed attempt's record moves to <run>/setup_failed/<kind>/<repo>/<stamp>/
+before a retry, so its transcript and cost are kept (D-061). The setup workspace is a snapshot at `repos.<repo>.build.setup_commit`
 (fairness-protocol.md, "One-time setup artifacts must not leak fixes").
 """
 from __future__ import annotations
@@ -19,7 +20,7 @@ from typing import Callable
 from abb import paths
 from abb.config import load_repo
 from abb.harness.env import load_env_lock
-from abb.util import utcnow_iso
+from abb.util import stamp, utcnow_iso
 
 OK_SUBTYPES = ("success", "error_max_turns")   # a turn-capped constitution is still a (partial) setup
 
@@ -73,6 +74,10 @@ def ensure_setup(arm, repo_key: str, run_dir: Path, *, run_id: str,
                                     "cost_usd": 0.0, "cost_usd_imputed": 0.0, "num_turns": 0, "calls": [],
                                     "limits": record.get("limits"), "recorded_at": utcnow_iso()})
         return {"key": key, "artifacts": cdir / "artifacts", "reused": True, "record": record}
+    if (rec_dir / "run.json").exists():  # an earlier failed attempt: keep its transcript and cost (D-061)
+        failed = run_dir / "setup_failed" / arm.setup_kind / repo_key / stamp()
+        failed.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(rec_dir), str(failed))
     ws, ctx = make_context(arm, repo_key, rec_dir)
     try:
         calls = arm.one_time_setup(repo_key, ws, ctx.budget.limits, ctx=ctx)
