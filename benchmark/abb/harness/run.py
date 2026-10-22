@@ -131,8 +131,10 @@ class Runner:
     def __init__(self, *, run_id: str, label: str, arms: list[str], tasks: list[str], trials: int, model: str,
                  grade: bool, sandbox: str, allow_env_drift: bool, profile: str | None, task_set: str,
                  parallel: int = 1, max_usd: float | None = None, allow_no_canary: bool = False,
-                 max_pause_h: float = 48.0, pause_at: float | None = PAUSE_AT_UTILIZATION):
+                 max_pause_h: float = 48.0, pause_at: float | None = PAUSE_AT_UTILIZATION,
+                 through_trial: int | None = None):
         self.run_id, self.label, self.arms, self.tasks, self.trials = run_id, label, arms, tasks, trials
+        self.through_trial = through_trial   # a batch (S6): launch only trial rounds <= this; resume for the rest
         self.model, self.grade, self.sandbox, self.allow_env_drift = model, grade, sandbox, allow_env_drift
         self.task_set, self.parallel, self.max_usd = task_set, max(1, parallel), max_usd
         self.allow_no_canary, self.max_pause_h, self.pause_at = allow_no_canary, max_pause_h, pause_at
@@ -242,9 +244,14 @@ class Runner:
         stop = self.root / "STOP"
         stop.unlink(missing_ok=True)
         self.event(event="run_start", arms=self.arms, tasks=self.tasks, trials=self.trials, model=self.model,
-                   parallel=self.parallel, max_usd=self.max_usd)
+                   parallel=self.parallel, max_usd=self.max_usd, through_trial=self.through_trial)
+        if self.through_trial:
+            m = self.manifest.read()
+            self.write_manifest(batches=m.get("batches", []) + [{"at": utcnow_iso(), "through_trial": self.through_trial}])
         meter = CostMeter(self.max_usd, spent=self._spent_so_far())
-        sched = Scheduler(order_jobs(self.arms, self.tasks, self.trials), self._job, workers=self.parallel,
+        jobs = [j for j in order_jobs(self.arms, self.tasks, self.trials)
+                if not self.through_trial or j.trial <= self.through_trial]
+        sched = Scheduler(jobs, self._job, workers=self.parallel,
                           meter=meter, stop_file=stop, probe=self._scheduler_probe, pause_at=self.pause_at,
                           max_pause_s=self.max_pause_h * 3600, on_event=lambda **kw: self.event(**kw))
         proxy = from_sandbox_config("user", self.root / "proxy.log")

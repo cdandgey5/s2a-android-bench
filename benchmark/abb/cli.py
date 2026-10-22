@@ -430,6 +430,10 @@ def run_main(ctx: typer.Context,
              dry_run: bool = typer.Option(False, "--dry-run", help="print the matrix and its estimated cost, run nothing"),
              allow_no_canary: bool = typer.Option(False, help="run a matrix without the usage-limit canary (recorded)"),
              max_pause_h: float = typer.Option(48.0, help="give up (aborted: usage_limit) after pausing this long"),
+             through_trial: Optional[int] = typer.Option(None, "--through-trial",
+                                                         help="a batch: launch only trial rounds <= this (the order "
+                                                              "is trial-major); `--resume` with a higher value or "
+                                                              "none runs the rest"),
              allow_env_drift: bool = typer.Option(False), profile: Optional[str] = typer.Option(None)) -> None:
     """Run arms x tasks x trials on --parallel workers; results under ABB_RESULTS_DIR/<run_id> (phase 8)."""
     if ctx.invoked_subcommand is not None:
@@ -461,7 +465,8 @@ def run_main(ctx: typer.Context,
         raise typer.Exit(2)
     r = runmod.Runner(run_id=run_id, label=label, arms=arms, tasks=ids, trials=trials, model=model, grade=grade,
                       sandbox=sandbox, allow_env_drift=allow_env_drift, profile=profile, task_set=task_set,
-                      parallel=parallel or 1, max_usd=max_usd, allow_no_canary=allow_no_canary, max_pause_h=max_pause_h)
+                      parallel=parallel or 1, max_usd=max_usd, allow_no_canary=allow_no_canary, max_pause_h=max_pause_h,
+                      through_trial=through_trial)
     out = r.run()
     typer.echo(f"run {out['run_id']} finished; aborted_reason={out['aborted_reason']}; est. USD {out['spent_usd']}")
     typer.echo(f"results: {paths.results_dir() / out['run_id']}")
