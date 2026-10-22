@@ -12,8 +12,8 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `10`, **waiting at S5** (hard stop). s2a frozen at `5ca7283` (D-058, D-059). The Opus dev-set confirmation `20261022-0355-dev-opus-confirm` is done (audit PASS; 60 trials + 1 invalidated and re-run, D-060; RUNS.md has per-arm cost/time and the held-out plan). `docs/PREREG.md` has every field filled except the owner's **[S5]** ones. Phase 10 step 1 pre-flight: `abb tasks lint --all` 25/0 errors; `abb tasks lint --setup-leak` 0 leaks (after D-062); `tasks/TASKSET.sha256` = 80b55a02… unchanged; `abb env verify` per repo running/done (logs `C:\abb\logs\verify-phase10-<repo>.log`).
-- Last commit: `Opus confirmation done; setup records kept on retry (D-061); setup-leak lint per spec (D-062)` + this handoff
+- Phase: `10`, **S6** (held-out run). **Frozen at tag `v1.0-frozen` on 2026-10-22** (S5 passed: owner chose `auth_mode: subscription`, Max 5x, optional arms kept, freeze approved; fresh token stored as user env `ABB_OAUTH_TOKEN`). Phase 10 step 1 pre-flight: `tasks lint --all` 25/0; `tasks lint --setup-leak` 0 leaks (D-062); `env verify` AntennaPod 60/60 x2 + 13 seed OK, Wikipedia 367/367 x2 + 12 seed OK (logs `C:\abb\logs\verify-phase10-<repo>.log`); TASKSET 80b55a02… matches; s2a `5ca7283`. The runner enforces the freeze for `split: test` runs (D-063).
+- Last commit: `phase 10 step 1: freeze …` (tagged `v1.0-frozen`) + this handoff
 - Working tree: clean
 - Date: `2026-10-22`
 
@@ -41,7 +41,6 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. **S5 (hard stop, owner):** review `docs/PREREG.md`; choose `auth_mode` (subscription batches on Max / subscription after asking Anthropic / API key); confirm the plan name (Max 5x or 20x) and the optional run (`plain-gate`, `s2a-norepro`, `speckit-sdd` x 1; default yes, after the main matrix); approve the freeze tag; create a fresh token in their own terminal (`claude setup-token`, store it as the user environment variable `ABB_OAUTH_TOKEN`; never pasted into chat); reply `done`.
-2. Then Phase 10 step 1: fill the [S5] fields, commit PREREG, record its sha256, tag `v1.0-frozen`, D-010 entry (`test set run once on <date>; no task or prompt changes after the tag`), `abb auth check` with the new token.
-3. **S6:** main matrix `abb run --arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks test --trials 3 --parallel 2 --model claude-opus-5-5 --profile final --label heldout-final --grade --max-usd 757.52 --max-pause-h 150` (never under `ABB_TUNING=1`; never tuned on; ~52 h); then the optional run (`--arm plain-gate --arm s2a-norepro --arm speckit-sdd --trials 1 --label heldout-optional --max-usd 149.66`).
-4. Report, labels (LLM-only, D-057), README, reproducibility package (`abb repro` still to build), write-up, publish (Phase 10 steps 5-9).
+1. **S6, main matrix** (started right after the freeze, background; label `heldout-final`): `abb run --arm plain --arm plain-guided --arm speckit --arm s2a --arm s2a-nomap --arm s2a-noverify --tasks test --trials 3 --parallel 2 --model claude-opus-5-5 --profile final --label heldout-final --grade --max-usd 757.52 --max-pause-h 150`, launched **without `ABB_TUNING`** and with the new token from the user environment (this session's shell still holds the old one: the session wraps the call so the child gets `ABB_OAUTH_TOKEN` from HKCU\Environment). Log `C:\abb\logs\heldout-final.log`; ~52 h. If interrupted: `abb run --resume <run_id> --max-pause-h 150` (same token handling). Never tune on it; never re-run it except under the PREREG rerun rule.
+2. When it ends: `abb audit`, `abb report`, RUNS.md rows (`scripts/runs_rows.py`), then the optional run: `--arm plain-gate --arm s2a-norepro --arm speckit-sdd --tasks test --trials 1 --parallel 2 --model claude-opus-5-5 --profile final --label heldout-optional --grade --max-usd 149.66 --max-pause-h 150`.
+3. Then Phase 10 steps 5-9: labels (LLM-only, D-057), README (split, model, trials, sample-size limits, held-out date), reproducibility package (`abb repro` still to build), write-up, publish; retire the S5 token after the runs.

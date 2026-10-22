@@ -1,9 +1,10 @@
 # Pre-registration (complete and commit BEFORE `v1.0-frozen`; sha256 goes into the manifest)
 
-Status: **DRAFT for S5 (2026-10-22)** — every field the harness knows is filled from the repository and the run
-records, including the budget and windows from the Opus dev-set confirmation run (`20261022-0355-dev-opus-confirm`).
-Fields marked **[S5]** are the owner's decisions at the hard stop. Nothing in this file may change after the freeze
-tag; if it must, the run is a new, labelled run.
+Status: **FROZEN 2026-10-22** at tag `v1.0-frozen`, approved by the owner at S5. Every field is filled from the
+repository, the run records (budget and windows from the Opus dev-set confirmation run
+`20261022-0355-dev-opus-confirm`) and the owner's S5 decisions. Nothing in this file may change after the freeze tag;
+if it must, the run is a new, labelled run. The runner refuses a `split: test` run unless this file is committed
+unchanged since the tag (D-063).
 
 ## Primary hypothesis and comparison
 
@@ -27,16 +28,17 @@ tag; if it must, the run is a new, labelled run.
 - Final arms at **3 trials**: `plain`, `plain-guided`, `speckit`, `s2a`, `s2a-nomap`, `s2a-noverify`
   (15 tasks x 3 x 6 = 270 trials). Optional arms at **1 trial** (MVP cut, D-045): `plain-gate`, `s2a-norepro`,
   `speckit-sdd` (15 x 1 x 3 = 45 trials), as a **second run** (`heldout-optional`) started only after the main
-  matrix has finished, so they cannot delay or starve it; exploratory, never part of the primary comparison. The
-  owner may drop them at S5.
+  matrix has finished, so they cannot delay or starve it; exploratory, never part of the primary comparison. Kept by
+  the owner at S5.
 - Model: **`claude-opus-5-5`** (D-001; profile `final`); Claude Code **2.1.302**; Spec Kit **v1.2.1**;
   `s2a_git_sha` **5ca7283a1a63170d9070a2a0e54e3f5fd179729c** (frozen 2026-10-22 at `8f8fc50`; re-frozen here
   after one post-freeze setup fix before any held-out run, D-059: map turn cap 25 -> 40; s2a/CHANGELOG.md).
 - Limits: 45 min, $15 est., 200 turns, nudges 2/call 4/trial. Binding: wall-clock and est. USD. One-time setups
   (Spec Kit constitution, s2a map) are built per repo with the pinned model (D-058) and reported separately.
 - Parallelism: `--parallel 2` on the laptop (two sandbox users, D-037/D-056).
-- **[S5] `auth_mode`:** `subscription` (batches across usage windows; plan **Max** since 2026-10-21) |
-  `subscription after asking Anthropic` (answer kept in `docs/`) | `api_key` — see `specs/auth-and-usage.md` §5.
+- **`auth_mode`: `subscription`** — batches across usage windows, plan **Max 5x** (since 2026-10-21); chosen by the
+  owner at S5 (2026-10-22) over "ask Anthropic first" and "API key", accepting that an unattended matrix of
+  hundreds of trials stretches "ordinary individual use" (`specs/auth-and-usage.md` §5).
 - Expected duration and windows (from `20261022-0355-dev-opus-confirm`, docs/RUNS.md): main matrix ≈ 105
   slot-hours ≈ **52 h at `--parallel 2`**, ≈ 11 five-hour windows with no pause expected (each window of the
   confirmation run peaked at 0.60-0.68 at parallel 2; the pause point is 0.9); about **50-55 % of one week's
@@ -107,6 +109,9 @@ spoiled trials under (d) are handled by invalidation and re-run (above), not by 
   session wrote tasks and S2A, and the README says so.
 - Task drafting: **25** tasks `drafted_by: agent` (model `claude-opus-5-5`), human-reviewed at S2 (2026-10-18);
   **0** `drafted_by: human`; the README limitations state this.
-- **[S5]** This file's sha256 recorded in `manifest.prereg_sha256`: `[at the freeze]`.
-- **[S5]** Freeze tag `v1.0-frozen` = `[commit]`, date `[ ]`; the held-out run uses a fresh `claude setup-token`
-  token (D-026), retired after the run.
+- This file's sha256 is computed by the runner from the committed file and recorded in every held-out run's
+  `manifest.prereg_sha256` (a file cannot contain its own hash); `git show v1.0-frozen:docs/PREREG.md | sha256sum`
+  reproduces it.
+- Freeze tag `v1.0-frozen` = the commit that marks this file FROZEN (`git rev-parse v1.0-frozen`, also in
+  `manifest.freeze_commit`), date **2026-10-22**. The held-out run uses a fresh `claude setup-token` token created
+  by the owner at S5 (2026-10-22, D-026), retired after the run.

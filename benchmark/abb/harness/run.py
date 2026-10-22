@@ -63,6 +63,42 @@ def _split_sha() -> str | None:
     return split_sha256()
 
 
+FREEZE_TAG = "v1.0-frozen"
+
+
+def freeze_record() -> dict:
+    """A run with any split: test task starts only from the S5 freeze (Phase 10 step 1): docs/PREREG.md committed,
+    unmodified and FROZEN; the freeze tag an ancestor of HEAD; PREREG and the tasks unchanged since the tag; the
+    installed s2a the one PREREG names. Returns the manifest fields; raises SystemExit otherwise."""
+    import subprocess
+
+    root = paths.repo_clone()
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+
+    prereg = root / "docs" / "PREREG.md"
+    if not prereg.exists():
+        raise SystemExit("held-out run refused: docs/PREREG.md is missing (S5, Phase 10 step 1)")
+    text = prereg.read_text(encoding="utf-8")
+    if not re.search(r"^Status: \*\*FROZEN", text, flags=re.M):
+        raise SystemExit("held-out run refused: docs/PREREG.md is not marked FROZEN (S5, Phase 10 step 1)")
+    if git("status", "--porcelain", "--", "docs/PREREG.md", "benchmark/tasks").stdout.strip():
+        raise SystemExit("held-out run refused: docs/PREREG.md or benchmark/tasks has uncommitted changes")
+    tag = git("rev-parse", "--verify", "--quiet", f"refs/tags/{FREEZE_TAG}^{{commit}}").stdout.strip()
+    if not tag:
+        raise SystemExit(f"held-out run refused: tag {FREEZE_TAG} does not exist (S5, Phase 10 step 1)")
+    if git("merge-base", "--is-ancestor", tag, "HEAD").returncode != 0:
+        raise SystemExit(f"held-out run refused: HEAD does not contain {FREEZE_TAG}")
+    if git("diff", "--quiet", tag, "HEAD", "--", "docs/PREREG.md", "benchmark/tasks").returncode != 0:
+        raise SystemExit(f"held-out run refused: docs/PREREG.md or benchmark/tasks changed after {FREEZE_TAG}")
+    s2a = (load_env_lock().get("_s2a") or {}).get("s2a_git_sha")
+    if not s2a or s2a not in text:
+        raise SystemExit(f"held-out run refused: the installed s2a ({s2a}) is not the one docs/PREREG.md names")
+    return {"prereg_sha256": hashlib.sha256(prereg.read_bytes()).hexdigest(), "freeze_tag": FREEZE_TAG,
+            "freeze_commit": tag}
+
+
 def task_set_sha(ids: list[str]) -> str:
     h = hashlib.sha256()
     for tid in ids:
@@ -159,8 +195,10 @@ class Runner:
             if t.validation and t.validation.env_fingerprint != cur and not self.allow_env_drift:
                 raise SystemExit(f"{tid} was validated against {t.validation.env_fingerprint}, environment is {cur}: "
                                  "re-validate or pass --allow-env-drift (recorded)")
-        matrix = len(self.arms) * len(self.tasks) * self.trials > MATRIX_TRIALS or \
-            any(load_task(t).split == "test" for t in self.tasks)
+        held_out = any(load_task(t).split == "test" for t in self.tasks)
+        if held_out:
+            self.write_manifest(**freeze_record())
+        matrix = len(self.arms) * len(self.tasks) * self.trials > MATRIX_TRIALS or held_out
         if matrix and not has_canary() and not self.allow_no_canary:
             raise SystemExit("a matrix run needs the usage-limit canary in reference/verified.md (Phase 4 step 8), "
                              "or --allow-no-canary (recorded)")

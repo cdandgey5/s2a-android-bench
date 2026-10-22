@@ -41,7 +41,10 @@ Phase 1's invariants test, run as the sandbox user, proves the deny.
   "run_id": "20261203-0900-heldout-final",
   "created_at": "2026-12-03T09:00:00Z",
   "label": "heldout-final",
-  "prereg_sha256": "...",                     # docs/PREREG.md at freeze time
+  "prereg_sha256": "...",                     # docs/PREREG.md at freeze time (null for dev runs)
+  "freeze_tag": "v1.0-frozen", "freeze_commit": "...",  # set for any run with a split: test task; the runner refuses one
+                                              # unless PREREG is FROZEN and committed, the tag is an ancestor of HEAD,
+                                              # PREREG and tasks/ are unchanged since it, and s2a is the one PREREG names (D-063)
   "arms": ["plain", "plain-guided", "speckit", "s2a", "s2a-nomap", "s2a-noverify"],
   "task_set": "test",                         # dev | test | all | dev5 | explicit list
   "task_ids": ["antennapod-0001", "..."],
