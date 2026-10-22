@@ -32,7 +32,7 @@ back). The write-up reports S2A against both, not only against `plain`.
 
 | Item | How |
 |---|---|
-| One-time per-repo setup (Spec Kit constitution; S2A codebase map) | `results/<run>/setup/<setup_kind>/<repo>/run.json`. Report as "setup cost per repo" and *also* as an amortised per-task number (`setup / tasks_in_repo`) in a clearly labelled column. Never fold silently into cost per task. |
+| One-time per-repo setup (Spec Kit constitution; S2A codebase map) | `results/<run>/setup/<setup_kind>/<repo>/run.json`. Report as "setup cost per repo" and *also* as an amortised per-task number (`setup / tasks_in_repo`) in a clearly labelled column. Never fold silently into cost per task. Nor into a trial's time: a trial's wall-clock starts once its setup is in place, so building it (or waiting for another slot to) never shortens a trial (D-060). |
 | Historical (mined/reverted) vs authored tasks | Separate rows in every headline table. The primary comparison uses all test tasks; the pre-registered **contamination-robustness** check repeats it on historical post-cutoff tasks, and authored tasks are shown on their own (written by the framework author, or model-drafted — `drafted_by`, `drafted_with_model` — and human-reviewed). |
 | Pre- vs post-cutoff tasks | `upstream.fix_date` **and** `upstream.issue_created` vs the pinned model's published training cutoff (D-001); a task is post-cutoff only if both are. |
 | Trials with no cost line | `cost_usd` null; `cost_usd_imputed` reported alongside; share per arm shown. All `cost_usd` figures are Claude Code's client-side estimate at API list price ("est. API-equivalent USD"); tokens are the primary unit. |

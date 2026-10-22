@@ -333,9 +333,6 @@ class Runner:
                 get_platform().rmtree_robust(trial_root)
             ws = Workspace(repo, trial_root, self.sandbox, run_as=self.slot_user(slot))  # type: ignore[arg-type]
             ws.snapshot(task.base_commit)
-            budget = TrialBudget.start(self.limits)
-            ctx = DriverContext(ws=ws, record_dir=rec, run_dir=self.root, tag=f"{arm_name}-{tid}-t{k}",
-                                token=self.token or "", budget=budget, as_agent=self.sandbox == "user")
             arm = get_arm(arm_name)
             if getattr(arm, "setup_kind", None):
                 try:
@@ -349,6 +346,11 @@ class Runner:
                         return Outcome("usage_limited", reset_at=reset, utilization=util)
                     return Outcome("abort", abort_reason="setup_failed")
                 arm.install_setup(ws, setup["artifacts"])
+            # the trial's clock starts once its one-time setup is in place: building it (or waiting for the other
+            # slot to) is setup cost, never the trial's time (D-060)
+            budget = TrialBudget.start(self.limits)
+            ctx = DriverContext(ws=ws, record_dir=rec, run_dir=self.root, tag=f"{arm_name}-{tid}-t{k}",
+                                token=self.token or "", budget=budget, as_agent=self.sandbox == "user")
             ticket = (task_dir(tid) / task.problem_statement).read_text(encoding="utf-8")
             arm_task = task.model_copy(update={"test_patch": None, "gold_patch": None})
             self.event(event="trial_start", arm=arm_name, task=tid, trial=k, attempt=attempt, slot=slot,
