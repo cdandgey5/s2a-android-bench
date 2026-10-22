@@ -79,7 +79,7 @@ Claude Code session on this machine, outranks your login, and a token session ca
 Control or claude.ai connectors — set globally it would silently turn every building chat into a
 CI session. Only the harness maps `ABB_OAUTH_TOKEN` to `CLAUDE_CODE_OAUTH_TOKEN`, inside each
 trial's environment block (`specs/auth-and-usage.md` §1). Phase 0 verifies it (`abb auth check`).
-Know your plan's usage limits (session and weekly; Opus has its own): the runner pauses and
+Know your plan's usage limits (session and weekly; on a Max plan Sonnet and Opus share them): the runner pauses and
 probes automatically when a limit is hit, and `PLAN.md` §6 plans the runs around the windows.
 Read `specs/auth-and-usage.md` §5 once — it explains why the final matrix is a decision you make
 before the freeze.

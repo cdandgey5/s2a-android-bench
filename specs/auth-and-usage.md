@@ -74,8 +74,8 @@ charge at all. Therefore:
 
 ## 3. Usage limits (the real constraint)
 
-A subscription has a rolling **session limit** and a **weekly limit**, with separate Opus and
-Sonnet limits on some plans; the interactive app shows "You've hit your session limit · resets
+A subscription has a rolling **session limit** and a **weekly limit** (on the owner's Max plan Sonnet
+and Opus count against the same limits: owner, 2026-10-22; reference/verified.md); the interactive app shows "You've hit your session limit · resets
 3:45pm" and can auto-continue, but **a `-p` run neither waits nor exposes a documented
 limit-specific result subtype** — it ends with a non-zero exit and an error. The harness treats
 this as an environmental pause, never as an agent failure, and errs on the side of *not
@@ -90,8 +90,8 @@ counting* a trial:
 | Canary | the exact `-p` output on a limit is undocumented. Phase 4 captures the first real occurrence verbatim (transcript tail, stderr, exit code) into `reference/verified.md` and tunes the detector. If dev runs never hit a limit, run `abb ws smoke --until-limit --max-calls 200` once when the window is nearly spent (end of a work session, or when the app's usage indicator says so): it loops the probe prompt through the launcher until the limit answers or `--max-calls` is reached, records the output, and costs the remainder of that window — and locks your own chats out until it resets. A **matrix run** — `--tasks test`, or more than 30 trials — refuses to start without the canary unless `--allow-no-canary` is passed, which is recorded in the manifest. |
 | Plan | **Throughput probe (D-027):** Phase 1 step 10b first runs one realistic sandboxed session on the seed task with the usage meter read before and after, and records session % and weekly % per trial, giving a lower-bound estimate of the weeks the plan needs and an early Pro / Max / MVP-cut decision. Then Phase 4's gate records **trials per session window** for the plain arm on Sonnet in `docs/RUNS.md` — the number for scheduling dev work. The held-out run is planned from the **Opus dev-set confirmation run** (Phase 10 prerequisite), per arm, because Opus has its own limit and multi-stage arms use 2–5× the tokens. `PLAN.md` §6 turns those into a calendar. |
 
-Opus has its own limit on the plans that separate it, and dev work on `claude-sonnet-5-5`
-keeps that window free for the pinned final runs.
+On the owner's plan Sonnet and Opus share one allowance, so dev work on `claude-sonnet-5-5` saves
+allowance (Sonnet uses less per trial) rather than a separate Opus window.
 
 **Same account, same windows.** The building chats and the headless trials draw on the same
 subscription: a dev run, the canary, or a paused matrix share the window with the chat you are

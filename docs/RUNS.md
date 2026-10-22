@@ -481,7 +481,7 @@ Spec Kit constitution antennapod $0.4788, wikipedia $0.3405. The held-out run re
 `--parallel 2`**. Five-hour window: each window of this run peaked at 0.60-0.68 at parallel 2, under the 0.9 pause
 point, so ≈ 11 windows with no pause expected. Seven-day window: 0.06 → 0.18 during this run (est. $136 incl. the
 set-aside work; the subscription is shared, so the owner's own use in those hours is included), so the held-out run
-needs roughly 50-55 % of a week's Opus allowance; it resets Sundays 19:00 UTC. A weekly cut is handled as
+needs roughly 50-55 % of a week's allowance (Sonnet and Opus share it on this plan); it resets Sundays 19:00 UTC. A weekly cut is handled as
 `usage_limited` (pause, probe, re-queue; `--max-pause-h`).
 
 | Time (UTC) | Run / activity | Model | Result | in | out | cr | cw | est. USD | Pauses | Note |
