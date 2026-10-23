@@ -19,8 +19,9 @@ Claude Code alone, one headless call. **7 turns, 2.4 min, est. $0.29 — resolve
 +        String[] parts = durationStr.trim().replace(",", ".").split(":");
 ```
 
-Show `results/20261022-0355-dev-opus-confirm/plain/antennapod-0000/t1/transcript/`: three tool calls — read the
-parser and its test, edit with one `sed` and add tests, run `:parser:feed:test` — then stop. No notes, no plan.
+Show `results/20261022-0355-dev-opus-confirm/plain/antennapod-0000/t1/transcript/`: six tool calls (read and grep
+the parser and its test, one `sed` and one edit adding tests, run `:parser:feed:test`), then stop. No notes, no
+plan.
 
 ## 1:00 — Spec Kit: the bug path (40 s)
 
