@@ -562,6 +562,22 @@ def report(run_id: str, out: Optional[Path] = typer.Option(None, help="write her
         typer.echo(text)
 
 
+@app.command("repro")
+def repro(run_id: str = typer.Argument(..., help="a finished run"), k: int = typer.Option(3, help="trials to re-grade"),
+          seed: int = typer.Option(0, help="which trials (random.Random(seed))"),
+          regrade: bool = typer.Option(True, "--regrade/--no-regrade", help="skip the Gradle re-grades")) -> None:
+    """Re-grade k random trials from their stored diffs, re-run `abb audit`, re-render the report into scratch
+    and compare it byte for byte with <run>/report (Phase 10 step 7); writes <run>/repro.json; exit 1 on a mismatch."""
+    import json
+
+    from abb.harness import repro as rp
+
+    out = rp.repro(run_id, k=k, seed=seed, regrade=regrade)
+    typer.echo(json.dumps(out, indent=2))
+    if not out["ok"]:
+        raise typer.Exit(1)
+
+
 @app.command("report-diff")
 def report_diff(a: Path, b: Path) -> None:
     """Compare two report directories byte for byte: prints `identical` or the files that differ."""

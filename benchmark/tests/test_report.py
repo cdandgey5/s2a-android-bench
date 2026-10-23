@@ -85,3 +85,19 @@ def test_failed_audit_withholds_the_headline(run, tmp_path) -> None:
     _w(tmp_path / run / "audit.json", {"ok": False})
     text = report.render(run, n_boot=200)
     assert "Withheld" in text and "## Headline" not in text
+
+
+def test_repro_checks_regrade_audit_and_report(run, tmp_path, monkeypatch) -> None:
+    from abb.harness import audit as auditmod, grade as grading, repro
+
+    monkeypatch.setattr(paths, "work_dir", lambda: tmp_path / "work")
+    monkeypatch.setattr(auditmod, "audit", lambda rid: {"ok": True})
+    report.render(run, n_boot=10_000)
+    stored = lambda task, diff, out_dir: json.loads((diff.parent / "grade.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(grading, "grade", stored)
+    out = repro.repro(run, k=3, seed=0)
+    assert out["ok"] and len(out["regraded"]) == 3 and out["report_identical"]
+    assert (tmp_path / run / "repro.json").exists()
+    monkeypatch.setattr(grading, "grade", lambda task, diff, out_dir: {**stored(task, diff, out_dir), "resolved": None})
+    out = repro.repro(run, k=3, seed=0)
+    assert not out["ok"] and all("resolved" in r["differences"] for r in out["regraded"])
