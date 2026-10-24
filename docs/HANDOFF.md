@@ -12,10 +12,11 @@ and folds its open items into this one.
 ## Where we are
 
 - Mode: `autopilot (RUN-ALL.md)`
-- Phase: `10`, **S6** (held-out run) — **running: `20261022-2104-heldout-final`** (started 2026-10-22 21:04 UTC, one batch per the owner's S6 approval of all batches, D-064; log `C:\abb\logs\heldout-final.log`; manifest has `prereg_sha256` 7253364d…, `freeze_commit` 207ebfe). **Frozen at tag `v1.0-frozen` on 2026-10-22** (S5 passed: owner chose `auth_mode: subscription`, Max 5x, optional arms kept, freeze approved; fresh token stored as user env `ABB_OAUTH_TOKEN`). Phase 10 step 1 pre-flight: `tasks lint --all` 25/0; `tasks lint --setup-leak` 0 leaks (D-062); `env verify` AntennaPod 60/60 x2 + 13 seed OK, Wikipedia 367/367 x2 + 12 seed OK (logs `C:\abb\logs\verify-phase10-<repo>.log`); TASKSET 80b55a02… matches; s2a `5ca7283`. The runner enforces the freeze for `split: test` runs (D-063).
-- Last commit: `phase 10 step 1: freeze …` (tagged `v1.0-frozen`) + this handoff
+- Phase: `10`, **S6 — held-out run PAUSED by the owner** ("pause it … I plan to resume this task after Sunday", 2026-10-24). `20261022-2104-heldout-final` stopped cleanly at 2026-10-24T11:01Z with `abb run abort` (STOP file; the running trials finished and were graded): **140 of 270 trials done, 130 pending**, est. $287.73, 2 scheduler pauses, 2 usage-limited cuts (kept under `usage_limited/`, re-run, not scored), `aborted_reason: abort` (resumable), **`abb audit` ok** on the 140. The chained optional run was cancelled before it started. Weekly usage was 0.71 at the stop; it resets Sundays 19:00 UTC.
+- Frozen at `v1.0-frozen` (`207ebfe`, 2026-10-22); s2a `5ca7283`; PREREG sha256 `7253364d…` in the run's manifest.
+- Last commit: `handoff: held-out run paused by the owner …`
 - Working tree: clean
-- Date: `2026-10-22`
+- Date: `2026-10-24`
 
 ## What exists and is verified
 
@@ -41,8 +42,13 @@ and folds its open items into this one.
 
 ## Exact next action
 
-1. **Running:** `20261022-2104-heldout-final` (log `C:\abb\logs\heldout-final.log`; one pause so far, one usage-limited cut re-run). **Chained after it** (owner, 2026-10-23: "finish everything soon"): the session's background script `chain_optional.py` waits for the main run's clean finish, smoke-tests `plain-gate`, `s2a-norepro`, `speckit-sdd` on antennapod-0000 (label `smoke-optional-arms`, log `C:\abb\logs\smoke-optional-arms.log`), and, if no harness error, starts `heldout-optional` (`--arm plain-gate --arm s2a-norepro --arm speckit-sdd --tasks test --trials 1 --parallel 2 --model claude-opus-5-5 --profile final --grade --max-usd 149.66 --max-pause-h 150`, log `C:\abb\logs\heldout-optional.log`). If the session died, start these by hand with the new token in the child environment (from HKCU\Environment `ABB_OAUTH_TOKEN`), never under `ABB_TUNING`. If a run stopped: `abb run --resume <run_id> --max-pause-h 150`.
-2. When the main run ends: `abb audit`, `abb report`, RUNS.md rows (`scripts/runs_rows.py`), `abb labels init/llm` for its failures (LLM-only, D-057); then fill the [after the run] sections of `benchmark/README.md` and `docs/WRITEUP.md` from `report/summary.md` only (three transcript excerpts per major finding).
-3. After both runs: `abb repro <run_id>` (refuses while a run is live), publish (`benchmark/published/<run_id>/`: manifest, audit, report, labels; tarball of the results dir for the release — ask the owner before pushing a release), retire the S5 token, README status table to done.
+When the owner says to resume (after Sunday 2026-10-25):
 
-Drafted while the run goes (2026-10-23, committed): `abb repro` (+ test), public `benchmark/README.md`, `docs/architecture.svg`, `docs/DEMO.md` (dev task antennapod-0000, Opus confirmation run), `docs/WRITEUP.md` (question, design, dev lessons, limits).
+1. **Token.** The run needs the S5 token in `ABB_OAUTH_TOKEN`. A Claude app or shell started after 2026-10-22 18:00Z inherits it from the user environment; an older shell holds the previous token. Check without printing it: compare the sha256 of `os.environ["ABB_OAUTH_TOKEN"]` with that of `HKCU\Environment\ABB_OAUTH_TOKEN` (`winreg`); if they differ, pass the HKCU value into the child's environment only (never argv). Never set `ABB_TUNING`.
+2. **Resume the main run** in the background (log `C:\abb\logs\heldout-final.log`, append):
+   `abb run --resume 20261022-2104-heldout-final --max-pause-h 150` — keeps its arms/tasks/trials/`--max-usd 757.52`/parallel 2 from the manifest, removes the STOP file, records the resume (with its code shas) in `manifest.resumes`; the freeze gate re-checks PREREG and the tasks. ~130 trials ≈ 29 h at ~4.5/h.
+3. **Then the optional arms** (only after the main run ends cleanly): smoke on a dev task — `abb run --arm plain-gate --arm s2a-norepro --arm speckit-sdd --tasks antennapod-0000 --trials 1 --parallel 2 --model claude-opus-5-5 --profile final --grade --label smoke-optional-arms` — and if no `harness_error`, `abb run --arm plain-gate --arm s2a-norepro --arm speckit-sdd --tasks test --trials 1 --parallel 2 --model claude-opus-5-5 --profile final --grade --label heldout-optional --max-usd 149.66 --max-pause-h 150` (~10 h).
+4. When the main run ends: `abb audit`, `abb report`, RUNS.md rows (`scripts/runs_rows.py`), `abb labels init/llm` for its failures (LLM-only, D-057); fill the [after the run] sections of `benchmark/README.md` and `docs/WRITEUP.md` from `report/summary.md` only (three transcript excerpts per major finding); then the same for the optional run.
+5. After both runs: `abb repro <run_id>` (refuses while a run is live); publish (`benchmark/published/<run_id>/`: manifest, audit, report, labels; tarball of the results dir for the release — ask the owner before pushing a release); retire the S5 token; README status table to done.
+
+Drafted already (2026-10-23, committed): `abb repro` (+ test), public `benchmark/README.md`, `docs/architecture.svg`, `docs/DEMO.md`, `docs/WRITEUP.md` (question, design, dev lessons, limits).

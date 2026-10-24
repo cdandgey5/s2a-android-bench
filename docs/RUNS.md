@@ -567,3 +567,5 @@ matrix runs as one batch (D-064).
 |---|---|---|---|---|---|---|---|---|---|---|
 | 21:00 | `20261022-2059-smoke-s5-token` plain/antennapod-0000/t1 | claude-opus-5-5 | completed, 9 turns, 139 s | 12 | 1,865 | 129,553 | 33,279 | 0.3295 | 0 | resolved=True; nudges 0; five-hour 0 → 0.01, seven-day 0.19 |
 | | **`20261022-2059-smoke-s5-token` total (1 trials, 1 resolved)** | | mean 139 s | **12** | **1,865** | **129,553** | **33,279** | **0.3295** | 0 | incl. one-time setup |
+
+**`20261022-2104-heldout-final` paused by the owner** at 2026-10-24T11:01Z (`abb run abort`; running trials finished): 140 of 270 trials done, est. $287.73 (run_end incl. the cut attempts: $292.35), 2 scheduler pauses (five-hour >= 0.9; ~3 h each), 2 usage-limited cuts re-run; `abb audit` ok. Per-trial rows are added when the run is complete (`scripts/runs_rows.py`). Resume after 2026-10-25 (docs/HANDOFF.md).
